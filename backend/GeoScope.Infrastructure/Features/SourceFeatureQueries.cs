@@ -132,7 +132,7 @@ internal sealed class SourceFeatureQueries(GeoScopeDbContext db) : ISourceFeatur
         d.Override != null ? d.Override.UpdatedAt : null,
         d.Override != null ? (uint?)d.Override.Version : null);
 
-    private static readonly System.Linq.Expressions.Expression<Func<HealthFacility, FacilityRowData>> FacilityRow = f => new FacilityRowData(
+    internal static readonly System.Linq.Expressions.Expression<Func<HealthFacility, FacilityRowData>> FacilityRow = f => new FacilityRowData(
         f.Id, f.Geom,
         f.Override != null && f.Override.Name != null ? f.Override.Name : f.Name,
         f.Name,

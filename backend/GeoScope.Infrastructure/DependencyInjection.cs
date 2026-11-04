@@ -1,5 +1,8 @@
+using GeoScope.Application.Analysis;
 using GeoScope.Application.Features;
+using GeoScope.Infrastructure.Analysis;
 using GeoScope.Application.Health;
+using GeoScope.Application.UserFeatures;
 using GeoScope.Infrastructure.Features;
 using GeoScope.Infrastructure.Health;
 using GeoScope.Infrastructure.Persistence;
@@ -18,6 +21,8 @@ public static class DependencyInjection
         services.AddScoped<IDatabaseStatusProbe, PostGisStatusProbe>();
         services.AddScoped<ISourceFeatureQueries, SourceFeatureQueries>();
         services.AddScoped<IOverrideCommands, OverrideCommands>();
+        services.AddScoped<IUserFeatureStore, UserFeatureStore>();
+        services.AddScoped<IAnalysisService, AnalysisService>();
         return services;
     }
 

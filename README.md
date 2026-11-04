@@ -2,7 +2,7 @@
 
 Bursa ilçeleri ve sağlık tesisleri üzerine Web CBS uygulaması (ASP.NET Core + PostgreSQL/PostGIS + React/MapLibre).
 
-> **Durum:** Faz 3 tamamlandı. Kullanıcı çizimleri (CRUD) ve geometrik analizler sonraki fazlarda.
+> **Durum:** Faz 5 tamamlandı: çizim/CRUD ve üç geometrik analiz (alan içi, tampon, en yakın N). Ölçüm (A04) ve ilçe başına sayım (A05) sonraki fazda.
 > Faz durumu: [docs/PROGRESS.md](docs/PROGRESS.md), gereksinimler: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md).
 
 ## Özellikler (bugün çalışan)
@@ -10,7 +10,14 @@ Bursa ilçeleri ve sağlık tesisleri üzerine Web CBS uygulaması (ASP.NET Core
 - Katmanları açıp kapatma; iki altlık (OSM Standart / OpenFreeMap Positron). Altlık değişince veri katmanları, görünürlük ve seçim korunur.
 - Haritada tıklanan ilçe/tesisin öznitelikleri yan panelde: tür, ilçe, kaynak OSM etiketleri ve bağlantısı.
 - Sunucu tarafı arama ve filtre (ad, tesis türü, ilçe). Büyük/küçük harf ve Türkçe aksan duyarsızdır ("nilufer" → Nilüfer). Sonuçlar vurgulanır, seçilen sonuca zoom yapılır.
-- İçe aktarılan kayıtlara yerel ad/açıklama verilebilir. OSM verisi değişmez, yeniden import bu düzenlemeyi ezmez. Eşzamanlı düzenleme ETag/If-Match ile korunur.
+- Harita sol tuş ya da orta tuşla (tekerleğe basılı tutarak) sürüklenerek kaydırılır.
+- Sağlık tesisleri türe göre (hastane, eczane…) haritada ayrı ayrı gizlenip gösterilebilir.
+- Haritada nokta, çizgi ve alan çizilip ad/açıklamayla kaydedilebilir. Çizgi ve alan "Çizimi bitir" düğmesi ya da Enter tuşuyla bitirilir. Çizimler ayrı "Kullanıcı çizimleri" katmanındadır; geometri sürüklenerek düzenlenir, onayla silinir. Tüm işlemler REST API (`/api/features`) üzerinden yapılır ve geometri sunucuda yeniden doğrulanır.
+- İçe aktarılan kayıtlara yerel ad/açıklama verilebilir.
+- **Analizler (PostGIS, backend):**
+  - *Alan içindekiler:* seçili ilçe/alan çizimi ya da haritada çizilen alan içindeki tesisler; sınır dahil (`ST_Covers`) veya hariç (`ST_Within`).
+  - *Tampon:* seçili obje çevresinde metre cinsinden mesafe; seçim `ST_DWithin(geography)`, tampon haritada yaklaşık çokgen olarak gösterilir.
+  - *En yakın N:* haritada tıklanan noktaya en yakın N tesis, kuş uçuşu metre/km ve sırayla. Kesin sferoid sıralaması kullanılır, derece tabanlı KNN değil. OSM verisi değişmez, yeniden import bu düzenlemeyi ezmez. Eşzamanlı düzenleme ETag/If-Match ile korunur.
 
 ![Arama ve detay paneli](docs/screenshots/faz3-search-details.png)
 

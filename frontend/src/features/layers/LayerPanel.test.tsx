@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import type { LayerKey } from '../map/layerIds'
+import type { BasemapId } from '../map/mapStyle'
 import type { SourceLayersState } from '../map/useSourceLayers'
+import type { FacilityType } from '../../services/sourceLayers'
 import { LayerPanel } from './LayerPanel'
 
 const meta = (returned: number, hasMore = false) => ({ returned, limit: 2000, offset: 0, hasMore })
@@ -17,13 +20,16 @@ function loaded(hasMore = false): SourceLayersState {
 function renderPanel(overrides: Partial<Parameters<typeof LayerPanel>[0]> = {}) {
   const props = {
     state: loaded(),
-    onRetry: vi.fn(),
-    visibility: { districts: true, facilities: true },
-    onToggle: vi.fn(),
-    basemap: 'osm' as const,
-    onBasemapChange: vi.fn(),
-    ...overrides,
+    userCount: 3 as number | null,
+    onRetry: vi.fn<() => void>(),
+    visibility: { districts: true, facilities: true, 'user-features': true },
+    onToggle: vi.fn<(layer: LayerKey, visible: boolean) => void>(),
+    basemap: 'osm' as BasemapId,
+    onBasemapChange: vi.fn<(basemap: BasemapId) => void>(),
+    facilityTypes: { hospital: true, clinic: true, doctors: true, dentist: true, pharmacy: true, other_healthcare: true },
+    onToggleFacilityType: vi.fn<(type: FacilityType, visible: boolean) => void>(),
   }
+  Object.assign(props, overrides)
   render(<LayerPanel {...props} />)
   return props
 }
@@ -45,6 +51,43 @@ describe('LayerPanel', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: /Sağlık tesisleri/ }))
 
     expect(props.onToggle).toHaveBeenCalledWith('facilities', false)
+  })
+
+  it('tesis türleri haritada ayrı ayrı gizlenebilir (geliştirici geri bildirimi G2)', async () => {
+    const facility = (facilityType: FacilityType) => ({
+      type: 'Feature' as const,
+      id: 1,
+      geometry: { type: 'Point' as const, coordinates: [29, 40] },
+      properties: { layer: 'facilities' as const, name: 'x', sourceName: 'x', description: null, facilityType, osmType: 'node', osmId: 1, representativePoint: false },
+    })
+    const state: SourceLayersState = {
+      kind: 'loaded',
+      districts: { type: 'FeatureCollection', features: [], meta: meta(17) },
+      facilities: { type: 'FeatureCollection', features: [facility('pharmacy'), facility('pharmacy'), facility('hospital')], meta: meta(3) },
+    }
+    const props = renderPanel({ state })
+
+    const pharmacy = screen.getByRole('checkbox', { name: /Eczane/ })
+    expect(pharmacy.closest('label')).toHaveTextContent('2') // türe göre sayı
+    await userEvent.click(pharmacy)
+
+    expect(props.onToggleFacilityType).toHaveBeenCalledWith('pharmacy', false)
+  })
+
+  it('tesis katmanı kapalıyken tür anahtarları devre dışıdır', () => {
+    renderPanel({ visibility: { districts: true, facilities: false, 'user-features': true } })
+
+    expect(screen.getByRole('checkbox', { name: /Hastane/ })).toBeDisabled()
+  })
+
+  it('kullanıcı çizimleri ayrı bir katman olarak sayısıyla listelenir', async () => {
+    const props = renderPanel()
+
+    const toggle = screen.getByRole('checkbox', { name: /Kullanıcı çizimleri/ })
+    expect(toggle.closest('label')).toHaveTextContent('3')
+    await userEvent.click(toggle)
+
+    expect(props.onToggle).toHaveBeenCalledWith('user-features', false)
   })
 
   it('altlık seçimi bildirilir', async () => {

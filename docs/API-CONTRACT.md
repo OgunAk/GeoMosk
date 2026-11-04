@@ -73,9 +73,54 @@ sınır dahil; birden çoksa en küçük id). 404: bulunamadı veya kaynakta kal
 
 Örnek: `PATCH /api/facilities/817` + `If-Match: "0"` + `{"description":"Acil servis 7/24"}` → 200 ve yeni `ETag` (değer örnektir).
 
+## Kullanıcı çizimleri (`/api/features`) — C02-C04
+
+Kaynak (OSM) katmanlarından ayrı `user_features` tablosu. Yalnız Point, LineString (polyline) ve Polygon; EPSG:4326, `[boylam, enlem]`.
+Feature `id` UUID metnidir. `properties`: `layer: "user-features"`, `name`, `description`, `geometryType`, `createdAt`, `updatedAt` (ISO 8601, UTC).
+
+| Method | Yol | İstek | Başarılı yanıt | Hatalar |
+|---|---|---|---|---|
+| GET | `/api/features?bbox&q&limit&offset` | — | 200 FeatureCollection + `meta`; sıra `createdAt`, `id` | 400 |
+| GET | `/api/features/{id}` | — | 200 Feature + `ETag` | 404 |
+| POST | `/api/features` | RFC 7946 Feature: `{"type":"Feature","geometry":{…},"properties":{"name":"…","description"?:"…"}}` | **201** + `Location: /api/features/{id}` + `ETag` + kaydedilen Feature | 400 biçim, 422 geometri |
+| PATCH | `/api/features/{id}` | `{"name"?, "description"?, "geometry"?}` + `If-Match` | 200 + yeni `ETag` (öznitelik ve geometri tek UPDATE'te) | 400, 404, 412, 422, 428 |
+| DELETE | `/api/features/{id}` | `If-Match` | **204** | 404, 412, 428 |
+
+**400 (biçim):** gövde nesne değil; `type` "Feature" değil; `geometry`/`properties`/`name` eksik; `name` boş, metin değil veya 200'den uzun;
+`description` 2000'den uzun; izin verilmeyen alan (`id` istemciden gönderilemez; `properties` yalnız `name`, `description`); koordinatlar dizi değil.
+PATCH'te `name: null` ve `geometry: null` 400 (çizimi silmek için DELETE).
+
+**422 (geometri anlamı):** Point/LineString/Polygon dışındaki tip (Multi*, GeometryCollection sessizce dönüştürülmez); `crs` üyesi;
+3 boyutlu konum; sonlu olmayan veya aralık dışı koordinat; LineString < 2 konum ya da tek farklı nokta; Polygon halkası < 4 konum
+veya kapalı değil; kendini kesme vb. (NTS `IsValidOp`, mesajda konum); 10 000'den fazla köşe; **Bursa çalışma alanı dışı**
+(boylam 28.0–30.1, enlem 39.5–40.8). Sonuncusu çoğunlukla ters koordinat sırasıdır; otomatik düzeltilmez.
+Doğrulama sunucuda yapılır; istemci kontrolleri yalnız erken uyarıdır. DB CHECK kısıtları ikinci savunma hattıdır.
+
+Örnek: `POST /api/features` `{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"Deneme çizimi","description":"Kullanıcı geometrisi"}}`
+→ 201, `Location: /api/features/<uuid>`.
+
+## Analizler (`/api/analysis/*`) — A01-A03
+
+Hesap tamamen backend'de PostGIS ile yapılır; arayüz yalnız girdiyi toplar ve sonucu gösterir. Ortak yanıt:
+`{ "analysis": "within"|"buffer"|"nearest", "input": Feature (alan / tampon poligonu / nokta), "matches": FeatureCollection + meta, "parameters": {…} }`.
+`matches` içindeki tesis özellikleri liste uç noktasıyla aynıdır; tampon ve en yakın N'de ek olarak `distanceMeters`
+(WGS84 sferoidi üzerinde, kuş uçuşu, yuvarlanmamış), en yakın N'de `rank`.
+
+Girdi seçenekleri — tam olarak biri: `sourceFeature: { layerId: "districts"|"facilities"|"user-features", id }` (geometri
+sunucudan okunur; istemci kopyasına güvenilmez) **veya** `geometry` (kullanıcı çizimiyle aynı doğrulama: Point/LineString/Polygon,
+4326, Bursa çalışma alanı, geçerlilik). İkisi birden ya da hiçbiri → 400. Tanımsız alan → 400. JSON dışı içerik → 415.
+
+| Uç nokta | Gövde | Semantik | Hatalar |
+|---|---|---|---|
+| `POST /api/analysis/within` | girdi (alan: ilçe, Polygon kullanıcı çizimi veya Polygon geometri), `includeBoundary` (varsayılan **true**), `limit` (1..2000, varsayılan 500) | Sınır dahil `ST_Covers(alan, tesis)`, hariç `ST_Within(tesis, alan)`. Delikler hariç, MultiPolygon'un tüm parçaları dahil | 400; 404 kaynak yok; 422 kaynak alan değil / geçersiz geometri |
+| `POST /api/analysis/buffer` | girdi (her tip), `radiusMeters` (0 < r ≤ 50 000), `excludeSource` (varsayılan true; yalnız kaynak tesisin **id**'si hariç, aynı koordinattaki başka tesis dahil), `limit` | Seçim `ST_DWithin(geom::geography, kaynak::geography, r)`; sıra (mesafe, id). `input` = `ST_Buffer(geography, r, 'quad_segs=16')` yaklaşık 64 kenarlı çokgen (görsel) | 400 (r ≤ 0, r > 50 000); 404; 422 |
+| `POST /api/analysis/nearest` | `point` (GeoJSON Point), `n` (1..100, varsayılan 5), `type`? (tesis türü), `maxDistanceMeters`? (≤ 50 000) | Kesin sıralama: tüm adaylarda `ST_Distance(geography)` + `id` bağ kırıcı, `LIMIT n`. Veri azsa n'den az sonuç; filtre yoksa mesafe sınırı yok | 400 (n dışı, tür); 422 (Point değil, çalışma alanı dışı/ters koordinat) |
+
+Sorgu planları (911 tesis, 2026-11-04): `scripts/sql/analysis-plans.2026-11-04.txt`. Tampon `ix_health_facilities_geog`
+(geography ifade indeksi) ile 0.8 ms, alan içinde `ix_health_facilities_geom` (GiST) ile 0.4 ms. En yakın N kesin sıralama
+için tüm tabloyu tarayıp sıralar (12 ms); KNN (`<->`) bilinçli olarak kullanılmadı (ADR-0012).
+
 ## Planlanan (henüz yok)
 | Faz | Method | Yol |
 |---|---|---|
-| 4 | GET/POST/PATCH/DELETE | `/api/features`, `/api/features/{id}` |
-| 5 | POST | `/api/analysis/within`, `/api/analysis/buffer`, `/api/analysis/nearest` |
 | 6 | POST/GET | `/api/analysis/measure`, `/api/analysis/district-stats` |

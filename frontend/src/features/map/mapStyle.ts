@@ -55,4 +55,8 @@ export const facilityColorExpression: ExpressionSpecification = [
 ] as unknown as ExpressionSpecification
 
 export const HIGHLIGHT_COLOR = '#f1c40f'
+/** Kullanıcı çizimleri; kaynak katman renklerinden ayrışır. */
+export const USER_COLOR = '#db2777'
+/** Analiz girdisi ve eşleşmeleri. */
+export const ANALYSIS_COLOR = '#ea580c'
 export const SELECTED_COLOR = '#1d4ed8'

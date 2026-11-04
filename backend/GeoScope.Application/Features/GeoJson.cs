@@ -3,9 +3,12 @@ using NetTopologySuite.Geometries;
 
 namespace GeoScope.Application.Features;
 
-/// <summary>RFC 7946 Feature. Geometri EPSG:4326, [boylam, enlem]; serileştirme API katmanındaki GeoJSON dönüştürücüsüyle.</summary>
+/// <summary>
+/// RFC 7946 Feature. Geometri EPSG:4326, [boylam, enlem]; serileştirme API katmanındaki GeoJSON dönüştürücüsüyle.
+/// Id kaynak katmanlarda sayı (long), kullanıcı çizimlerinde metin (UUID); RFC 7946 ikisine de izin verir.
+/// </summary>
 public sealed record GeoJsonFeature(
-    [property: JsonPropertyOrder(1)] long Id,
+    [property: JsonPropertyOrder(1)] object Id,
     [property: JsonPropertyOrder(2)] Geometry Geometry,
     [property: JsonPropertyOrder(3)] IReadOnlyDictionary<string, object?> Properties)
 {

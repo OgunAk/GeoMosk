@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '../../services/apiClient'
-import { fetchFeature, type SourceFeatureDetail } from '../../services/sourceLayers'
-import type { Selection } from '../map/MapView'
+import { fetchFeature, type SourceFeatureDetail, type SourceLayerId } from '../../services/sourceLayers'
+
+/** Kaynak (OSM) katmanlarından bir kaydın seçimi. */
+export interface SourceSelection {
+  layer: SourceLayerId
+  id: number
+}
 
 export type DetailState =
   | { kind: 'none' }
@@ -15,7 +20,7 @@ type Settled = Exclude<DetailState, { kind: 'none' } | { kind: 'loading' }>
  * Seçili objenin tekil kaydını (kaynak etiketleri + ETag) yükler; seçim değişince eski istek iptal edilir.
  * Sonuç istek anahtarıyla saklanır: anahtar değişince "yükleniyor" render sırasında türetilir.
  */
-export function useFeatureDetail(selection: Selection | null) {
+export function useFeatureDetail(selection: SourceSelection | null) {
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<{ key: string; value: Settled } | null>(null)
   const key = selection ? `${selection.layer}/${selection.id}/${attempt}` : null

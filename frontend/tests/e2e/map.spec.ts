@@ -21,12 +21,15 @@ async function probe(page: Page): Promise<Probe> {
   }, EMPTY)
 }
 
+// Uygulamanın kendi rendering katmanları: 7 kaynak (ilçe/tesis) + 5 kullanıcı çizimi + 4 analiz katmanı.
+const OUR_LAYER_COUNT = 16
+
 async function openApp(page: Page) {
   const errors: string[] = []
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   await page.goto('/')
   await expect(page.getByRole('checkbox', { name: /Sağlık tesisleri/ })).toBeVisible()
-  await expect.poll(async () => (await probe(page)).layers.length, { timeout: 20_000 }).toBe(7)
+  await expect.poll(async () => (await probe(page)).layers.length, { timeout: 20_000 }).toBe(OUR_LAYER_COUNT)
   return errors
 }
 
@@ -48,7 +51,7 @@ test('katman aç/kapa ve altlık değişiminde katmanlar ve durum korunur', asyn
   await page.getByRole('radio', { name: /Positron/ }).check()
 
   await expect.poll(async () => (await probe(page)).hasBasemapVector, { timeout: 20_000 }).toBe(true)
-  await expect.poll(async () => (await probe(page)).layers.length).toBe(7)
+  await expect.poll(async () => (await probe(page)).layers.length).toBe(OUR_LAYER_COUNT)
   const afterSwitch = await probe(page)
   expect(afterSwitch.visibility['lyr-facilities-circle']).toBe('none') // gizli kalmalı
   expect(afterSwitch.visibility['lyr-districts-line']).toBe('visible')
@@ -57,6 +60,41 @@ test('katman aç/kapa ve altlık değişiminde katmanlar ve durum korunur', asyn
   await page.getByRole('radio', { name: 'OSM Standart' }).check()
   await expect.poll(async () => (await probe(page)).hasBasemapVector, { timeout: 20_000 }).toBe(false)
   await expect.poll(async () => (await probe(page)).visibility['lyr-facilities-circle']).toBe('visible')
+})
+
+test('orta tuşla sürükleyince harita kayar, seçim yapılmaz', async ({ page }) => {
+  await openApp(page)
+  const center = () => page.evaluate(() => window.__geoscopeMap!.getCenter().toArray())
+  const before = await center()
+  const box = (await page.getByTestId('map').boundingBox())!
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down({ button: 'middle' })
+  await page.mouse.move(start.x + 200, start.y + 100, { steps: 10 })
+  await page.mouse.up({ button: 'middle' })
+
+  const after = await center()
+  expect(after[0]).toBeLessThan(before[0]) // sağa sürükleme → merkez batıya (boylam azalır)
+  expect(after[1]).toBeGreaterThan(before[1]) // aşağı sürükleme → merkez kuzeye (enlem artar)
+  await expect(page.getByRole('button', { name: 'Seçimi kapat' })).toHaveCount(0) // orta tık seçim açmaz
+})
+
+test('tesis türü filtresi haritaya uygulanır ve altlık değişiminde korunur', async ({ page }) => {
+  await openApp(page)
+  const filter = () => page.evaluate(() => JSON.stringify(window.__geoscopeMap?.getFilter('lyr-facilities-circle') ?? null))
+
+  await page.getByRole('checkbox', { name: /Eczane/ }).uncheck()
+  await expect.poll(filter).not.toContain('pharmacy')
+  expect(await filter()).toContain('hospital')
+
+  await page.getByRole('radio', { name: /Positron/ }).check()
+  await expect.poll(async () => (await probe(page)).hasBasemapVector, { timeout: 20_000 }).toBe(true)
+  await expect.poll(async () => (await probe(page)).layers.length).toBe(OUR_LAYER_COUNT)
+  await expect.poll(filter).not.toContain('pharmacy')
+
+  await page.getByRole('checkbox', { name: /Eczane/ }).check()
+  await expect.poll(filter).toContain('pharmacy')
 })
 
 test('Türkçe aksansız arama sonucu vurgular, seçer ve objeye zoom yapar', async ({ page }) => {

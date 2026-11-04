@@ -50,6 +50,23 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Karar:** ETag = override satırının PostgreSQL `xmin` değeri (yoksa `"0"`). PATCH'te `If-Match` zorunlu (428), uyuşmazlık 412. Override satırı silinmez: silinip yeniden oluşturulsa sürüm `"0"`'a döner ve eski istemcinin ETag'i yanlışlıkla eşleşirdi (ABA). Eşzamanlı ilk oluşturmada PK çakışması da 412'ye çevrilir.
 - **Not:** nginx gzip yanıtta ETag'i zayıflatır (`W/"n"`). Sunucu bu biçimi de kabul eder; sürüm karşılaştırması uygulama içinde yapılır.
 
+## ADR-0011 — Çizim aracı ve kullanıcı geometrisi doğrulaması
+
+- **Durum:** Kabul (Faz 4).
+- **Çizim:** terra-draw 1.38.0 + terra-draw-maplibre-gl-adapter 1.5.0 (peer: maplibre-gl >= 4). API kurulu paketin tip tanımlarından doğrulandı. Point, LineString, Polygon ve Select modları kullanılıyor; Select'te sürükleme, ara noktadan köşe ekleme ve köşe silme açık. `setStyle` adaptörün katmanlarını da sildiği için altlık değişmeden önce taslak saklanır, örnek durdurulur ve yeni stilde yeni bir örnekle geri yüklenir (E2E ile doğrulandı).
+- **Doğrulama:** Sunucu, istemciye güvenmeden kendi ayrıştırıcısıyla (`UserGeometryParser`) doğrular. Genel GeoJSON dönüştürücüsü `crs`, Multi* ve 3B girdiyi sessizce kabul edebileceği için kullanılmadı. Biçim hatası 400, geometri anlamı hatası 422. Geçersiz şekil `ST_MakeValid` ile onarılmaz. Bursa çalışma alanı dışı reddedilir: ters koordinatı yakalamanın ölçülebilir yolu (master prompt §8.3).
+- **Eşzamanlılık:** ETag = `xmin`; PATCH ve DELETE'te `If-Match` zorunlu. DELETE tek SQL'de sürüm koşuluyla yapılır (`ExecuteDelete`).
+- **Arayüz:** Taslak, kayıttan ayrı tutulur. Kayıt başarısız olursa taslak ve form korunur. Geometri düzenlenirken kayıtlı hali gizlenir (aynı şekil iki kez görünmez). Tıklama toleransı ±5 px; ince çizgiler seçilebilir (E2E'de bulundu).
+
+## ADR-0012 — MVP analizlerinin semantiği (A01-A03)
+
+- **Durum:** Kabul (Faz 5).
+- **A01:** Varsayılan sınır dahil (`ST_Covers`), kullanıcı seçimiyle hariç (`ST_Within`). Kaynak ilçe (MultiPolygon) ya da Polygon kullanıcı çizimi; ya da çizilen poligon. Tesis noktası kaynak olamaz (422).
+- **A02:** Seçim `ST_DWithin(geography)` ile metre cinsinden (WGS84 sferoidi). Çizilen tampon `ST_Buffer(geography, r, quad_segs=16)` yaklaşık çokgendir ve seçimde kullanılmaz; alanı πr²'nin %99'undan büyük (test). Kaynak tesis id ile hariç tutulur; aynı koordinattaki farklı tesis elenmez.
+- **A03:** Tüm adaylarda `ST_Distance(geography)` + `id` ile kesin sıralama. 4326 `<->` derece tabanlıdır; sferoid sıralamasıyla aynı sonucu garanti etmez. 911 kayıtta tam tarama 12 ms olduğu için KNN eklenmedi. Büyük veride önce KNN aday kümesi + kesin yeniden sıralama, referans sorguya karşı testle değerlendirilecek (Faz 7).
+- **Doğruluk kanıtı:** Beklenen mesafeler PostGIS'ten bağımsız WGS84 meridyen/paralel yayı formülüyle hesaplanır (`GeodesicReference`); fark 5 cm toleransın altında. Aynı ölçüde 0.02° boylam (~1705 m) tampon içinde, 0.02° enlem (~2221 m) dışında kalır; derece ile metre karıştırılsa bu test başarısız olurdu.
+- **Arayüz:** Ölçüm ve mesafe değerleri yalnız backend'den gelir. Bağlantı çizgileri kuş uçuşu ilişkiyi gösterir ve rota olmadığı belirtilir. Analiz için çizilen alan kullanıcı katmanına kaydedilmez.
+
 ## ADR-0010 — Harita veri yükleme stratejisi
 
 - **Durum:** Kabul (Faz 3), Faz 7'de ölçümle yeniden değerlendirilecek.

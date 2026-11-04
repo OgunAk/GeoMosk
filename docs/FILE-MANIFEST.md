@@ -82,4 +82,24 @@ Makine tarafından denetlenen liste: `scripts/agent-setup.manifest.json` (`node 
 | `frontend/playwright.config.ts`, `frontend/tests/e2e/**`, `frontend/tsconfig.e2e.json` | Kalıcı uçtan uca testler | oluşturuldu | typecheck | 5/5 (yerel Chrome) | TEST-PLAN | 3-8 |
 | `.github/workflows/ci.yml` (e2e işi) | CI'da compose + import + Playwright | güncellendi | — | çalıştırılmadı (push yok) | — | 3-8 |
 
+## Faz 4 dosyaları
+
+| yol | amaç | oluşturuldu/güncellendi | statik doğrulama | runtime keşfi | kanıt | kullanılacak faz |
+|---|---|---|---|---|---|---|
+| `backend/GeoScope.Application/UserFeatures/**` | Geometri ve istek doğrulama, depo portu | oluşturuldu | build 0 uyarı | 36 API testi | PROGRESS Faz 4 | 4+ |
+| `backend/GeoScope.Infrastructure/Features/UserFeatureStore.cs`, `Api/Controllers/UserFeaturesController.cs` | Kullanıcı çizimi CRUD | oluşturuldu | build | 103/103 | API-CONTRACT | 4+ |
+| `frontend/src/features/drawing/**`, `services/userFeatures.ts` | Terra Draw, araç çubuğu, kayıt formu, çizim paneli | oluşturuldu | typecheck/lint | Vitest 28/28, E2E 9/9 | TEST-PLAN | 4+ |
+| `frontend/tests/e2e/drawing.spec.ts` | Çizim E2E | oluşturuldu | typecheck | 4/4 (yerel sunucular) | TEST-PLAN | 4-8 |
+| `docs/DEVELOPER-REVIEW.md` | Kontrol noktası 2 deneme rehberi | güncellendi | — | — | — | 4 |
+
+## Faz 5 dosyaları
+
+| yol | amaç | oluşturuldu/güncellendi | statik doğrulama | runtime keşfi | kanıt | kullanılacak faz |
+|---|---|---|---|---|---|---|
+| `backend/GeoScope.Application/Analysis/**`, `Infrastructure/Analysis/AnalysisService.cs`, `Api/Controllers/AnalysisController.cs` | A01-A03 | oluşturuldu | build 0 uyarı | 120/120 | API-CONTRACT, ADR-0012 | 5+ |
+| `backend/GeoScope.Tests/Analysis/**` | Bağımsız referanslı spatial testler | oluşturuldu | build | 17/17 | TEST-PLAN | 5+ |
+| `frontend/src/features/analysis/**`, `services/analysis.ts`, `features/map/useMiddleMousePan.ts` | Analiz paneli, orta tuşla kaydırma | oluşturuldu | typecheck/lint | Vitest 40/40, E2E 15/15 | TEST-PLAN | 5+ |
+| `frontend/tests/e2e/analysis.spec.ts` | Analiz E2E | oluşturuldu | typecheck | 4/4 | TEST-PLAN | 5-8 |
+| `scripts/sql/analysis-plans.sql`, `analysis-plans.2026-11-04.txt` | EXPLAIN kayıtları | oluşturuldu | psql exit 0 | — | API-CONTRACT | 5, 7 |
+
 Henüz yazılmayan belgeler (ilgili fazda): `DELIVERY-CHECKLIST.md` (Faz 8), `CLAUDE-CODE-SETUP.md`, `docs/adr/`.
