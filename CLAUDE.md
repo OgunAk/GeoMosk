@@ -23,13 +23,14 @@ MapLibre haritası, katman/altlık, arama, sözel düzenleme, kullanıcı çizim
 | `scripts/verify-agent-setup.mjs`, `scripts/validate-project.mjs`, `scripts/hooks/` | Faz 0 ✓ |
 | `docs/` REQUIREMENTS, PROGRESS, DECISIONS, DEVELOPER-REVIEW, FILE-MANIFEST, AI-TOOLS | Faz 0 ✓ |
 | `backend/GeoScope.{Domain,Application,Infrastructure,Api,Tests}/`, `Directory.Packages.props` | Faz 1 ✓ |
-| `frontend/src/{components,features/health,services,test}/` | Faz 1 ✓ |
-| `frontend/src/features/{map,layers,search,drawing,analysis}/`, `frontend/tests/` | Faz 2+ (planlanan) |
-| `data/{raw,samples,test-fixtures}/`, `scripts/import/`, `scripts/sql/` | Faz 2 (planlanan) |
-| `docker-compose.yml`, `.env.example`, `.github/workflows/ci.yml`, `global.json` | Faz 1 ✓ |
+| `frontend/src/{components,features/{health,map,layers},services,test}/` | Faz 1-2 ✓ |
+| `frontend/src/features/{search,drawing,analysis}/`, `frontend/tests/` | Faz 3+ (planlanan) |
+| `scripts/import/` (fetch/load OSM), `data/samples/osm-bursa/` (gerçek), `data/test-fixtures/` (SENTETİK) | Faz 2 ✓ |
+| `backend/GeoScope.Infrastructure/Persistence/Migrations/`, `docker/db/` (rol script'leri) | Faz 2 ✓ |
+| `docker-compose.yml` (db, migrate, api, web, import[tools]), `.env.example`, `.github/workflows/ci.yml` | Faz 1-2 ✓ |
 
-Faz 1 belgeleri: ARCHITECTURE, ROADMAP, TEST-PLAN, README. Diğerleri (DATABASE, API-CONTRACT,
-DATA-SOURCES, DELIVERY-CHECKLIST) ilgili fazın başında oluşturulur (master prompt §22).
+Belgeler: ARCHITECTURE, ROADMAP, TEST-PLAN, DATABASE, API-CONTRACT, DATA-SOURCES, README.
+DELIVERY-CHECKLIST Faz 8'de oluşturulur (master prompt §22).
 
 ## Komutlar (çalışan)
 ```bash
@@ -41,10 +42,13 @@ node scripts/hooks/validate-changed-files.mjs --file <yol>   # tek dosya elle
 dotnet build backend                          # .NET 9 (global.json 9.0.320)
 dotnet test backend                           # Docker gerekli: Testcontainers postgis/postgis:17-3.5
 npm --prefix frontend run typecheck           # ayrıca: lint | test | build | dev
-docker compose up --build -d                  # web :8080, api :5080, db :5432 (yalnız 127.0.0.1)
+docker compose up --build -d                  # db → migrate → api → web :8080 (yalnız 127.0.0.1)
+docker compose --profile tools run --rm import   # gerçek OSM snapshot'ını yükler (idempotent)
+npm run import:fetch                          # Overpass'tan yeni snapshot (ağ; adil kullanım)
+dotnet tool run dotnet-ef migrations add <Ad> --project backend/GeoScope.Infrastructure --startup-project backend/GeoScope.Infrastructure --output-dir Persistence/Migrations
 ```
-Elle geliştirme: `docker compose up -d db`, `dotnet run --project backend/GeoScope.Api` (5080),
-`npm --prefix frontend run dev` (5173, /api → 5080).
+Elle geliştirme: `docker compose up -d db migrate`, `dotnet run --project backend/GeoScope.Api` (5080, `geoscope_app` rolü),
+`npm --prefix frontend run dev` (5173, /api → 5080). DB rolleri: `docs/DATABASE.md`.
 
 ## Bağımlılık yönleri
 `Domain` ← `Application` ← `Infrastructure`; `Api` → Application (+ Infrastructure yalnız DI). Frontend DB'ye bağlanmaz.

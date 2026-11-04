@@ -26,6 +26,10 @@ Kurallar: `.claude/rules/testing.md`. Bu belge mevcut testleri ve komutları kay
 | `…Unknown_api_route_returns_problem_details` | API | 404 `application/problem+json` |
 | `LayerDependencyTests` (3) | Mimari | Katman referans yönleri |
 | `SystemStatus.test.tsx` (3) | Frontend | Hazır, 503 ve ağ hatası + tekrar dene durumları |
+| `MigrationTests` (13) — Faz 2 | Entegrasyon | Tekrar migration no-op; kolon typmod'ları (4326); GiST + geography indeksi; CHECK'lerin kendini kesen/Multi*/boş geometriyi ve yanlış SRID'yi reddi; Point/LineString/Polygon kabulü |
+| `ImportPipelineTests` (4) — Faz 2 | Entegrasyon (Node import + PostGIS) | Halka birleşimi + delik; delikteki nokta kapsanmaz; temsilî nokta alan içinde; tür eşleme; kalite raporu sayıları; idempotent tekrar import (updated_at değişmez); override korunur + silinen kayıt işaretlenir; bozuk checksum reddi ve veri değişmemesi |
+| `SourceLayerApiTests` (14) — Faz 2 | API + PostGIS | RFC 7946 şekli, `crs` yok, [boylam, enlem]; silinmiş kayıt dönmez; bbox gerçek kesişim (delikteki kutu ilçeyi döndürmez); sayfalama hasMore + stabil sıra; bbox/limit/offset doğrulama 400 + traceId; OpenAPI geometri şeması |
+| `LayerSummary.test.tsx` (3) — Faz 2 | Frontend | Sayılar + atıf; sayfa sınırı aşımında uyarı; hata + tekrar dene |
 | `scripts/hooks/tests` (20) | Araç | Hook davranışı |
 
 ## Manuel / tarayıcı doğrulamaları
@@ -37,6 +41,12 @@ Kurallar: `.claude/rules/testing.md`. Bu belge mevcut testleri ve komutları kay
 ## Performans bütçesi (ölçülmedi)
 Öneri: 10.000 tesis ile liste/arama p95 <500 ms, temel analiz p95 <1 s (PDF şartı değil). Faz 7'de donanım, veri sayısı, soğuk/sıcak, p50/p95 ve payload ile ölçülecek.
 
+| 2026-11-04 | Playwright CLI, Faz 2 harita (compose) | 17 ilçe + 911 tesis çizildi, OSM altlığıyla hizalı, tuval 960×651, konsol hatası 0; `docs/screenshots/faz2-map.png` |
+| 2026-11-04 | Temiz kurulum: ayrı Compose projesi + yeni volume | rol + migration + container import 17/911, API 200 |
+
+Test verisi ayrımı: gerçek veri `data/samples/osm-bursa/`, sentetik fixture `data/test-fixtures/osm-mini/` (README'de etiketli).
+
 ## Bilinen eksikler
-- CI iş akışı (`.github/workflows/ci.yml`) yazıldı; uzak depo olmadığı için GitHub'da çalıştırılmadı.
-- Spatial doğruluk, migration, import ve E2E testleri ilgili fazlarda eklenecek.
+- CI: Faz 1 GitHub Actions çalışması yeşil (4/4). Faz 2 değişiklikleri henüz push edilmedi.
+- Mobil yerleşim tarayıcıda denenmedi. Kalıcı Playwright E2E testleri Faz 3'te eklenecek.
+- Analiz doğruluk testleri Faz 5-6'da eklenecek.

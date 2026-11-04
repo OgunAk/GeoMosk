@@ -1,16 +1,21 @@
 using GeoScope.Api.Health;
+using GeoScope.Api.OpenApi;
+using GeoScope.Application.Features;
 using GeoScope.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using NetTopologySuite.IO.Converters;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("GeoScope")
     ?? throw new InvalidOperationException("ConnectionStrings:GeoScope yapılandırılmamış (ortam değişkeni: ConnectionStrings__GeoScope).");
 builder.Services.AddInfrastructure(connectionString);
+builder.Services.Configure<FeatureListOptions>(builder.Configuration.GetSection(FeatureListOptions.SectionName));
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new GeoJsonConverterFactory()));
 builder.Services.AddProblemDetails();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(o => o.AddSchemaTransformer<GeometrySchemaTransformer>());
 builder.Services.AddHealthChecks()
     .AddCheck<PostGisHealthCheck>("postgis", tags: ["ready"]);
 

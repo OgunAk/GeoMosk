@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "note": "SENTETİK TEST VERİSİ — gerçek yer/tesis değildir; yalnızca import testleri için.",
+  "snapshotId": "fixture-v2",
+  "files": {
+    "districts": {
+      "file": "districts.json",
+      "query": "synthetic",
+      "osmBase": "2026-01-01T00:00:00Z",
+      "sha256": "f18d8c04a8709d32ee6752c1f9fa5070211c04a99bbc464f29b5d5f60f937c51",
+      "elements": 2
+    },
+    "facilities": {
+      "file": "facilities.json",
+      "query": "synthetic",
+      "osmBase": "2026-02-01T00:00:00Z",
+      "sha256": "2ced7a55988846b1abe7dc93e94f29f99b46319d62a9f69c9d6434a9a51fa0c6",
+      "elements": 5
+    }
+  }
+}

@@ -16,7 +16,8 @@ export function AppLayout({ sidePanel, children }: AppLayoutProps) {
         <aside className="w-full shrink-0 space-y-4 overflow-y-auto border-slate-200 p-4 md:w-80 md:border-r">
           {sidePanel}
         </aside>
-        <main className="min-h-0 flex-1">{children}</main>
+        {/* Harita mutlak konumla main'i doldurur; mobil (dikey) yerleşimde en az 60vh. */}
+        <main className="relative min-h-[60vh] flex-1 md:min-h-0">{children}</main>
       </div>
     </div>
   )

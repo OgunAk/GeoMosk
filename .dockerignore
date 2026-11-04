@@ -1,0 +1,5 @@
+# Kök bağlam yalnızca import aracı imajı için kullanılır.
+**
+!package.json
+!package-lock.json
+!scripts/import/**

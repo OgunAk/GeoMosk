@@ -1,0 +1,79 @@
+{
+ "version": 0.6,
+ "generator": "GeoScope synthetic fixture",
+ "osm3s": {
+  "timestamp_osm_base": "2026-02-01T00:00:00Z"
+ },
+ "elements": [
+  {
+   "type": "node",
+   "id": 10,
+   "lat": 40.02,
+   "lon": 29.02,
+   "tags": {
+    "amenity": "hospital",
+    "name": "Sentetik Devlet Hastanesi"
+   }
+  },
+  {
+   "type": "node",
+   "id": 11,
+   "lat": 40.05,
+   "lon": 29.05,
+   "tags": {
+    "amenity": "pharmacy",
+    "name": "Delikteki Eczane"
+   }
+  },
+  {
+   "type": "node",
+   "id": 12,
+   "lat": 40.05,
+   "lon": 29.1,
+   "tags": {
+    "amenity": "clinic",
+    "name": "Sınırdaki Klinik"
+   }
+  },
+  {
+   "type": "node",
+   "id": 15,
+   "lat": 40.0202,
+   "lon": 29.0203,
+   "tags": {
+    "amenity": "hospital",
+    "name": "Sentetik Hastanesi"
+   }
+  },
+  {
+   "type": "way",
+   "id": 20,
+   "tags": {
+    "amenity": "clinic",
+    "name": "Alan Klinik"
+   },
+   "geometry": [
+    {
+     "lat": 40.05,
+     "lon": 29.15
+    },
+    {
+     "lat": 40.05,
+     "lon": 29.152
+    },
+    {
+     "lat": 40.052,
+     "lon": 29.152
+    },
+    {
+     "lat": 40.052,
+     "lon": 29.15
+    },
+    {
+     "lat": 40.05,
+     "lon": 29.15
+    }
+   ]
+  }
+ ]
+}

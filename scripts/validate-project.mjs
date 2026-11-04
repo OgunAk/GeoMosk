@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -43,8 +44,18 @@ const PHASES = [
       { name: 'docker compose config', cmd: 'docker', args: ['compose', 'config', '--quiet'] },
     ],
   },
-  { phase: 2, title: 'Gerçek veri dikey dilimi', files: ['docs/DATA-SOURCES.md', 'docs/DATABASE.md', 'scripts/import', 'backend/GeoScope.Infrastructure/Migrations'] },
-  { phase: 3, title: 'Katman, arama ve API', files: ['docs/API-CONTRACT.md', 'frontend/src/features/layers', 'frontend/src/features/search'] },
+  {
+    phase: 2,
+    title: 'Gerçek veri dikey dilimi',
+    files: [
+      'docs/DATA-SOURCES.md', 'docs/DATABASE.md', 'docs/API-CONTRACT.md',
+      'scripts/import/fetch-osm.mjs', 'scripts/import/load-osm.mjs', 'data/raw/osm-bursa.manifest.json',
+      'data/test-fixtures/osm-mini/v1/manifest.json', 'backend/GeoScope.Infrastructure/Persistence/Migrations',
+      'docker/db/sql/app-role.sql', 'frontend/src/features/map/MapView.tsx',
+    ],
+    checks: [checkSampleSnapshot],
+  },
+  { phase: 3, title: 'Katman, arama ve API', files: ['frontend/src/features/search'] },
   { phase: 4, title: 'Çizim ve CRUD', files: ['frontend/src/features/drawing', 'docs/DEVELOPER-REVIEW.md'] },
   { phase: 5, title: 'Üç MVP analizi', files: ['frontend/src/features/analysis', 'docs/TEST-PLAN.md'] },
   { phase: 6, title: 'Güçlü teslim analizleri', files: [] },
@@ -77,6 +88,23 @@ function run({ cmd, args }) {
   const errorLines = lines.filter((l) => /^(ERROR|✖|not ok)|error/i.test(l.trim()));
   const tail = (errorLines.length ? errorLines.slice(0, 10) : lines.slice(-6)).join('\n');
   return { status: r.error ? `başlatılamadı (${r.error.code})` : r.status, ms: Date.now() - started, tail };
+}
+
+// Depodaki gerçek veri örneğinin checksum'ı manifestle uyuşmalı (import aynı kontrolü yapar).
+export function checkSampleSnapshot() {
+  const problems = [];
+  const base = path.join(root, 'data', 'samples', 'osm-bursa');
+  const ids = fs.existsSync(base) ? fs.readdirSync(base).filter((d) => fs.existsSync(path.join(base, d, 'manifest.json'))) : [];
+  if (!ids.length) return ['data/samples/osm-bursa altında manifest\'li snapshot yok'];
+  for (const id of ids) {
+    const manifest = JSON.parse(fs.readFileSync(path.join(base, id, 'manifest.json'), 'utf8'));
+    if (manifest.synthetic) problems.push(`${id}: samples altındaki veri sentetik olamaz`);
+    for (const [name, meta] of Object.entries(manifest.files ?? {})) {
+      const sha = crypto.createHash('sha256').update(fs.readFileSync(path.join(base, id, meta.file))).digest('hex');
+      if (sha !== meta.sha256) problems.push(`${id}/${name}: checksum uyuşmuyor`);
+    }
+  }
+  return problems;
 }
 
 export function checkRequirementsMatrix() {

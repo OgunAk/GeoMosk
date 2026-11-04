@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Entity'ler Faz 2'de eklenir; Domain hiçbir katmana bağımlı değildir. -->
+  <!-- ADR-0002: NTS geometri tipleri Domain'de doğrudan kullanılır; HTTP/EF ayrıntısı yoktur. -->
+  <ItemGroup>
+    <PackageReference Include="NetTopologySuite" />
+  </ItemGroup>
 
 </Project>

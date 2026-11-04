@@ -1,3 +1,6 @@
+using GeoScope.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace GeoScope.Tests.Infrastructure;
@@ -18,6 +21,31 @@ public sealed class PostGisContainerFixture : IAsyncLifetime
     public Task InitializeAsync() => _container.StartAsync();
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
+
+    /// <summary>Test sınıfına özel, migration'ları uygulanmış yeni bir veritabanı oluşturur (testler birbirini etkilemez).</summary>
+    public async Task<string> CreateMigratedDatabaseAsync(string prefix)
+    {
+        // xUnit her test için sınıfı yeniden oluşturur; ad benzersiz olmalı.
+        var name = $"{prefix}_{Guid.NewGuid():N}"[..Math.Min(prefix.Length + 9, 63)];
+        await using (var admin = new NpgsqlConnection(ConnectionString))
+        {
+            await admin.OpenAsync();
+            await using var cmd = new NpgsqlCommand($"CREATE DATABASE \"{name}\"", admin);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        var connectionString = new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name }.ConnectionString;
+        await using var db = CreateDbContext(connectionString);
+        await db.Database.MigrateAsync();
+        return connectionString;
+    }
+
+    public static GeoScopeDbContext CreateDbContext(string connectionString)
+    {
+        var options = new DbContextOptionsBuilder<GeoScopeDbContext>();
+        GeoScope.Infrastructure.DependencyInjection.ConfigureDbContext(options, connectionString);
+        return new GeoScopeDbContext(options.Options);
+    }
 }
 
 [CollectionDefinition(Name)]

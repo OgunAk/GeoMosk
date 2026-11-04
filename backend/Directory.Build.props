@@ -4,6 +4,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Assembly sürüm çakışması (MSB3277) derleyici uyarısı değildir; açıkça hataya çevrilir. -->
+    <MSBuildWarningsAsErrors>MSB3277</MSBuildWarningsAsErrors>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 </Project>

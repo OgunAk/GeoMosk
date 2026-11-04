@@ -30,6 +30,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      # Import entegrasyon testleri scripts/import/load-osm.mjs'i (Node + pg) gerçek PostGIS'e karşı çalıştırır.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
       - run: dotnet restore backend
       - run: dotnet build backend --no-restore --nologo
       - run: dotnet test backend --no-build --nologo --logger "trx;LogFileName=results.trx"
