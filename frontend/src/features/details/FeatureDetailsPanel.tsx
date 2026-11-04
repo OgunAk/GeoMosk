@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import type { SourceFeatureDetail } from '../../services/sourceLayers'
-import type { Selection } from '../map/MapView'
 import { FACILITY_LABELS } from '../map/mapStyle'
 import { displayName } from '../search/displayName'
 import { FeatureEditor } from './FeatureEditor'
-import type { DetailState } from './useFeatureDetail'
+import type { DetailState, SourceSelection } from './useFeatureDetail'
 
 interface FeatureDetailsPanelProps {
-  selection: Selection
+  selection: SourceSelection
   state: DetailState
   onClose: () => void
   onReload: () => void
@@ -69,7 +68,7 @@ function Details({
   onZoom,
   onSaved,
 }: {
-  selection: Selection
+  selection: SourceSelection
   feature: SourceFeatureDetail
   etag: string
   editing: boolean

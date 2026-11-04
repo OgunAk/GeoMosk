@@ -23,8 +23,8 @@ MapLibre haritası, katman/altlık, arama, sözel düzenleme, kullanıcı çizim
 | `scripts/verify-agent-setup.mjs`, `scripts/validate-project.mjs`, `scripts/hooks/` | Faz 0 ✓ |
 | `docs/` REQUIREMENTS, PROGRESS, DECISIONS, DEVELOPER-REVIEW, FILE-MANIFEST, AI-TOOLS | Faz 0 ✓ |
 | `backend/GeoScope.{Domain,Application,Infrastructure,Api,Tests}/`, `Directory.Packages.props` | Faz 1 ✓ |
-| `frontend/src/{components,hooks,services,test}/`, `features/{health,map,layers,search,details}/`, `frontend/tests/e2e/` | Faz 1-3 ✓ |
-| `frontend/src/features/{drawing,analysis}/` | Faz 4+ (planlanan) |
+| `frontend/src/{components,hooks,services,test}/`, `features/{health,map,layers,search,details,drawing,analysis}/`, `frontend/tests/e2e/` | Faz 1-5 ✓ |
+| `backend/GeoScope.{Application,Infrastructure}/Analysis/`, `scripts/sql/analysis-plans.*` | Faz 5 ✓ (A04/A05 Faz 6) |
 | `scripts/import/` (fetch/load OSM), `data/samples/osm-bursa/` (gerçek), `data/test-fixtures/` (SENTETİK) | Faz 2 ✓ |
 | `backend/GeoScope.Infrastructure/Persistence/Migrations/`, `docker/db/` (rol script'leri) | Faz 2 ✓ |
 | `docker-compose.yml` (db, migrate, api, web, import[tools]), `.env.example`, `.github/workflows/ci.yml` | Faz 1-2 ✓ |

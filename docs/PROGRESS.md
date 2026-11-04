@@ -1,12 +1,81 @@
 # GeoScope — İlerleme kaydı
 
 ## Kısa durum (4 Kasım 2026)
-- **Son doğrulanan faz:** Faz 3 — Katman, arama ve API (`validate-project --phase 3` exit 0).
-- **Git:** `master` = Faz 0-1 (GitHub). Faz 2 `faz-2-veri` dalında commit'li (09392ec, push edilmedi). Faz 3 `faz-3-katman-arama` dalında, henüz commit edilmedi.
-- **Çalışan ortam:** compose db/migrate/api/web ayakta; volume `geoscope_geoscope-db` gerçek veriyle dolu (17 ilçe, 911 tesis). E2E testleri bu ortama karşı koşar.
-- **Sonraki adım:** Faz 4 — Terra Draw (P04) erken deneyi; `/api/features` CRUD (C02-C04); kullanıcı katmanı; ardından **geliştirici kontrol noktası 2** (docs/DEVELOPER-REVIEW.md).
-- **Faz 7'ye taşınan notlar:** MapLibre paketi 500 KB üstü (kod bölme); ilçe GeoJSON tam çözünürlükte (gzip 115 KB); arama için trigram indeksi ölçümü; bbox yüklemesi (ADR-0010).
-- **İlgili master prompt bölümleri:** §9 (API), §12 (çizim/CRUD), §8 (GeoJSON doğrulama).
+- **Son doğrulanan faz:** Faz 5 — Üç MVP analizi (`validate-project --phase 5` exit 0, E2E yerel sunuculara karşı). MVP gereksinimleri (A00-A03) tamam.
+- **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. **Bekleyen:** geliştiricinin kendi değişikliği ("ad en az 3 karakter") — kodda henüz yok; AI dokunmuyor.
+- **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
+- **Git:** `master` = Faz 0-3 (GitHub). Faz 4 + Faz 5 `faz-4-cizim-crud` dalında, henüz commit edilmedi.
+- **Çalışan ortam:** compose `db` ayakta (gerçek veri). Compose `api`/`web` durdurulmuş (Docker Desktop container ağı sorunu); API `dotnet run` (5080) + Vite (5173) yerelde.
+- **Sonraki adım:** Faz 6 — A04 metrik SRID ölçümü (EPSG:32635 adaylığı extent ile doğrulanacak), A05 ilçe başına tesis sayısı (tekil atama) + choropleth.
+- **Faz 7'ye taşınan notlar:** MapLibre + Terra Draw paketi 500 KB üstü (kod bölme); ilçe GeoJSON tam çözünürlükte (gzip 115 KB); arama için trigram indeksi ölçümü; bbox yüklemesi (ADR-0010); mobil ve yalnız klavye ile çizim; nearest büyük veride KNN + kesin yeniden sıralama (ADR-0012).
+- **İlgili master prompt bölümleri:** §10 A04-A05, §8.7-8.8 (metrik SRID), §8.9 (tekil atama).
+
+## Faz 5 raporu
+
+```text
+Faz: 5 — Üç MVP analizi
+Durum: doğrulandı
+Karşılanan gereksinimler: A00, A01, A02, A03 doğrulandı; Q02, Q03 devam ediyor (A04 ve ölçüm Faz 6-7).
+Oluşturulan/değişen dosyalar:
+  backend: Application/Analysis (AnalysisRequests: girdi/limit doğrulama, IAnalysisService), Infrastructure/Analysis/AnalysisService
+    (ST_Covers/ST_Within, ST_DWithin + ST_Distance geography, ST_Buffer geography; parametreli ADO.NET), Api/Controllers/AnalysisController;
+    SourceFeatureQueries.FacilityRow internal (aynı tesis özellikleri)
+  backend testleri: Analysis/GeodesicReference (bağımsız WGS84 yay formülleri), Analysis/AnalysisApiTests (17)
+  frontend: services/analysis.ts (+formatDistance), features/analysis/AnalysisPanel (girdi, sonuç listesi), MapView (analiz kaynağı/katmanları,
+    kuş uçuşu bağlantılar, nokta seçme modu), App (analiz için alan çizme kayıt formuna gitmez), layerIds/mapStyle
+  frontend testleri: AnalysisPanel.test.tsx (7); tests/e2e/analysis.spec.ts (4); map.spec katman sayısı 16
+  scripts/sql/analysis-plans.sql + analysis-plans.2026-11-04.txt (EXPLAIN ANALYZE BUFFERS)
+  docs: API-CONTRACT (analizler), DECISIONS ADR-0012
+Çalıştırılan komutlar ve sonuç/exit code:
+  dotnet test backend → 120/120 (ilk koşuda 16/17; başarısız olan test verimdeydi: kare 29.295'ten başlıyordu, "Batı 0.01" 29.29'da gerçekten dışarıda — API doğruydu)
+  Ara bulgu: dotnet run süreci derleme çıktısını kilitledi (MSB3027) → API durdurulup yeniden başlatıldı
+  npm --prefix frontend run typecheck / lint / test (40/40) → exit 0 (lint: ref'in hook'tan sonra tanımlanması → en üste taşındı)
+  E2E (E2E_BASE_URL=http://127.0.0.1:5173) → 15/15 (analysis 4 + drawing 4 + map 7)
+  EXPLAIN: ilk koşu geçersizdi (PowerShell betiği yanlış kodlamayla okudu, 'Nilüfer' eşleşmedi, 0 satır) → OSM id ile ve bash üzerinden yeniden alındı
+  node scripts/validate-project.mjs --phase 5 (E2E_BASE_URL=http://127.0.0.1:5173) → GEÇTİ, exit 0
+Veri/CRS/analiz kanıtları:
+  Mesafeler bağımsız referansla ±5 cm; 0.02° boylam ≈ 1705 m (tampon içi) / 0.02° enlem ≈ 2221 m (tampon dışı) aynı testte;
+  1990 m içeride, 2010 m dışarıda; tampon çokgeni alanı ≥ %99 πr²; eşit mesafede id bağ kırıcı; delik/sınır/MultiPolygon;
+  gerçek veri: Nilüfer içinde 120 tesis = /api/facilities?districtId sonucu (aynı ST_Covers politikası).
+İnceleme bulguları ve çözümleri: yukarıda. Alt ajan incelemesi yapılmadı.
+Çalıştırılamayan kontroller ve nedeni: üretim imajıyla E2E ve CI (push yok, Docker ağı).
+Kalan risk/engel: nearest büyük veride tam tarama (ölçülecek); Docker Desktop ağı.
+Sonraki somut adım: Faz 6.
+```
+
+## Faz 4 raporu
+
+```text
+Faz: 4 — Çizim ve CRUD
+Durum: doğrulandı (teknik kapı); geliştirici kontrol noktası 2 bekliyor
+Karşılanan gereksinimler: C02, C03, C04, P04 doğrulandı.
+Oluşturulan/değişen dosyalar:
+  backend: Application/UserFeatures (UserGeometryParser, UserFeatureRequests, IUserFeatureStore),
+    Infrastructure/Features/UserFeatureStore, Api/Controllers/UserFeaturesController; GeoJsonFeature.Id → object (UUID)
+  backend testleri: UserFeatureApiTests (36 durum)
+  frontend: terra-draw 1.38.0 + adaptör 1.5.0; features/drawing (useTerraDraw, useUserFeatures, DrawingToolbar,
+    CreateFeatureForm, UserFeaturePanel); MapView (kullanıcı katmanı, çizim, ±5 px tıklama toleransı); LayerPanel
+    (kullanıcı katmanı anahtarı); services/userFeatures; App bağlantıları
+  frontend testleri: CreateFeatureForm 5, UserFeaturePanel 4, LayerPanel +1 (Vitest 28/28); tests/e2e/drawing.spec.ts 4
+  docs: API-CONTRACT (kullanıcı çizimleri), DECISIONS ADR-0011, DEVELOPER-REVIEW (deneme rehberi)
+Çalıştırılan komutlar ve sonuç/exit code:
+  dotnet test backend → 103/103 (36 yeni test ilk koşuda geçti)
+  npm --prefix frontend run typecheck / lint / test (28/28) → exit 0. Lint bulguları: useTerraDraw'da render sırasında
+    ref okuma ve cleanup'ta ref.current; düzeltme sırasında gerçek hata bulundu: cleanup altlık değişiminden önce saklanan
+    taslağı siliyordu → örneğe özgü durdurma bayrağıyla düzeltildi
+  E2E (E2E_BASE_URL=http://127.0.0.1:5173; API dotnet run + Vite) → 9/9 (drawing 4 + map 5). Bulgular:
+    ince çizgiye tıklama altındaki ilçeyi seçiyordu → ±5 px tolerans + açık katman önceliği;
+    test kurgusu: zoom/koordinatlar harita dışına düşüyordu, kullanıcı katmanı yüklenmeden tıklama, "Düzenle" tam eşleşme
+  docker compose build api web → BAŞARISIZ (Docker Desktop ağı: auth.docker.io DNS, ardından container içinde npm ci ağ hatası).
+    Kod hatası değil; üretim imajı bu oturumda doğrulanamadı, push sonrası CI e2e işi doğrulayacak.
+  node scripts/validate-project.mjs --phase 4 (E2E_BASE_URL=http://127.0.0.1:5173) → GEÇTİ, exit 0
+Veri/CRS/analiz kanıtları: kaydedilen noktanın ST_X/ST_Y'si girilen [boylam, enlem] ile aynı (API testi + E2E ±0.001°);
+  ters sıra [40.19, 29.06] → 422 çalışma alanı mesajı.
+İnceleme bulguları ve çözümleri: yukarıda. Alt ajan incelemesi yapılmadı.
+Çalıştırılamayan kontroller ve nedeni: Compose üretim imajıyla E2E (Docker ağı); mobil/klavye ile çizim; CI (push yok).
+Kalan risk/engel: Docker Desktop ağ sorunu (kullanıcı ortamı). Terra Draw köşe silme/ara nokta ekleme E2E'de ayrıca denenmedi.
+Sonraki somut adım: geliştirici denemesi ve seçilen küçük değişiklik; ardından Faz 5.
+```
 
 ## Faz 3 raporu
 
@@ -179,4 +248,6 @@ Sonraki somut adım: Docker Desktop'ı başlat → Faz 1 iskeleti.
 | 1 | doğrulandı (CI uzakta çalışmadı) | 2026-11-04 | Faz 1 raporu |
 | 2 | doğrulandı | 2026-11-04 | Faz 2 raporu |
 | 3 | doğrulandı | 2026-11-04 | Faz 3 raporu |
-| 4 | bekliyor | — | — |
+| 4 | doğrulandı (geliştirici kontrolü bekliyor) | 2026-11-04 | Faz 4 raporu |
+| 5 | doğrulandı | 2026-11-04 | Faz 5 raporu |
+| 6 | bekliyor | — | — |

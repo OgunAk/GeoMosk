@@ -11,15 +11,30 @@ import {
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './maplibreSetup'
 import { useEffect, useRef, useState } from 'react'
-import type { SourceLayerId } from '../../services/sourceLayers'
+import type { FacilityType, SourceLayerId } from '../../services/sourceLayers'
+import type { UserFeatureCollection } from '../../services/userFeatures'
+import { useTerraDraw, type DrawCallbacks, type DrawRequest } from '../drawing/useTerraDraw'
+import type { UserFeaturesState } from '../drawing/useUserFeatures'
 import type { SourceLayersState } from './useSourceLayers'
+import { useMiddleMousePan } from './useMiddleMousePan'
 import type { Bbox } from './geometry'
-import { BURSA_CENTER, CLICKABLE_LAYERS, INITIAL_ZOOM, LAYER_IDS, OVERLAY_GROUPS, SOURCE_IDS } from './layerIds'
-import { BASEMAPS, HIGHLIGHT_COLOR, SELECTED_COLOR, facilityColorExpression, type BasemapId } from './mapStyle'
+import {
+  BURSA_CENTER,
+  CLICKABLE_LAYERS,
+  INITIAL_ZOOM,
+  LAYER_IDS,
+  LAYER_OF_RENDERING,
+  OVERLAY_GROUPS,
+  SOURCE_IDS,
+  type LayerKey,
+} from './layerIds'
+import { ANALYSIS_COLOR, BASEMAPS, HIGHLIGHT_COLOR, SELECTED_COLOR, USER_COLOR, facilityColorExpression, type BasemapId } from './mapStyle'
+import type { AnalysisResponse } from '../../services/analysis'
 
 export interface Selection {
-  layer: SourceLayerId
-  id: number
+  layer: LayerKey
+  /** Kaynak katmanlarda sayı, kullanıcı çizimlerinde UUID metni. */
+  id: number | string
 }
 
 export interface FocusRequest {
@@ -30,13 +45,29 @@ export interface FocusRequest {
 
 interface MapViewProps {
   layers: SourceLayersState
+  userFeatures: UserFeaturesState
   basemap: BasemapId
-  visibility: Record<SourceLayerId, boolean>
+  visibility: Record<LayerKey, boolean>
   selection: Selection | null
   highlight: Record<SourceLayerId, number[]>
   focus: FocusRequest | null
+  draw: DrawRequest
+  drawCallbacks: DrawCallbacks
+  /** Artınca açık çizgi/alan çizimi bitirilir ("Çizimi bitir" düğmesi). */
+  finishSignal: number
+  /** Haritada gösterilen tesis türleri (lejant filtresi). */
+  facilityTypes: FacilityType[]
+  /** Son analiz sonucu: girdi geometrisi + eşleşen tesisler. */
+  analysis: AnalysisResponse | null
+  /** true iken harita tıklaması seçim yerine nokta verir (en yakın N). */
+  pickingPoint: boolean
+  onPickPoint: (lngLat: [number, number]) => void
+  /** Geometrisi düzenlenen kullanıcı çizimi: kayıtlı hali gizlenir, taslakla üst üste görünmez. */
+  editingId: string | null
   onSelect: (selection: Selection | null) => void
 }
+
+const HIT_TOLERANCE_PX = 5
 
 declare global {
   interface Window {
@@ -45,18 +76,28 @@ declare global {
   }
 }
 
-export function MapView({ layers, basemap, visibility, selection, highlight, focus, onSelect }: MapViewProps) {
+export function MapView(props: MapViewProps) {
+  const { layers, userFeatures, basemap, visibility, selection, highlight, focus, draw, drawCallbacks, finishSignal, facilityTypes, editingId, onSelect } =
+    props
+  const { analysis, pickingPoint, onPickPoint } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const appliedBasemap = useRef<BasemapId>(basemap)
   const onSelectRef = useRef(onSelect)
+  const drawingRef = useRef(false)
   // Her style.load'da artar: altlık değişince kaynak/katmanlar bu sayaçla yeniden kurulur.
   const [styleRevision, setStyleRevision] = useState(0)
   const [basemapError, setBasemapError] = useState(false)
 
+  const suspendDraw = useTerraDraw(mapRef, styleRevision, draw, drawCallbacks, finishSignal)
+
+  const pickRef = useRef<((lngLat: [number, number]) => void) | null>(null)
+
   useEffect(() => {
     onSelectRef.current = onSelect
-  }, [onSelect])
+    drawingRef.current = draw.kind !== 'off'
+    pickRef.current = pickingPoint ? onPickPoint : null
+  })
 
   // Harita örneği tekil: StrictMode çift mount'unda cleanup önceki örneği kaldırır.
   useEffect(() => {
@@ -77,19 +118,36 @@ export function MapView({ layers, basemap, visibility, selection, highlight, foc
     }
     const onError = (e: ErrorEvent & { sourceId?: string }) => {
       // Yalnızca altlık hataları kullanıcıya gösterilir; veri katmanları API'den gelir.
-      if (e.sourceId && e.sourceId !== SOURCE_IDS.districts && e.sourceId !== SOURCE_IDS.facilities) setBasemapError(true)
+      const ours = Object.values(SOURCE_IDS).filter((id) => id !== SOURCE_IDS.basemap) as string[]
+      if (e.sourceId && !ours.includes(e.sourceId) && !e.sourceId.startsWith('td')) setBasemapError(true)
+    }
+    const hitAt = (e: MapMouseEvent) => {
+      const available = CLICKABLE_LAYERS.filter((id) => map.getLayer(id))
+      if (!available.length) return undefined
+      // İnce çizgi ve küçük noktalar için ±5 px tolerans; aday çoksa CLICKABLE_LAYERS önceliği (kullanıcı > tesis > ilçe).
+      const { x, y } = e.point
+      const hits = map.queryRenderedFeatures([[x - HIT_TOLERANCE_PX, y - HIT_TOLERANCE_PX], [x + HIT_TOLERANCE_PX, y + HIT_TOLERANCE_PX]], {
+        layers: [...available],
+      })
+      for (const layerId of available) {
+        const hit = hits.find((h) => h.layer.id === layerId)
+        if (hit) return hit
+      }
+      return undefined
     }
     const onClick = (e: MapMouseEvent) => {
-      const available = CLICKABLE_LAYERS.filter((id) => map.getLayer(id))
-      const hit = available.length ? map.queryRenderedFeatures(e.point, { layers: [...available] })[0] : undefined
-      if (!hit || hit.id === undefined) return onSelectRef.current(null)
-      const layer: SourceLayerId = hit.layer.id === LAYER_IDS.facilities ? 'facilities' : 'districts'
-      onSelectRef.current({ layer, id: Number(hit.id) })
+      if (drawingRef.current) return // çizim/düzenleme sırasında tıklama seçim yapmaz
+      if (pickRef.current) return pickRef.current([e.lngLat.lng, e.lngLat.lat]) // en yakın N için nokta seçimi
+      const hit = hitAt(e)
+      if (!hit) return onSelectRef.current(null)
+      const layer = LAYER_OF_RENDERING[hit.layer.id]
+      const id = layer === 'user-features' ? (hit.properties.featureId as string) : hit.id
+      if (id === undefined) return
+      onSelectRef.current({ layer, id: layer === 'user-features' ? String(id) : Number(id) })
     }
     const onMove = (e: MapMouseEvent) => {
-      const available = CLICKABLE_LAYERS.filter((id) => map.getLayer(id))
-      const over = available.length > 0 && map.queryRenderedFeatures(e.point, { layers: [...available] }).length > 0
-      map.getCanvas().style.cursor = over ? 'pointer' : ''
+      if (drawingRef.current) return
+      map.getCanvas().style.cursor = pickRef.current ? 'crosshair' : hitAt(e) ? 'pointer' : ''
     }
 
     map.on('style.load', onStyleLoad)
@@ -109,35 +167,72 @@ export function MapView({ layers, basemap, visibility, selection, highlight, foc
     }
   }, [])
 
-  // Altlık değişimi: stil tamamen değişir; diff kapalı, katmanlar style.load sonrası yeniden kurulur.
+  // Harita oluşturma efektinden sonra: orta tuşla sürükleyerek kaydırma.
+  useMiddleMousePan(mapRef)
+
+  // Altlık değişimi: çizim taslağı saklanır, stil tamamen değişir (diff kapalı), katmanlar style.load sonrası yeniden kurulur.
   useEffect(() => {
     const map = mapRef.current
     if (!map || appliedBasemap.current === basemap) return
     appliedBasemap.current = basemap
+    suspendDraw()
     map.setStyle(BASEMAPS[basemap].style, { diff: false })
-  }, [basemap])
+  }, [basemap, suspendDraw])
 
-  // Veri kaynakları ve katmanlar (idempotent): kaynak varsa yalnızca veri güncellenir.
+  // Kaynak katman verisi ve katmanlar (idempotent): kaynak varsa yalnızca veri güncellenir.
   useEffect(() => {
     const map = mapRef.current
     if (!map || styleRevision === 0 || layers.kind !== 'loaded') return
     upsertGeoJson(map, SOURCE_IDS.districts, layers.districts)
     upsertGeoJson(map, SOURCE_IDS.facilities, layers.facilities)
-    ensureOverlayLayers(map)
+    ensureSourceLayers(map)
   }, [styleRevision, layers])
 
-  // Görünürlük, vurgu ve seçim: her stil yenilemesinden sonra da yeniden uygulanır.
   useEffect(() => {
     const map = mapRef.current
-    if (!map || styleRevision === 0 || layers.kind !== 'loaded' || !map.getLayer(LAYER_IDS.facilities)) return
-    for (const layer of ['districts', 'facilities'] as const) {
-      for (const id of OVERLAY_GROUPS[layer]) map.setLayoutProperty(id, 'visibility', visibility[layer] ? 'visible' : 'none')
+    if (!map || styleRevision === 0 || userFeatures.kind !== 'loaded') return
+    upsertGeoJson(map, SOURCE_IDS.userFeatures, withFeatureIdProperty(userFeatures.collection))
+    ensureUserLayers(map)
+  }, [styleRevision, userFeatures])
+
+  // Analiz sonucu: girdi (alan/tampon/nokta) + en yakın N için kuş uçuşu bağlantılar; eşleşen tesisler halkayla vurgulanır.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || styleRevision === 0) return
+    upsertGeoJson(map, SOURCE_IDS.analysis, analysisCollection(analysis))
+    ensureAnalysisLayers(map)
+    const ids = analysis ? analysis.matches.features.map((f) => Number(f.id)) : []
+    if (map.getLayer(LAYER_IDS.analysisMatches)) map.setFilter(LAYER_IDS.analysisMatches, idFilter(ids))
+  }, [styleRevision, analysis, layers])
+
+  // Görünürlük, vurgu, seçim ve düzenlenen kaydın gizlenmesi: her stil yenilemesinden sonra da yeniden uygulanır.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || styleRevision === 0) return
+    for (const layer of Object.keys(OVERLAY_GROUPS) as LayerKey[]) {
+      for (const id of OVERLAY_GROUPS[layer]) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visibility[layer] ? 'visible' : 'none')
+      }
     }
-    map.setFilter(LAYER_IDS.districtsHighlight, idFilter(highlight.districts))
-    map.setFilter(LAYER_IDS.facilitiesHighlight, idFilter(highlight.facilities))
-    map.setFilter(LAYER_IDS.districtsSelected, idFilter(selection?.layer === 'districts' ? [selection.id] : []))
-    map.setFilter(LAYER_IDS.facilitiesSelected, idFilter(selection?.layer === 'facilities' ? [selection.id] : []))
-  }, [styleRevision, layers, visibility, highlight, selection])
+    if (map.getLayer(LAYER_IDS.facilities)) {
+      // Tür filtresi tesis noktalarına ve vurgu/seçim halkalarına birlikte uygulanır.
+      const types = ['in', ['get', 'facilityType'], ['literal', facilityTypes]]
+      const withTypes = (f: FilterSpecification) => ['all', f, types] as unknown as FilterSpecification
+      map.setFilter(LAYER_IDS.facilities, types as unknown as FilterSpecification)
+      map.setFilter(LAYER_IDS.districtsHighlight, idFilter(highlight.districts))
+      map.setFilter(LAYER_IDS.facilitiesHighlight, withTypes(idFilter(highlight.facilities)))
+      map.setFilter(LAYER_IDS.districtsSelected, idFilter(selection?.layer === 'districts' ? [selection.id as number] : []))
+      map.setFilter(LAYER_IDS.facilitiesSelected, withTypes(idFilter(selection?.layer === 'facilities' ? [selection.id as number] : [])))
+    }
+    if (map.getLayer(LAYER_IDS.userPoint)) {
+      const selectedUser = selection?.layer === 'user-features' && selection.id !== editingId ? String(selection.id) : ''
+      map.setFilter(LAYER_IDS.userFill, userFilter('Polygon', editingId))
+      map.setFilter(LAYER_IDS.userLine, userFilter(null, editingId))
+      map.setFilter(LAYER_IDS.userPoint, userFilter('Point', editingId))
+      map.setFilter(LAYER_IDS.userSelectedLine, selectedUserFilter(selectedUser, false))
+      map.setFilter(LAYER_IDS.userSelectedPoint, selectedUserFilter(selectedUser, true))
+    }
+  }, [styleRevision, layers, userFeatures, visibility, highlight, selection, editingId, facilityTypes])
 
   useEffect(() => {
     const map = mapRef.current
@@ -167,16 +262,41 @@ function idFilter(ids: number[]): FilterSpecification {
   return ['in', ['id'], ['literal', ids]] as unknown as FilterSpecification
 }
 
+/** Geometri tipine göre (null: çizgi + alan kenarı) ve düzenlenen kaydı hariç tutan filtre. */
+function userFilter(type: 'Point' | 'Polygon' | null, editingId: string | null): FilterSpecification {
+  const typeCondition = type ? ['==', ['geometry-type'], type] : ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]]
+  return ['all', typeCondition, ['!=', ['get', 'featureId'], editingId ?? '']] as unknown as FilterSpecification
+}
+
+function selectedUserFilter(id: string, point: boolean): FilterSpecification {
+  const typeCondition = point ? ['==', ['geometry-type'], 'Point'] : ['!=', ['geometry-type'], 'Point']
+  return ['all', typeCondition, ['==', ['get', 'featureId'], id]] as unknown as FilterSpecification
+}
+
+/** MapLibre GeoJSON kaynağı metin id'leri feature id olarak kullanamaz; UUID bir özelliğe kopyalanır. */
+function withFeatureIdProperty(collection: UserFeatureCollection): FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: collection.features.map((f) => ({ ...f, properties: { ...f.properties, featureId: f.id } })),
+  }
+}
+
 function upsertGeoJson(map: MapLibreMap, id: string, data: FeatureCollection) {
   const source = map.getSource<GeoJSONSource>(id)
   if (source) source.setData(data)
   else map.addSource(id, { type: 'geojson', data })
 }
 
-function ensureOverlayLayers(map: MapLibreMap) {
-  const add = (spec: Parameters<MapLibreMap['addLayer']>[0]) => {
-    if (!map.getLayer(spec.id)) map.addLayer(spec)
-  }
+type LayerSpec = Parameters<MapLibreMap['addLayer']>[0]
+
+function addOnce(map: MapLibreMap, spec: LayerSpec, beforeId?: string) {
+  if (!map.getLayer(spec.id)) map.addLayer(spec, beforeId && map.getLayer(beforeId) ? beforeId : undefined)
+}
+
+function ensureSourceLayers(map: MapLibreMap) {
+  // Kullanıcı katmanı önceden eklendiyse kaynak katmanları onun altına yerleşir.
+  const below = map.getLayer(LAYER_IDS.userFill) ? LAYER_IDS.userFill : undefined
+  const add = (spec: LayerSpec) => addOnce(map, spec, below)
   add({ id: LAYER_IDS.districtsFill, type: 'fill', source: SOURCE_IDS.districts, paint: { 'fill-color': '#2c3e50', 'fill-opacity': 0.06 } })
   add({ id: LAYER_IDS.districtsLine, type: 'line', source: SOURCE_IDS.districts, paint: { 'line-color': '#2c3e50', 'line-width': 1.5 } })
   add({
@@ -217,5 +337,82 @@ function ensureOverlayLayers(map: MapLibreMap) {
     source: SOURCE_IDS.facilities,
     filter: idFilter([]),
     paint: { 'circle-radius': 9, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': SELECTED_COLOR, 'circle-stroke-width': 3 },
+  })
+}
+
+function analysisCollection(analysis: AnalysisResponse | null): FeatureCollection {
+  if (!analysis) return { type: 'FeatureCollection', features: [] }
+  const features: FeatureCollection['features'] = [analysis.input]
+  if (analysis.analysis === 'nearest' && analysis.input.geometry.type === 'Point') {
+    const from = analysis.input.geometry.coordinates
+    // Bağlantı çizgisi kuş uçuşu ilişkiyi gösterir; rota değildir.
+    for (const m of analysis.matches.features) {
+      features.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: [from, m.geometry.coordinates] }, properties: { role: 'connector' } })
+    }
+  }
+  return { type: 'FeatureCollection', features }
+}
+
+function ensureAnalysisLayers(map: MapLibreMap) {
+  // Kullanıcı katmanının altında, kaynak katmanların üstünde; tesis kaynağı yüklenmeden eşleşme katmanı eklenmez.
+  const below = map.getLayer(LAYER_IDS.userFill) ? LAYER_IDS.userFill : undefined
+  const add = (spec: LayerSpec) => addOnce(map, spec, below)
+  add({
+    id: LAYER_IDS.analysisFill,
+    type: 'fill',
+    source: SOURCE_IDS.analysis,
+    filter: ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]],
+    paint: { 'fill-color': ANALYSIS_COLOR, 'fill-opacity': 0.15 },
+  })
+  add({
+    id: LAYER_IDS.analysisLine,
+    type: 'line',
+    source: SOURCE_IDS.analysis,
+    filter: ['!=', ['geometry-type'], 'Point'],
+    paint: { 'line-color': ANALYSIS_COLOR, 'line-width': 2, 'line-dasharray': [3, 2] },
+  })
+  add({
+    id: LAYER_IDS.analysisPoint,
+    type: 'circle',
+    source: SOURCE_IDS.analysis,
+    filter: ['==', ['geometry-type'], 'Point'],
+    paint: { 'circle-radius': 7, 'circle-color': ANALYSIS_COLOR, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 },
+  })
+  if (map.getSource(SOURCE_IDS.facilities)) {
+    addOnce(map, {
+      id: LAYER_IDS.analysisMatches,
+      type: 'circle',
+      source: SOURCE_IDS.facilities,
+      filter: idFilter([]),
+      paint: { 'circle-radius': 9, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ANALYSIS_COLOR, 'circle-stroke-width': 3 },
+    })
+  }
+}
+
+function ensureUserLayers(map: MapLibreMap) {
+  // Terra Draw katmanları (td-*) varsa kullanıcı katmanı onların altında kalır: taslak her zaman üstte.
+  const tdLayer = map.getStyle().layers.find((l) => l.id.startsWith('td'))?.id
+  const add = (spec: LayerSpec) => addOnce(map, spec, tdLayer)
+  add({ id: LAYER_IDS.userFill, type: 'fill', source: SOURCE_IDS.userFeatures, paint: { 'fill-color': USER_COLOR, 'fill-opacity': 0.25 } })
+  add({ id: LAYER_IDS.userLine, type: 'line', source: SOURCE_IDS.userFeatures, paint: { 'line-color': USER_COLOR, 'line-width': 3 } })
+  add({
+    id: LAYER_IDS.userPoint,
+    type: 'circle',
+    source: SOURCE_IDS.userFeatures,
+    paint: { 'circle-radius': 7, 'circle-color': USER_COLOR, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 },
+  })
+  add({
+    id: LAYER_IDS.userSelectedLine,
+    type: 'line',
+    source: SOURCE_IDS.userFeatures,
+    filter: selectedUserFilter('', false),
+    paint: { 'line-color': SELECTED_COLOR, 'line-width': 5, 'line-dasharray': [2, 1] },
+  })
+  add({
+    id: LAYER_IDS.userSelectedPoint,
+    type: 'circle',
+    source: SOURCE_IDS.userFeatures,
+    filter: selectedUserFilter('', true),
+    paint: { 'circle-radius': 11, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': SELECTED_COLOR, 'circle-stroke-width': 3 },
   })
 }
