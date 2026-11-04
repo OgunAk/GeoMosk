@@ -1,0 +1,17 @@
+{
+  "name": "geoscope-tooling",
+  "private": true,
+  "description": "GeoScope kök araç script'leri (Claude Code altyapı doğrulama, faz doğrulama, hook testleri). Uygulama paketleri backend/ ve frontend/ altında ayrıdır.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "verify:agents": "node scripts/verify-agent-setup.mjs",
+    "validate": "node scripts/validate-project.mjs",
+    "test:hooks": "node --test \"scripts/hooks/tests/*.test.mjs\""
+  },
+  "devDependencies": {
+    "yaml": "2.9.1"
+  }
+}

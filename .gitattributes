@@ -1,0 +1,8 @@
+# Linux container ve CI ile tutarlı satır sonları.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.pdf binary
+*.png binary
+*.gpkg binary

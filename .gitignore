@@ -1,0 +1,20 @@
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+.playwright-cli/
+.playwright/
+graphify-out/
+node_modules/
+**/bin/
+**/obj/
+dist/
+
+# GeoScope Faz 0
+**/appsettings.Local.json
+*.dump
+data/raw/**
+!data/raw/README.md
+!data/raw/*.manifest.json
+TestResults/
+coverage/
