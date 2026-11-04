@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Entity'ler Faz 2'de eklenir; Domain hiçbir katmana bağımlı değildir. -->
+
+</Project>

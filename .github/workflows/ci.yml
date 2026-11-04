@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "faz-*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tooling:
+    name: Claude altyapısı ve hook testleri
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node scripts/verify-agent-setup.mjs
+      - run: npm run test:hooks
+
+  backend:
+    name: Backend build + test (gerçek PostGIS, Testcontainers)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore backend
+      - run: dotnet build backend --no-restore --nologo
+      - run: dotnet test backend --no-build --nologo --logger "trx;LogFileName=results.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: backend/**/TestResults/*.trx
+
+  frontend:
+    name: Frontend typecheck, lint, test, build
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.21.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  compose:
+    name: Docker Compose yapılandırması
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet

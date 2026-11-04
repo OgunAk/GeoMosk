@@ -44,4 +44,16 @@ Makine tarafından denetlenen liste: `scripts/agent-setup.manifest.json` (`node 
 | `docs/FILE-MANIFEST.md` | Bu dosya | oluşturuldu | geçti | — | — | tümü |
 | `docs/AI-TOOLS.md` | Araç kurulum kaydı | korundu | geçti (UTF-8) | — | — | tümü |
 
-Planlanan, Faz 0'da bilinçli olarak yazılmayan belgeler (master prompt §22): `ARCHITECTURE.md`, `ROADMAP.md`, `DATABASE.md`, `API-CONTRACT.md`, `DATA-SOURCES.md`, `TEST-PLAN.md`, `DELIVERY-CHECKLIST.md`, `CLAUDE-CODE-SETUP.md`, `docs/adr/`, `README.md`.
+## Faz 1 dosyaları
+
+| yol | amaç | oluşturuldu/güncellendi | statik doğrulama | runtime keşfi | kanıt | kullanılacak faz |
+|---|---|---|---|---|---|---|
+| `global.json`, `backend/Directory.*.props`, `backend/GeoScope.sln` + 5 proje | .NET 9 solution, merkezi paket sürümleri | oluşturuldu | `dotnet build` 0 uyarı | `dotnet test` 8/8 | PROGRESS Faz 1 | tümü |
+| `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, `docker-compose.yml`, `.env.example` | Container ortamı | oluşturuldu | `docker compose config` | compose up + tarayıcı akışı | PROGRESS Faz 1 | tümü |
+| `frontend/` (Vite react-ts) | UI iskeleti, health durumu | oluşturuldu | typecheck/lint/build | Vitest 3/3, Playwright CLI | PROGRESS Faz 1 | tümü |
+| `.github/workflows/ci.yml` | CI | oluşturuldu | — | çalıştırılmadı (uzak depo yok) | — | 1, 7 |
+| `.gitattributes` | LF satır sonu | oluşturuldu | — | — | — | tümü |
+| `docs/ARCHITECTURE.md`, `ROADMAP.md`, `TEST-PLAN.md`, `README.md` | Faz 1 belgeleri | oluşturuldu | — | — | — | tümü |
+| `docs/screenshots/faz1-system-status.png` | Çalışan uygulamadan ekran görüntüsü | oluşturuldu | — | Playwright CLI | TEST-PLAN | 8 |
+
+Henüz yazılmayan belgeler (ilgili fazda): `DATABASE.md`, `API-CONTRACT.md`, `DATA-SOURCES.md` (Faz 2-3), `DELIVERY-CHECKLIST.md` (Faz 8), `CLAUDE-CODE-SETUP.md`, `docs/adr/`.

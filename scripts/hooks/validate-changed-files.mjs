@@ -19,6 +19,36 @@ const SKIP_DIRS = new Set(['node_modules', 'bin', 'obj', 'dist', '.git', 'graphi
 const TEXT_EXT = new Set(['.md', '.json', '.mjs', '.js', '.cjs', '.ts', '.tsx', '.cs', '.csproj', '.sql', '.yml', '.yaml', '.css', '.html', '.env', '.example', '.txt']);
 const PRIVATE_KEY_RE = /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/;
 
+// Yorum ve sondaki virgüle izin veren (JSONC) bilinen yapılandırma dosyaları.
+function isJsonc(rel) {
+  const p = rel.split(path.sep).join('/');
+  const base = path.basename(p);
+  return /^[tj]sconfig(\..+)?\.json$/.test(base) || p.startsWith('.vscode/') || p.includes('/.vscode/') || base === '.oxlintrc.json';
+}
+
+// Dize içeriğini koruyarak // ve /* */ yorumlarını ve sondaki virgülleri kaldırır.
+export function stripJsonc(text) {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== '"') j += text[j] === '\\' ? 2 : 1;
+      out += text.slice(i, j + 1);
+      i = j;
+    } else if (c === '/' && text[i + 1] === '/') {
+      while (i < text.length && text[i] !== '\n') i++;
+      out += '\n';
+    } else if (c === '/' && text[i + 1] === '*') {
+      const end = text.indexOf('*/', i + 2);
+      i = end < 0 ? text.length : end + 1;
+    } else {
+      out += c;
+    }
+  }
+  return out.replace(/,(\s*[}\]])/g, '$1');
+}
+
 function parseArgs(argv) {
   const out = {};
   for (let i = 0; i < argv.length; i++) {
@@ -78,7 +108,7 @@ export function validateFile(root, abs) {
   if (ext === '.json') {
     if (hasBom) errors.push('JSON dosyası BOM ile başlıyor; BOM olmadan UTF-8 yazın');
     try {
-      JSON.parse(text);
+      JSON.parse(isJsonc(rel) ? stripJsonc(text) : text);
     } catch (err) {
       errors.push(`JSON parse hatası: ${err.message}`);
     }

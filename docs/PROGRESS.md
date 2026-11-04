@@ -1,11 +1,48 @@
 # GeoScope — İlerleme kaydı
 
 ## Kısa durum (4 Kasım 2026)
-- **Son doğrulanan faz:** Faz 0 — Analiz ve ajan altyapısı (statik kapı geçti; runtime kısmi, ayrıntı aşağıda).
-- **Git:** Faz 0, `faz-0-altyapi` dalında commit edildi (geliştirici birleştirecek).
-- **Docker:** Geliştirici Docker Desktop'ı başlattı; daemon 29.6.2 yanıt veriyor.
-- **Sonraki adım:** Faz 1 — `global.json` (.NET 9 SDK, ADR-0001), backend solution + 5 proje, Npgsql/NTS paket sürümlerini NuGet'ten doğrulama, Vite+React+TS frontend, `docker-compose.yml` (sürüm etiketli PostGIS), live/ready health, CI iskeleti. Faz 1'de `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/TEST-PLAN.md` oluşturulacak.
-- **İlgili master prompt bölümleri:** §5 (mimari), §9 (API), §15 (yol haritası), §17 (Docker/CI).
+- **Son doğrulanan faz:** Faz 1 — Çalışan iskelet (`validate-project --phase 1` exit 0).
+- **Git:** Faz 0 commit'i `faz-0-altyapi` dalında (379c637, yazar OgunAk). Faz 1 değişiklikleri `faz-1-iskelet` dalında, henüz commit edilmedi.
+- **Çalışan ortam:** `docker compose up --build -d` ile db/api/web ayakta (volume `geoscope_geoscope-db`).
+- **Sonraki adım:** Faz 2 — gis-specialist ile Bursa ilçe (MultiPolygon) + sağlık tesisi (Point) kaynak/lisans doğrulaması; migration'lar; tekrarlanabilir import; `docs/DATA-SOURCES.md`, `docs/DATABASE.md`; MapLibre ile ilk harita (M01).
+- **Faz 2 açık kararları:** uygulama için superuser olmayan DB rolü; NTS tiplerinin Domain'de kullanımı (ADR-0002 alt kararı).
+- **İlgili master prompt bölümleri:** §6 (veri), §7 (şema), §8 (CRS).
+
+## Faz 1 raporu
+
+```text
+Faz: 1 — Çalışan iskelet
+Durum: doğrulandı (CI uzakta çalıştırılmadı)
+Karşılanan gereksinimler: T01, T02, T05, P03, P07 doğrulandı; T03, P05, P06 devam ediyor.
+Oluşturulan/değişen dosyalar: global.json; backend/ (GeoScope.sln, Directory.Build.props,
+  Directory.Packages.props, 5 proje, Dockerfile, .dockerignore); frontend/ (Vite react-ts şablonu
+  create-vite@9.3.1, Tailwind 4.3.3, Vitest 4.1.12, SystemStatus, AppLayout, apiClient, Dockerfile,
+  nginx.conf); docker-compose.yml; .env.example; .github/workflows/ci.yml; .gitattributes;
+  docs/ARCHITECTURE.md, ROADMAP.md, TEST-PLAN.md; README.md; hook'a JSONC desteği (+3 test).
+Çalıştırılan komutlar ve sonuç/exit code:
+  winget install Microsoft.DotNet.SDK.9 → 9.0.320 kuruldu, exit 0
+  dotnet build backend → 0 uyarı, 0 hata (ilk denemede Testcontainers kullanımdan kalkmış kurucu
+    uyarısı TreatWarningsAsErrors ile hata verdi → image parametreli kurucuya geçildi)
+  dotnet test backend → 8 başarılı, 0 başarısız (gerçek postgis/postgis:17-3.5 container)
+  npm --prefix frontend run typecheck / lint / test (3/3) / build → hepsi exit 0
+  npm run test:hooks → 20/20
+  docker compose config --quiet → exit 0; docker compose up --build -d → exit 0
+  GET :8080/api/health/live → 200; /api/health/ready → 200 postgisVersion 3.5.2; :5080/openapi/v1.json → 200
+  docker compose stop db → ready 503, gövdede bağlantı ayrıntısı yok; start db → 200
+  playwright-cli open http://127.0.0.1:8080/ → "Veritabanı: Hazır (PostGIS 3.5.2)", konsol hatası 0,
+    ekran görüntüsü docs/screenshots/faz1-system-status.png
+  node scripts/validate-project.mjs --phase 1 → GEÇTİ, exit 0
+Veri/CRS/analiz kanıtları: yok (Faz 2+).
+İnceleme bulguları ve çözümleri: Hook iki gerçek sorunu yakaladı: dotnet şablonlarından gelen BOM'lu
+  JSON/csproj (temizlendi) ve tsconfig JSONC yanlış alarmı (hook düzeltildi, test eklendi). Hook ayrıca
+  test dosyasındaki sahte özel anahtar kalıbını yakaladı (kalıp çalışma anında birleştirilecek şekilde
+  değiştirildi). Alt ajan incelemesi yapılmadı (iskelet, kritik spatial/CRUD kodu yok).
+Çalıştırılamayan kontroller ve nedeni: GitHub Actions CI — uzak depo yok. Temiz kurulum (ayrı Compose
+  projesi + yeni volume) Faz 8'de. MapLibre/WebGL henüz yok.
+Kalan risk/engel: .NET 9 desteği 10 Kasım 2026'da bitiyor (README'de kısıt olarak yazıldı).
+  Compose DB kullanıcısı superuser (postgis image varsayılanı) → Faz 2'de ayrı uygulama rolü.
+Sonraki somut adım: Faz 2 veri kaynağı doğrulaması.
+```
 
 ## Faz 0 raporu
 
@@ -54,4 +91,5 @@ Sonraki somut adım: Docker Desktop'ı başlat → Faz 1 iskeleti.
 | Faz | Durum | Tarih | Kanıt |
 |---|---|---|---|
 | 0 | doğrulandı (statik) / runtime kısmi | 2026-11-04 | Yukarıdaki rapor |
-| 1 | bekliyor | — | — |
+| 1 | doğrulandı (CI uzakta çalışmadı) | 2026-11-04 | Faz 1 raporu |
+| 2 | bekliyor | — | — |

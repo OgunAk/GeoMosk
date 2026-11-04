@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- dotnet ef için başlangıç projesinde gerekli; yayın çıktısına girmez. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoScope.Application\GeoScope.Application.csproj" />
+    <!-- Yalnızca DI composition root için (bkz. .claude/rules/architecture.md). -->
+    <ProjectReference Include="..\GeoScope.Infrastructure\GeoScope.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GeoScope.Tests" />
+  </ItemGroup>
+
+</Project>
