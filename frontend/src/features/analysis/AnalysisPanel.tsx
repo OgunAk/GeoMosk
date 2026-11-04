@@ -92,7 +92,7 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
   }
 
   return (
-    <section aria-labelledby="analysis-title" className="rounded-lg border border-orange-200 bg-white p-4 text-sm">
+    <section aria-labelledby="analysis-title" className="min-w-0 rounded-lg border border-orange-200 bg-white p-4 text-sm">
       <h2 id="analysis-title" className="font-semibold text-slate-900">
         Analiz
       </h2>
@@ -166,21 +166,29 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
 
         {kind === 'nearest' && (
           <>
-            <p className="flex flex-wrap items-center gap-2">
-              Nokta:{' '}
-              {pickedPoint ? (
-                <strong>
-                  {pickedPoint[1].toFixed(5)}, {pickedPoint[0].toFixed(5)}
-                </strong>
-              ) : (
-                <em className="text-slate-500">seçilmedi</em>
-              )}
-              <button type="button" onClick={onPickPoint} disabled={pickingPoint} className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 disabled:opacity-50">
-                {pickingPoint ? 'Haritaya tıklayın…' : 'Haritada nokta seç'}
+            {/* Dar yan panelde (320 px) taşmasın: bilgi ve düğme ayrı satırda, düğme tam genişlik. */}
+            <div className="space-y-1">
+              <p className="break-words">
+                Nokta:{' '}
+                {pickedPoint ? (
+                  <strong className="tabular-nums">
+                    {pickedPoint[1].toFixed(5)}, {pickedPoint[0].toFixed(5)}
+                  </strong>
+                ) : (
+                  <em className="text-slate-500">seçilmedi</em>
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={onPickPoint}
+                disabled={pickingPoint}
+                className="w-full rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 disabled:opacity-50"
+              >
+                {pickingPoint ? 'Haritaya tıklayın…' : pickedPoint ? 'Başka nokta seç' : 'Haritada nokta seç'}
               </button>
-            </p>
-            <div className="flex gap-3">
-              <div>
+            </div>
+            <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3">
+              <div className="min-w-0">
                 <label htmlFor={ids.n} className="block text-xs text-slate-600">
                   N (1–{MAX_N})
                 </label>
@@ -192,14 +200,19 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
                   value={n}
                   onChange={(e) => setN(e.target.value)}
                   aria-invalid={!nValid}
-                  className="w-20 rounded border border-slate-300 px-2 py-1"
+                  className="w-full rounded border border-slate-300 px-2 py-1"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label htmlFor={ids.type} className="block text-xs text-slate-600">
                   Tür
                 </label>
-                <select id={ids.type} value={type} onChange={(e) => setType(e.target.value as FacilityType | '')} className="rounded border border-slate-300 px-2 py-1">
+                <select
+                  id={ids.type}
+                  value={type}
+                  onChange={(e) => setType(e.target.value as FacilityType | '')}
+                  className="w-full min-w-0 truncate rounded border border-slate-300 px-2 py-1"
+                >
                   <option value="">Tümü</option>
                   {(Object.keys(FACILITY_LABELS) as FacilityType[]).map((t) => (
                     <option key={t} value={t}>
@@ -209,6 +222,7 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
                 </select>
               </div>
             </div>
+            {!nValid && <p className="text-xs text-red-700">N 1 ile {MAX_N} arasında tam sayı olmalı.</p>}
           </>
         )}
 

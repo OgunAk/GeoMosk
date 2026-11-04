@@ -17,6 +17,30 @@ async function searchAndPick(page: Page, layer: 'districts' | 'facilities', q: s
 const analysis = (page: Page) => page.getByRole('region', { name: 'Analiz' })
 const resultNames = (page: Page) => analysis(page).getByRole('list', { name: 'Analiz sonuçları' }).getByRole('listitem')
 
+test('analiz paneli hiçbir modda dar yan panelden taşmaz', async ({ page }) => {
+  await openApp(page)
+  // Panelin iç (padding hariç) sağ kenarını aşan görünür öğe olmamalı.
+  const overflowing = () =>
+    page.evaluate(() => {
+      const s = document.querySelector('[aria-labelledby=analysis-title]')!
+      const inner = s.getBoundingClientRect().right - parseFloat(getComputedStyle(s).paddingRight)
+      return [...s.querySelectorAll<HTMLElement>('*')]
+        .filter((e) => e.offsetParent !== null && e.tagName !== 'OPTION' && e.getBoundingClientRect().right > inner + 0.5)
+        .map((e) => e.textContent?.trim().slice(0, 30))
+    })
+
+  for (const mode of ['Alan içindekiler', 'Tampon (yakınlık)', 'En yakın N']) {
+    await analysis(page).getByRole('radio', { name: mode }).check()
+    expect(await overflowing(), mode).toEqual([])
+  }
+  // Nokta seçildikten sonra (koordinat metni ve "Başka nokta seç") da taşma yok.
+  await analysis(page).getByRole('button', { name: 'Haritada nokta seç' }).click()
+  const box = (await page.getByTestId('map').boundingBox())!
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await expect(analysis(page).getByRole('button', { name: 'Başka nokta seç' })).toBeVisible()
+  expect(await overflowing()).toEqual([])
+})
+
 test('ilçe içindeki tesisler, aynı politikadaki API filtresiyle aynı sayıyı verir', async ({ page }) => {
   await openApp(page)
   await searchAndPick(page, 'districts', 'nilufer', 'Nilüfer')
@@ -35,6 +59,28 @@ test('ilçe içindeki tesisler, aynı politikadaki API filtresiyle aynı sayıy�
   expect(uiCount).toBe(apiCount)
   // Girdi alanı haritada çizilir.
   expect(await page.evaluate(() => window.__geoscopeMap!.querySourceFeatures('src-analysis').length)).toBeGreaterThan(0)
+})
+
+test('başka bir ilçe seçilince eski analiz sonucu kaybolur; sonuç listesinden seçim sonucu korur', async ({ page }) => {
+  await openApp(page)
+  await searchAndPick(page, 'districts', 'nilufer', 'Nilüfer')
+  await analysis(page).getByRole('button', { name: 'Analizi çalıştır' }).click()
+  const results = analysis(page).getByRole('list', { name: 'Analiz sonuçları' })
+  await expect(results).toBeVisible()
+
+  // Sonuç listesindeki bir tesise tıklamak sonucu silmez.
+  await results.getByRole('button').first().click()
+  await expect(results).toBeVisible()
+
+  // Haritada başka bir ilçeye (Mudanya, boş bir noktası) tıkla: eski sonuç kaybolmalı.
+  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [28.86, 40.30], zoom: 11 }))
+  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
+  const box = (await page.getByTestId('map').boundingBox())!
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+
+  await expect(page.getByRole('heading', { name: 'Nilüfer' })).toHaveCount(0)
+  await expect(results).toHaveCount(0)
+  await expect(analysis(page).getByRole('button', { name: 'Temizle' })).toHaveCount(0)
 })
 
 test('tesis çevresinde 2000 m tampon: tampon çizilir, tüm mesafeler sınır içinde', async ({ page }) => {

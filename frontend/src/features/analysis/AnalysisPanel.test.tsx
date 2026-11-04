@@ -99,6 +99,19 @@ describe('AnalysisPanel', () => {
     expect(props.onPickPoint).toHaveBeenCalled()
   })
 
+  it('nokta seçildikten sonra koordinatı gösterir ve düğme "Başka nokta seç" olur', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok(response('nearest', [5])))
+    vi.stubGlobal('fetch', fetchMock)
+    setup({ pickedPoint: [29.06, 40.19] })
+    await userEvent.click(screen.getByRole('radio', { name: 'En yakın N' }))
+
+    expect(screen.getByText('40.19000, 29.06000')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Başka nokta seç' })).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByLabelText('Tür'), 'hospital')
+    await userEvent.click(screen.getByRole('button', { name: 'Analizi çalıştır' }))
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ point: { type: 'Point', coordinates: [29.06, 40.19] }, n: 5, type: 'hospital' })
+  })
+
   it('en yakın N sonuçlarını sıra ve mesafeyle listeler; tıklama seçimi bildirir', async () => {
     const props = setup({ result: response('nearest', [120, 980, 1705]) })
 

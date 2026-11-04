@@ -4,6 +4,8 @@
 - **Son doğrulanan faz:** Faz 5 — Üç MVP analizi (`validate-project --phase 5` exit 0, E2E yerel sunuculara karşı). MVP gereksinimleri (A00-A03) tamam.
 - **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. **Bekleyen:** geliştiricinin kendi değişikliği ("ad en az 3 karakter") — kodda henüz yok; AI dokunmuyor.
 - **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
+- **Geliştirici bildirimi (2026-11-05):** başka ilçe seçilince eski analiz sonucu kalıyordu → `keepAnalysisFor` kuralı: yalnız analiz kaynağı veya sonuç listesindeki tesis seçilince sonuç korunur, aksi halde temizlenir (Vitest 6 + E2E). Commit edilmedi.
+- **Geliştirici bildirimi (2026-11-05):** "En yakın N" modunda "Haritada nokta seç" düğmesi ve Tür kutusu 320 px yan panelde taşıyordu → nokta bilgisi/düğme ayrı satır, N+Tür ızgarası (`minmax(0,1fr)`), seçim kutusu `min-w-0`; E2E: üç modda ve nokta seçildikten sonra içerik alanını aşan öğe yok. Commit edilmedi.
 - **Git:** `master` = Faz 0-3 (GitHub). Faz 4 + Faz 5 `faz-4-cizim-crud` dalında, henüz commit edilmedi.
 - **Çalışan ortam:** compose `db` ayakta (gerçek veri). Compose `api`/`web` durdurulmuş (Docker Desktop container ağı sorunu); API `dotnet run` (5080) + Vite (5173) yerelde.
 - **Sonraki adım:** Faz 6 — A04 metrik SRID ölçümü (EPSG:32635 adaylığı extent ile doğrulanacak), A05 ilçe başına tesis sayısı (tekil atama) + choropleth.

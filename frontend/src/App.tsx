@@ -1,6 +1,7 @@
 import type { Feature, Geometry, Polygon } from 'geojson'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { AnalysisPanel, type SelectedSource } from './features/analysis/AnalysisPanel'
+import { keepAnalysisFor } from './features/analysis/analysisSelection'
 import type { AnalysisResponse } from './services/analysis'
 import { AppLayout } from './components/AppLayout'
 import { FeatureDetailsPanel } from './features/details/FeatureDetailsPanel'
@@ -67,6 +68,12 @@ export default function App() {
     if (bbox) setFocus((f) => ({ bbox, token: (f?.token ?? 0) + 1 }))
   }, [])
 
+  // Haritadan veya aramadan yeni seçim: sonuçla ilgisiz bir obje seçilirse eski analiz sonucu temizlenir.
+  const selectObject = useCallback((next: Selection | null) => {
+    setSelection(next)
+    setAnalysisResult((current) => (keepAnalysisFor(current, next) ? current : null))
+  }, [])
+
   // --- arama ---
   const onSearchResults = useCallback((layer: SourceLayerId, features: Feature[]) => {
     setHighlight({ ...NO_HIGHLIGHT, [layer]: features.map((f) => Number(f.id)) })
@@ -74,10 +81,10 @@ export default function App() {
   const onPick = useCallback(
     (layer: SourceLayerId, feature: Feature) => {
       showLayer(layer) // gizli katmandaki sonuç seçilirse katman açılır; aksi halde vurgu görünmezdi
-      setSelection({ layer, id: Number(feature.id) })
+      selectObject({ layer, id: Number(feature.id) })
       zoomTo([feature.geometry])
     },
-    [showLayer, zoomTo],
+    [showLayer, zoomTo, selectObject],
   )
 
   // --- kaynak kayıt düzenleme ---
@@ -285,7 +292,7 @@ export default function App() {
           setPickedPoint(point)
           setPickingPoint(false)
         }}
-        onSelect={setSelection}
+        onSelect={selectObject}
       />
     </AppLayout>
   )
