@@ -42,3 +42,26 @@ SELECT f.id FROM health_facilities f
 WHERE f.source_deleted_at IS NULL
   AND ST_Covers((SELECT geom FROM districts WHERE source_id = 1273952 /* Nilüfer, OSM relation */), f.geom);
 RESET enable_seqscan;
+
+\echo '=== A05 ilçe başına tesis sayısı (tekil atama) ==='
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+WITH f AS (
+    SELECT id, geom FROM health_facilities WHERE source_deleted_at IS NULL
+), d AS (
+    SELECT id, geom FROM districts WHERE source_deleted_at IS NULL
+), candidates AS (
+    SELECT f.id AS facility_id, d.id AS district_id, ST_Contains(d.geom, f.geom) AS interior,
+           count(*) OVER (PARTITION BY f.id) AS match_count
+    FROM f JOIN d ON ST_Covers(d.geom, f.geom)
+), picked AS (
+    SELECT DISTINCT ON (facility_id) facility_id, district_id, match_count
+    FROM candidates ORDER BY facility_id, interior DESC, district_id
+)
+SELECT d.id, count(p.facility_id)::int, (count(p.facility_id) FILTER (WHERE p.match_count > 1))::int
+FROM d LEFT JOIN picked p ON p.district_id = d.id
+GROUP BY d.id ORDER BY d.id;
+
+\echo '=== A04 ölçüm (Nilüfer, EPSG:32635) ==='
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT ST_Length(t.p), ST_Area(t.p), ST_Perimeter(t.p), ST_Length(t.g), ST_Area(t.g)
+FROM (SELECT ST_Transform(geom, 32635) AS p, geom::geography AS g FROM districts WHERE source_id = 1273952) t;

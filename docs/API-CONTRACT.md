@@ -120,7 +120,31 @@ Sorgu planları (911 tesis, 2026-11-04): `scripts/sql/analysis-plans.2026-11-04.
 (geography ifade indeksi) ile 0.8 ms, alan içinde `ix_health_facilities_geom` (GiST) ile 0.4 ms. En yakın N kesin sıralama
 için tüm tabloyu tarayıp sıralar (12 ms); KNN (`<->`) bilinçli olarak kullanılmadı (ADR-0012).
 
-## Planlanan (henüz yok)
-| Faz | Method | Yol |
-|---|---|---|
-| 6 | POST/GET | `/api/analysis/measure`, `/api/analysis/district-stats` |
+## Ölçüm ve ilçe istatistiği — A04, A05
+
+### `POST /api/analysis/measure` — A04 metrik ölçüm
+Gövde: tam olarak biri — `sourceFeature` (ilçe veya LineString/Polygon kullanıcı çizimi) **veya** `geometry` (LineString/Polygon,
+kullanıcı çizimiyle aynı doğrulama). Başka alan → 400.
+
+- Hesap: `ST_Transform(geom, 32635)` (WGS 84 / UTM 35N) sonrası düzlemsel `ST_Length` (çizgi), `ST_Area` + `ST_Perimeter` (alan).
+  Çevre `ST_Perimeter` ile; `ST_Length(polygon)` kullanılmaz. Gerekçe ve kapsam: ADR-0013.
+- Yanıt: ortak analiz yanıtı (`analysis: "measure"`, `input` = ölçülen geometri 4326, `matches` boş) ve
+  `measurement: { geometryType, lengthMeters|null, areaSquareMeters|null, perimeterMeters|null, calculationSrid: 32635,
+  calculationCrs, method, geodesicCheck: { lengthMeters|null, areaSquareMeters|null, relativeDifference } }`.
+  Ham değerler metre/m², yuvarlanmamış; km/km² gösterimi yalnız arayüzde. `geodesicCheck` aynı geometrinin geography (sferoid)
+  değeridir; yalnız çapraz kontrol, asıl değer projeksiyondaki ölçümdür. Bursa'da fark %0,1'in altındadır.
+- Hatalar: 400 (biçim, ikisi/hiçbiri); 404 kaynak yok; 422 — nokta veya tesis kaynağı ("Desteklenmeyen ölçüm", 0 dönülmez),
+  geçersiz geometri, UTM 35N kullanım alanı (24–30°D) dışı (Bursa çalışma alanı 30.1°D'ye uzandığı için erişilebilir bir durum).
+
+### `GET /api/analysis/district-stats?type` — A05 ilçe başına tesis sayısı
+- `type` isteğe bağlı tesis türü (`hospital`, `clinic`, `doctors`, `dentist`, `pharmacy`, `other_healthcare`); başka değer → 400.
+- **Tekil atama:** her tesis en çok bir ilçede sayılır. Aday ilçeler sınır dahil `ST_Covers(ilçe, tesis)`; önce tesisi iç bölgesinde
+  içeren (`ST_Contains`), eşitlikte en küçük ilçe `id`'si. `LEFT JOIN` + `count(tesis_id)`: tesisi olmayan ilçe **0**.
+- Yanıt: `{ analysis: "district-stats", facilityType, districts: [{ id, name, facilityCount, multiMatchCount }], totals:
+  { facilities, assigned, unassigned, multiMatch }, policy }`. Ad yerel düzenleme (override) varsa onu kullanır.
+  `facilities = assigned + unassigned`; ilçe sayılarının toplamı `assigned`'a eşittir (çifte sayım yok). `multiMatch`: birden çok ilçenin
+  kapsadığı (sınırda/örtüşmede) ve tek ilçeye atanan tesisler; `unassigned`: hiçbir ilçenin kapsamadığı tesisler.
+- Gerçek veri (2026-11-05): 911 tesisin 911'i atandı, atanamayan 0, çoklu eşleşme 0.
+
+Sorgu planları (2026-11-05): `scripts/sql/analysis-plans.2026-11-05.txt` — A05 ilçe başına `ix_health_facilities_geom` (GiST)
+ile 6.7 ms; A04 Nilüfer ölçümü 4.0 ms (geometri sayısına değil köşe sayısına bağlı).

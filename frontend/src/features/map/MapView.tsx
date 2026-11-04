@@ -62,6 +62,8 @@ interface MapViewProps {
   /** true iken harita tıklaması seçim yerine nokta verir (en yakın N). */
   pickingPoint: boolean
   onPickPoint: (lngLat: [number, number]) => void
+  /** A05 choropleth: ilçe id → sınıf rengi; null iken katman gizli. */
+  choropleth: Record<number, string> | null
   /** Geometrisi düzenlenen kullanıcı çizimi: kayıtlı hali gizlenir, taslakla üst üste görünmez. */
   editingId: string | null
   onSelect: (selection: Selection | null) => void
@@ -79,7 +81,7 @@ declare global {
 export function MapView(props: MapViewProps) {
   const { layers, userFeatures, basemap, visibility, selection, highlight, focus, draw, drawCallbacks, finishSignal, facilityTypes, editingId, onSelect } =
     props
-  const { analysis, pickingPoint, onPickPoint } = props
+  const { analysis, pickingPoint, onPickPoint, choropleth } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const appliedBasemap = useRef<BasemapId>(basemap)
@@ -205,6 +207,21 @@ export function MapView(props: MapViewProps) {
     if (map.getLayer(LAYER_IDS.analysisMatches)) map.setFilter(LAYER_IDS.analysisMatches, idFilter(ids))
   }, [styleRevision, analysis, layers])
 
+  // A05 choropleth: renkler ilçe id'sine göre match ifadesiyle; altlık değişiminde de yeniden uygulanır.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || styleRevision === 0 || !map.getLayer(LAYER_IDS.districtsChoropleth)) return
+    const entries = Object.entries(choropleth ?? {})
+    map.setFilter(LAYER_IDS.districtsChoropleth, idFilter(entries.map(([id]) => Number(id))))
+    map.setPaintProperty(
+      LAYER_IDS.districtsChoropleth,
+      'fill-color',
+      entries.length === 0
+        ? 'rgba(0,0,0,0)'
+        : (['match', ['id'], ...entries.flatMap(([id, color]) => [Number(id), color]), 'rgba(0,0,0,0)'] as unknown as string),
+    )
+  }, [styleRevision, layers, choropleth])
+
   // Görünürlük, vurgu, seçim ve düzenlenen kaydın gizlenmesi: her stil yenilemesinden sonra da yeniden uygulanır.
   useEffect(() => {
     const map = mapRef.current
@@ -298,6 +315,13 @@ function ensureSourceLayers(map: MapLibreMap) {
   const below = map.getLayer(LAYER_IDS.userFill) ? LAYER_IDS.userFill : undefined
   const add = (spec: LayerSpec) => addOnce(map, spec, below)
   add({ id: LAYER_IDS.districtsFill, type: 'fill', source: SOURCE_IDS.districts, paint: { 'fill-color': '#2c3e50', 'fill-opacity': 0.06 } })
+  add({
+    id: LAYER_IDS.districtsChoropleth,
+    type: 'fill',
+    source: SOURCE_IDS.districts,
+    filter: idFilter([]),
+    paint: { 'fill-color': 'rgba(0,0,0,0)', 'fill-opacity': 0.65 },
+  })
   add({ id: LAYER_IDS.districtsLine, type: 'line', source: SOURCE_IDS.districts, paint: { 'line-color': '#2c3e50', 'line-width': 1.5 } })
   add({
     id: LAYER_IDS.districtsHighlight,

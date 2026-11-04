@@ -113,6 +113,117 @@ internal sealed class AnalysisService(GeoScopeDbContext db) : IAnalysisService
             });
     }
 
+    public async Task<AnalysisResult> MeasureAsync(MeasureRequest request, CancellationToken cancellationToken)
+    {
+        var (status, geometry, _, label) = await ResolveAsync(request.Input, cancellationToken);
+        if (status != AnalysisStatus.Ok) return new(status, Problem: label);
+        var field = request.Input.Source is null ? "geometry" : "sourceFeature";
+        if (geometry is Point or MultiPoint)
+            return new(AnalysisStatus.SourceNotApplicable, Problem: "Desteklenmeyen ölçüm: noktanın uzunluğu veya alanı yoktur.", ProblemField: field);
+        if (!MetricProjection.Covers(geometry!))
+            return new(AnalysisStatus.SourceNotApplicable, ProblemField: field, Problem:
+                $"Geometri ölçüm projeksiyonunun ({MetricProjection.Name}, EPSG:{MetricProjection.Srid}) kullanım alanı dışında " +
+                $"(boylam {MetricProjection.MinLon}–{MetricProjection.MaxLon}°). Bu alan için ölçüm yapılmıyor.");
+
+        // Asıl değer: ST_Transform ile metrik projeksiyona dönüşüm, sonra düzlemsel ST_Length / ST_Area / ST_Perimeter (metre, m²).
+        // Çapraz kontrol: aynı geometri geography (WGS84 sferoidi) üzerinde. ST_SetSRID kullanılmaz; girdi zaten 4326.
+        const string sql = """
+            SELECT ST_Length(t.p), ST_Area(t.p), ST_Perimeter(t.p), ST_Length(t.g), ST_Area(t.g)
+            FROM (SELECT ST_Transform(@g, @srid) AS p, @g::geography AS g) t
+            """;
+        var connection = await OpenAsync(cancellationToken);
+        double length, area, perimeter, geoLength, geoArea;
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = sql;
+            command.Parameters.Add(Geo("g", geometry!));
+            command.Parameters.Add(new NpgsqlParameter("srid", NpgsqlDbType.Integer) { Value = MetricProjection.Srid });
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            await reader.ReadAsync(cancellationToken);
+            (length, area, perimeter, geoLength, geoArea) =
+                (reader.GetDouble(0), reader.GetDouble(1), reader.GetDouble(2), reader.GetDouble(3), reader.GetDouble(4));
+        }
+
+        var isLine = geometry is LineString or MultiLineString;
+        var measurement = isLine
+            ? new MeasurementResult(geometry!.GeometryType, length, null, null, MetricProjection.Srid, MetricProjection.Name,
+                $"ST_Length(ST_Transform(geom, {MetricProjection.Srid})) — metre",
+                new GeodesicCheck(geoLength, null, Relative(length, geoLength)))
+            : new MeasurementResult(geometry!.GeometryType, null, area, perimeter, MetricProjection.Srid, MetricProjection.Name,
+                $"ST_Area / ST_Perimeter(ST_Transform(geom, {MetricProjection.Srid})) — m², metre",
+                new GeodesicCheck(null, geoArea, Relative(area, geoArea)));
+
+        var input = InputFeature(geometry!, isLine ? "line" : "area", request.Input, label);
+        var response = new AnalysisResponse("measure", input,
+            new GeoJsonFeatureCollection([], new PageMeta(0, 0, 0, false)),
+            new Dictionary<string, object?> { ["calculationSrid"] = MetricProjection.Srid, ["method"] = measurement.Method },
+            measurement);
+        return new(AnalysisStatus.Ok, response);
+
+        static double Relative(double projected, double geodesic) => geodesic == 0 ? 0 : (projected - geodesic) / geodesic;
+    }
+
+    public async Task<DistrictStatsResponse> DistrictStatsAsync(string? facilityType, CancellationToken cancellationToken)
+    {
+        // Tekil atama: kapsayan (ST_Covers, sınır dahil) ilçeler içinden önce iç eşleşme (ST_Contains), sonra en küçük ilçe id'si.
+        // LEFT JOIN + count(p.facility_id): tesisi olmayan ilçe 0 görünür (count(*) 1 sayardı).
+        const string sql = """
+            WITH f AS (
+                SELECT id, geom FROM health_facilities
+                WHERE source_deleted_at IS NULL AND (@type::text IS NULL OR facility_type = @type::text)
+            ), d AS (
+                SELECT id, geom FROM districts WHERE source_deleted_at IS NULL
+            ), candidates AS (
+                SELECT f.id AS facility_id, d.id AS district_id, ST_Contains(d.geom, f.geom) AS interior,
+                       count(*) OVER (PARTITION BY f.id) AS match_count
+                FROM f JOIN d ON ST_Covers(d.geom, f.geom)
+            ), picked AS (
+                SELECT DISTINCT ON (facility_id) facility_id, district_id, match_count
+                FROM candidates
+                ORDER BY facility_id, interior DESC, district_id
+            )
+            SELECT d.id, count(p.facility_id)::int, (count(p.facility_id) FILTER (WHERE p.match_count > 1))::int
+            FROM d LEFT JOIN picked p ON p.district_id = d.id
+            GROUP BY d.id
+            ORDER BY d.id
+            """;
+        const string totalSql = """
+            SELECT count(*)::int FROM health_facilities
+            WHERE source_deleted_at IS NULL AND (@type::text IS NULL OR facility_type = @type::text)
+            """;
+        var connection = await OpenAsync(cancellationToken);
+        var counts = new List<(long Id, int Count, int Multi)>();
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = sql;
+            command.Parameters.Add(TypeParameter(facilityType));
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+                counts.Add((reader.GetInt64(0), reader.GetInt32(1), reader.GetInt32(2)));
+        }
+        int total;
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = totalSql;
+            command.Parameters.Add(TypeParameter(facilityType));
+            total = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
+        }
+
+        var names = await db.Districts.AsNoTracking().Where(d => d.SourceDeletedAt == null)
+            .Select(d => new { d.Id, Name = d.Override != null && d.Override.Name != null ? d.Override.Name : d.Name })
+            .ToDictionaryAsync(d => d.Id, d => d.Name, cancellationToken);
+
+        var rows = counts.Select(c => new DistrictStatsRow(c.Id, names.GetValueOrDefault(c.Id, ""), c.Count, c.Multi)).ToList();
+        var assigned = rows.Sum(r => r.FacilityCount);
+        return new DistrictStatsResponse("district-stats", facilityType, rows,
+            new DistrictStatsTotals(total, assigned, total - assigned, rows.Sum(r => r.MultiMatchCount)),
+            "Tekil atama: sınır dahil kapsayan ilçeler (ST_Covers) içinden önce tesisi iç bölgesinde içeren (ST_Contains), " +
+            "eşitlikte en küçük ilçe id'si. Her tesis en çok bir ilçede sayılır; hiçbir ilçenin kapsamadığı tesisler atanamayandır.");
+
+        static NpgsqlParameter TypeParameter(string? type) =>
+            new("type", NpgsqlDbType.Text) { Value = (object?)type ?? DBNull.Value };
+    }
+
     // --- kaynak çözümleme ---
 
     private async Task<(AnalysisStatus Status, Geometry? Geometry, long? FacilityId, string? Label)> ResolveAsync(

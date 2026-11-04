@@ -55,7 +55,7 @@ describe('AnalysisPanel', () => {
   it('alan analizi seçili ilçe yokken çalıştırılamaz, ilçe seçilince sourceFeature ile istek atar', async () => {
     const fetchMock = vi.fn().mockResolvedValue(ok(response('within', [])))
     vi.stubGlobal('fetch', fetchMock)
-    const props = setup({ selected: { ref: { layerId: 'districts', id: 12 }, label: 'Nilüfer', isArea: true } })
+    const props = setup({ selected: { ref: { layerId: 'districts', id: 12 }, label: 'Nilüfer', isArea: true, measurable: true } })
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Sınır üzerindeki tesisler dahil' }))
     await userEvent.click(screen.getByRole('button', { name: 'Analizi çalıştır' }))
@@ -67,14 +67,14 @@ describe('AnalysisPanel', () => {
   })
 
   it('nokta (tesis) seçiliyken alan analizi devre dışıdır', () => {
-    setup({ selected: { ref: { layerId: 'facilities', id: 5 }, label: 'Eczane', isArea: false } })
+    setup({ selected: { ref: { layerId: 'facilities', id: 5 }, label: 'Eczane', isArea: false, measurable: false } })
     expect(screen.getByRole('button', { name: 'Analizi çalıştır' })).toBeDisabled()
   })
 
   it('tampon için metre sınırlarını doğrular ve radiusMeters gönderir', async () => {
     const fetchMock = vi.fn().mockResolvedValue(ok(response('buffer', [10])))
     vi.stubGlobal('fetch', fetchMock)
-    setup({ selected: { ref: { layerId: 'facilities', id: 5 }, label: 'Hastane', isArea: false } })
+    setup({ selected: { ref: { layerId: 'facilities', id: 5 }, label: 'Hastane', isArea: false, measurable: false } })
     await userEvent.click(screen.getByRole('radio', { name: 'Tampon (yakınlık)' }))
     const radius = screen.getByLabelText(/Mesafe \(metre/)
 
@@ -122,6 +122,49 @@ describe('AnalysisPanel', () => {
     expect(screen.getByText('En yakın 3 tesis (kuş uçuşu)')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /Tesis 2/ }))
     expect(props.onSelectMatch).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }))
+  })
+
+  it('ölçüm: seçili ilçe için sourceFeature gönderir', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok(response('measure', [])))
+    vi.stubGlobal('fetch', fetchMock)
+    setup({ selected: { ref: { layerId: 'districts', id: 12 }, label: 'Nilüfer', isArea: true, measurable: true } })
+    await userEvent.click(screen.getByRole('radio', { name: 'Ölçüm' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Analizi çalıştır' }))
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/analysis/measure')
+    expect(JSON.parse(init.body)).toEqual({ sourceFeature: { layerId: 'districts', id: 12 } })
+  })
+
+  it('ölçüm: nokta seçiliyken desteklenmez, istek atılmaz', async () => {
+    setup({ selected: { ref: { layerId: 'facilities', id: 5 }, label: 'Eczane', isArea: false, measurable: false } })
+    await userEvent.click(screen.getByRole('radio', { name: 'Ölçüm' }))
+    expect(screen.getByText(/Desteklenmeyen ölçüm/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Analizi çalıştır' })).toBeDisabled()
+  })
+
+  it('ölçüm sonucunu metre/km² ve hesap SRID değeriyle gösterir', () => {
+    const result: AnalysisResponse = {
+      ...response('measure', []),
+      input: { type: 'Feature', geometry: { type: 'Polygon', coordinates: [] }, properties: { role: 'area', label: 'Nilüfer' } },
+      measurement: {
+        geometryType: 'MultiPolygon',
+        lengthMeters: null,
+        areaSquareMeters: 515_234_567.8,
+        perimeterMeters: 152_345.6,
+        calculationSrid: 32635,
+        calculationCrs: 'WGS 84 / UTM zone 35N',
+        method: 'ST_Area',
+        geodesicCheck: { lengthMeters: null, areaSquareMeters: 515_240_000, relativeDifference: -0.0000105 },
+      },
+    }
+    setup({ result })
+    const dl = screen.getByLabelText('Ölçüm sonuçları')
+    expect(dl).toHaveTextContent('Alan')
+    expect(dl).toHaveTextContent('515,23 km²')
+    expect(dl).toHaveTextContent('152,35 km')
+    expect(dl).not.toHaveTextContent('Uzunluk')
+    expect(screen.getByText(/EPSG:32635/)).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Analiz sonuçları' })).not.toBeInTheDocument()
   })
 
   it('sunucu hatasını gösterir', async () => {

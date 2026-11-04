@@ -10,6 +10,7 @@ export const SOURCE_IDS = {
 export const LAYER_IDS = {
   basemap: 'lyr-basemap-osm',
   districtsFill: 'lyr-districts-fill',
+  districtsChoropleth: 'lyr-districts-choropleth',
   districtsLine: 'lyr-districts-line',
   districtsHighlight: 'lyr-districts-highlight',
   districtsSelected: 'lyr-districts-selected',
@@ -32,7 +33,7 @@ export type LayerKey = 'districts' | 'facilities' | 'user-features'
 
 /** Görünürlüğü katman anahtarıyla birlikte değişen rendering katmanları. */
 export const OVERLAY_GROUPS: Record<LayerKey, readonly string[]> = {
-  districts: [LAYER_IDS.districtsFill, LAYER_IDS.districtsLine, LAYER_IDS.districtsHighlight, LAYER_IDS.districtsSelected],
+  districts: [LAYER_IDS.districtsFill, LAYER_IDS.districtsChoropleth, LAYER_IDS.districtsLine, LAYER_IDS.districtsHighlight, LAYER_IDS.districtsSelected],
   facilities: [LAYER_IDS.facilities, LAYER_IDS.facilitiesHighlight, LAYER_IDS.facilitiesSelected],
   'user-features': [LAYER_IDS.userFill, LAYER_IDS.userLine, LAYER_IDS.userPoint, LAYER_IDS.userSelectedLine, LAYER_IDS.userSelectedPoint],
 }

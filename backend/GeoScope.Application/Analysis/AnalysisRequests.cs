@@ -21,6 +21,26 @@ public sealed record BufferRequest(AnalysisInput Source, double RadiusMeters, bo
 /// <summary>A03: en yakın N. Kesin sıralama ST_Distance(geography) + id.</summary>
 public sealed record NearestRequest(Point Point, int N, string? FacilityType, double? MaxDistanceMeters);
 
+/// <summary>A04: metrik ölçüm. Çizgi → uzunluk; alan → alan + çevre. Nokta desteklenmez (422, 0 dönülmez).</summary>
+public sealed record MeasureRequest(AnalysisInput Input);
+
+/// <summary>
+/// A04 ölçüm projeksiyonu: EPSG:32635 (WGS 84 / UTM 35N). Kullanım alanı 24°D–30°D, 0°K–84°K.
+/// Bursa verisinin kapsamı 28.09°D–29.91°D (2026-11-05 sorgusu) zonun içindedir; seçim gerekçesi ADR-0013.
+/// </summary>
+public static class MetricProjection
+{
+    public const int Srid = 32635;
+    public const string Name = "WGS 84 / UTM zone 35N";
+    public const double MinLon = 24, MaxLon = 30, MinLat = 0, MaxLat = 84;
+
+    public static bool Covers(Geometry geometry)
+    {
+        var e = geometry.EnvelopeInternal;
+        return e.MinX >= MinLon && e.MaxX <= MaxLon && e.MinY >= MinLat && e.MaxY <= MaxLat;
+    }
+}
+
 public static class AnalysisLimits
 {
     public const int DefaultLimit = 500;
@@ -71,6 +91,24 @@ public static class AnalysisRequestParser
         var exclude = ReadBool(body, "excludeSource", true, errors);
         var limit = ReadInt(body, "limit", AnalysisLimits.DefaultLimit, 1, AnalysisLimits.MaxLimit, errors);
         return Result(errors, unprocessable, () => new BufferRequest(input!, radius!.Value, exclude, limit));
+    }
+
+    public static (MeasureRequest? Value, RequestErrors Errors) ParseMeasure(JsonElement body)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (!RequireObject(body, ["sourceFeature", "geometry"], errors)) return Fail<MeasureRequest>(errors);
+        var (input, unprocessable) = ReadInput(body, errors);
+        if (input?.Geometry is Point)
+        {
+            errors["geometry"] = ["Desteklenmeyen ölçüm: noktanın uzunluğu veya alanı yoktur. Çizgi ya da alan seçin."];
+            unprocessable = true;
+        }
+        if (input?.Source is { LayerId: AnalysisLayers.Facilities })
+        {
+            errors["sourceFeature.layerId"] = ["Desteklenmeyen ölçüm: sağlık tesisleri noktadır. İlçe veya çizgi/alan çizimi seçin."];
+            unprocessable = true;
+        }
+        return Result(errors, unprocessable, () => new MeasureRequest(input!));
     }
 
     public static (NearestRequest? Value, RequestErrors Errors) ParseNearest(JsonElement body)

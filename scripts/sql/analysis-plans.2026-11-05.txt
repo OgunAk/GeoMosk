@@ -1,0 +1,162 @@
+Pager usage is off.
+ANALYZE
+ANALYZE
+=== A03 en yakın N (Bursa merkezi, N=5) ===
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=29.711..29.713 rows=5 loops=1)
+   Buffers: shared hit=166
+   ->  Sort (actual time=29.695..29.696 rows=5 loops=1)
+         Sort Key: (st_distance((geom)::geography, '0101000020E61000008FC2F5285C0F3D40B81E85EB51184440'::geography, true)), id
+         Sort Method: top-N heapsort  Memory: 25kB
+         Buffers: shared hit=166
+         ->  Seq Scan on health_facilities f (actual time=28.489..29.565 rows=911 loops=1)
+               Filter: (source_deleted_at IS NULL)
+               Buffers: shared hit=163
+ Planning:
+   Buffers: shared hit=49
+ Planning Time: 0.424 ms
+ Execution Time: 29.766 ms
+(13 rows)
+
+=== A02 tampon 2000 m (Bursa merkezi) ===
+                                                                                    QUERY PLAN                                                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort (actual time=0.450..0.455 rows=137 loops=1)
+   Sort Key: (st_distance((geom)::geography, '0101000020E61000008FC2F5285C0F3D40B81E85EB51184440'::geography, true)), id
+   Sort Method: quicksort  Memory: 29kB
+   Buffers: shared hit=22
+   ->  Bitmap Heap Scan on health_facilities f (actual time=0.134..0.413 rows=137 loops=1)
+         Filter: ((source_deleted_at IS NULL) AND st_dwithin((geom)::geography, '0101000020E61000008FC2F5285C0F3D40B81E85EB51184440'::geography, '2000'::double precision, true))
+         Rows Removed by Filter: 37
+         Heap Blocks: exact=18
+         Buffers: shared hit=22
+         ->  Bitmap Index Scan on ix_health_facilities_geog (actual time=0.099..0.099 rows=174 loops=1)
+               Index Cond: ((geom)::geography && _st_expand('0101000020E61000008FC2F5285C0F3D40B81E85EB51184440'::geography, '2000'::double precision))
+               Buffers: shared hit=4
+ Planning:
+   Buffers: shared hit=33
+ Planning Time: 0.499 ms
+ Execution Time: 0.552 ms
+(16 rows)
+
+=== A01 alan içinde (Nilüfer, ST_Covers) ===
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Sort (actual time=0.446..0.450 rows=120 loops=1)
+   Sort Key: f.id
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=63
+   InitPlan 1
+     ->  Seq Scan on districts (actual time=0.016..0.018 rows=1 loops=1)
+           Filter: (source_id = 1273952)
+           Rows Removed by Filter: 16
+           Buffers: shared hit=8
+   ->  Index Scan using ix_health_facilities_geom on health_facilities f (actual time=0.225..0.414 rows=120 loops=1)
+         Index Cond: (geom @ (InitPlan 1).col1)
+         Filter: ((source_deleted_at IS NULL) AND st_covers((InitPlan 1).col1, geom))
+         Rows Removed by Filter: 25
+         Buffers: shared hit=63
+ Planning:
+   Buffers: shared hit=34
+ Planning Time: 0.346 ms
+ Execution Time: 0.535 ms
+(18 rows)
+
+SET
+=== (enable_seqscan=off) A02 tampon: geography ifade indeksi kullanılabilir mi? ===
+                                                                                 QUERY PLAN                                                                                 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on health_facilities f (actual time=0.050..0.188 rows=137 loops=1)
+   Filter: ((source_deleted_at IS NULL) AND st_dwithin((geom)::geography, '0101000020E61000008FC2F5285C0F3D40B81E85EB51184440'::geography, '2000'::double precision, true))
+   Rows Removed by Filter: 37
+   Heap Blocks: exact=18
+   Buffers: shared hit=22
+   ->  Bitmap Index Scan on ix_health_facilities_geog (actual time=0.028..0.029 rows=174 loops=1)
+         Index Cond: ((geom)::geography && _st_expand('0101000020E61000008FC2F5285C0F3D40B81E85EB51184440'::geography, '2000'::double precision))
+         Buffers: shared hit=4
+ Planning Time: 0.182 ms
+ Execution Time: 0.215 ms
+(10 rows)
+
+=== (enable_seqscan=off) A01 alan içinde: geometry GiST kullanılabilir mi? ===
+                                                            QUERY PLAN                                                            
+----------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using ix_health_facilities_geom on health_facilities f (actual time=0.121..0.246 rows=120 loops=1)
+   Index Cond: (geom @ (InitPlan 1).col1)
+   Filter: ((source_deleted_at IS NULL) AND st_covers((InitPlan 1).col1, geom))
+   Rows Removed by Filter: 25
+   Buffers: shared hit=33
+   InitPlan 1
+     ->  Index Scan using ix_districts_source_source_object_type_source_id on districts (actual time=0.053..0.054 rows=1 loops=1)
+           Index Cond: (source_id = 1273952)
+           Buffers: shared hit=2
+ Planning Time: 0.082 ms
+ Execution Time: 0.264 ms
+(11 rows)
+
+RESET
+=== A05 ilçe başına tesis sayısı (tekil atama) ===
+                                                                            QUERY PLAN                                                                             
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate (actual time=6.473..6.559 rows=17 loops=1)
+   Group Key: d.id
+   Buffers: shared hit=749
+   CTE d
+     ->  Seq Scan on districts (actual time=0.007..0.014 rows=17 loops=1)
+           Filter: (source_deleted_at IS NULL)
+           Buffers: shared hit=8
+   ->  Sort (actual time=6.465..6.498 rows=911 loops=1)
+         Sort Key: d.id
+         Sort Method: quicksort  Memory: 60kB
+         Buffers: shared hit=749
+         ->  Hash Right Join (actual time=3.039..6.378 rows=911 loops=1)
+               Hash Cond: (candidates.district_id = d.id)
+               Buffers: shared hit=749
+               ->  Unique (actual time=2.960..6.178 rows=911 loops=1)
+                     Buffers: shared hit=741
+                     ->  Incremental Sort (actual time=2.959..6.106 rows=911 loops=1)
+                           Sort Key: candidates.facility_id, candidates.interior DESC, candidates.district_id
+                           Presorted Key: candidates.facility_id
+                           Full-sort Groups: 29  Sort Method: quicksort  Average Memory: 26kB  Peak Memory: 26kB
+                           Buffers: shared hit=741
+                           ->  Subquery Scan on candidates (actual time=2.789..5.963 rows=911 loops=1)
+                                 Buffers: shared hit=736
+                                 ->  WindowAgg (actual time=2.788..5.886 rows=911 loops=1)
+                                       Buffers: shared hit=736
+                                       ->  Sort (actual time=2.748..2.795 rows=911 loops=1)
+                                             Sort Key: health_facilities.id
+                                             Sort Method: quicksort  Memory: 1930kB
+                                             Buffers: shared hit=368
+                                             ->  Nested Loop (actual time=0.108..1.975 rows=911 loops=1)
+                                                   Buffers: shared hit=368
+                                                   ->  CTE Scan on d d_1 (actual time=0.000..0.009 rows=17 loops=1)
+                                                   ->  Index Scan using ix_health_facilities_geom on health_facilities (actual time=0.032..0.084 rows=54 loops=17)
+                                                         Index Cond: (geom @ d_1.geom)
+                                                         Filter: ((source_deleted_at IS NULL) AND st_covers(d_1.geom, geom))
+                                                         Rows Removed by Filter: 33
+                                                         Buffers: shared hit=333
+               ->  Hash (actual time=0.064..0.065 rows=17 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                     Buffers: shared hit=8
+                     ->  CTE Scan on d (actual time=0.009..0.048 rows=17 loops=1)
+                           Buffers: shared hit=8
+ Planning:
+   Buffers: shared hit=29
+ Planning Time: 0.340 ms
+ Execution Time: 6.749 ms
+(46 rows)
+
+=== A04 ölçüm (Nilüfer, EPSG:32635) ===
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Seq Scan on districts (actual time=3.966..3.973 rows=1 loops=1)
+   Filter: (source_id = 1273952)
+   Rows Removed by Filter: 16
+   Buffers: shared hit=29
+ Planning:
+   Buffers: shared hit=3
+ Planning Time: 0.111 ms
+ Execution Time: 4.048 ms
+(8 rows)
+

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using GeoScope.Application.Analysis;
 using GeoScope.Application.UserFeatures;
+using GeoScope.Domain.Facilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GeoScope.Api.Controllers;
@@ -58,10 +59,39 @@ public sealed class AnalysisController(IAnalysisService analysis) : ControllerBa
         return request is null ? Validation(errors) : ToResult(await analysis.NearestAsync(request, cancellationToken));
     }
 
+    /// <summary>
+    /// A04 — metrik ölçüm. Gövde: <c>sourceFeature</c> (ilçe veya çizgi/alan kullanıcı çizimi) veya <c>geometry</c> (LineString/Polygon).
+    /// EPSG:32635'e ST_Transform sonrası çizgide uzunluk (m), alanda alan (m²) ve çevre (m); <c>measurement.geodesicCheck</c> çapraz kontroldür.
+    /// Nokta ve projeksiyon kullanım alanı dışı 422.
+    /// </summary>
+    [HttpPost("measure")]
+    [ProducesResponseType<AnalysisResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status422UnprocessableEntity, "application/problem+json")]
+    public async Task<IActionResult> Measure([FromBody] JsonElement body, CancellationToken cancellationToken)
+    {
+        var (request, errors) = AnalysisRequestParser.ParseMeasure(body);
+        return request is null ? Validation(errors) : ToResult(await analysis.MeasureAsync(request, cancellationToken));
+    }
+
+    /// <summary>
+    /// A05 — ilçe başına sağlık tesisi sayısı (tekil atama; tesisi olmayan ilçe 0). <c>type</c> isteğe bağlı tesis türü filtresi.
+    /// </summary>
+    [HttpGet("district-stats")]
+    [ProducesResponseType<DistrictStatsResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    public async Task<IActionResult> DistrictStats([FromQuery] string? type, CancellationToken cancellationToken)
+    {
+        if (type is not null && !FacilityTypes.All.Contains(type))
+            return Validation(new RequestErrors(new() { ["type"] = [$"Geçersiz tesis türü. İzin verilenler: {string.Join(", ", FacilityTypes.All)}."] }, false));
+        return Ok(await analysis.DistrictStatsAsync(type, cancellationToken));
+    }
+
     private IActionResult ToResult(AnalysisResult result) => result.Status switch
     {
         AnalysisStatus.SourceNotFound => Problem(statusCode: StatusCodes.Status404NotFound, title: result.Problem),
-        AnalysisStatus.SourceNotApplicable => Validation(new RequestErrors(new() { ["sourceFeature"] = [result.Problem!] }, true)),
+        AnalysisStatus.SourceNotApplicable => Validation(new RequestErrors(new() { [result.ProblemField] = [result.Problem!] }, true)),
         _ => Ok(result.Response),
     };
 

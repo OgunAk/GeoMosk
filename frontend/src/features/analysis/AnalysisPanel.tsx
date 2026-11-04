@@ -4,8 +4,10 @@ import { ApiError } from '../../services/apiClient'
 import {
   MAX_N,
   MAX_RADIUS_METERS,
+  formatArea,
   formatDistance,
   runBuffer,
+  runMeasure,
   runNearest,
   runWithin,
   type AnalysisKind,
@@ -22,6 +24,8 @@ export interface SelectedSource {
   label: string
   /** Alan analizi yalnız alanlarla (ilçe, Polygon çizim) yapılabilir. */
   isArea: boolean
+  /** Ölçüm (A04) yalnız çizgi ve alanlarda; nokta desteklenmez. */
+  measurable: boolean
 }
 
 interface AnalysisPanelProps {
@@ -42,6 +46,7 @@ const KINDS: { kind: AnalysisKind; label: string }[] = [
   { kind: 'within', label: 'Alan içindekiler' },
   { kind: 'buffer', label: 'Tampon (yakınlık)' },
   { kind: 'nearest', label: 'En yakın N' },
+  { kind: 'measure', label: 'Ölçüm' },
 ]
 
 /** A01-A03: hesap tamamen backend'de (PostGIS); arayüz yalnız girdiyi toplar ve sonucu gösterir. */
@@ -69,7 +74,9 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
         : selected?.isArea === true
       : kind === 'buffer'
         ? selected !== null && radiusValid
-        : pickedPoint !== null && nValid
+        : kind === 'measure'
+          ? selected?.measurable === true
+          : pickedPoint !== null && nValid
 
   async function onRun(e: FormEvent) {
     e.preventDefault()
@@ -82,7 +89,9 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
           ? await runWithin(areaSource === 'drawn' ? { geometry: drawnArea! } : { sourceFeature: selected!.ref }, includeBoundary)
           : kind === 'buffer'
             ? await runBuffer({ sourceFeature: selected!.ref }, radiusValue)
-            : await runNearest(pickedPoint!, nValue, type)
+            : kind === 'measure'
+              ? await runMeasure({ sourceFeature: selected!.ref })
+              : await runNearest(pickedPoint!, nValue, type)
       onResult(response)
     } catch (err) {
       setError(err instanceof ApiError ? err.userMessage : 'Analiz yapılamadı; bağlantıyı kontrol edin.')
@@ -226,6 +235,18 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
           </>
         )}
 
+        {kind === 'measure' && (
+          <div className="space-y-1">
+            <p className="break-words">
+              Obje: {selected ? <strong>{selected.label}</strong> : <em className="text-slate-500">haritada bir ilçe veya çizgi/alan çizimi seçin</em>}
+            </p>
+            {selected && !selected.measurable && (
+              <p className="text-xs text-amber-800">Desteklenmeyen ölçüm: noktanın uzunluğu veya alanı yoktur.</p>
+            )}
+            <p className="text-xs text-slate-600">Çizgide uzunluk, alanda alan ve çevre; EPSG:32635 (UTM 35N) projeksiyonunda metre.</p>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <button type="submit" disabled={!ready || running} className="rounded bg-orange-600 px-3 py-1 text-white hover:bg-orange-700 disabled:opacity-50">
             {running ? 'Hesaplanıyor…' : 'Analizi çalıştır'}
@@ -257,6 +278,7 @@ function AnalysisResults({
   onSelectMatch: (feature: Feature<Point, MatchProperties>) => void
   onShowAll: () => void
 }) {
+  if (result.analysis === 'measure' && result.measurement) return <MeasurementResult result={result} onShowAll={onShowAll} />
   const { features, meta } = result.matches
   const summary =
     result.analysis === 'within'
@@ -291,6 +313,41 @@ function AnalysisResults({
         ))}
       </ol>
       {result.analysis === 'buffer' && <p className="mt-1 text-xs text-slate-500">Haritadaki tampon yaklaşık bir çokgendir; seçim kesin mesafeyle yapılır.</p>}
+    </div>
+  )
+}
+
+function MeasurementResult({ result, onShowAll }: { result: AnalysisResponse; onShowAll: () => void }) {
+  const m = result.measurement!
+  const rows: [string, string, number][] = []
+  if (m.lengthMeters !== null) rows.push(['Uzunluk', formatDistance(m.lengthMeters), m.lengthMeters])
+  if (m.areaSquareMeters !== null) rows.push(['Alan', formatArea(m.areaSquareMeters), m.areaSquareMeters])
+  if (m.perimeterMeters !== null) rows.push(['Çevre', formatDistance(m.perimeterMeters), m.perimeterMeters])
+  const difference = (m.geodesicCheck.relativeDifference * 100).toLocaleString('tr-TR', { maximumFractionDigits: 3 })
+  return (
+    <div className="mt-3 border-t border-slate-200 pt-2" aria-live="polite">
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 break-words font-medium text-slate-800">Ölçüm: {result.input.properties.label ?? 'seçili obje'}</p>
+        <button type="button" onClick={onShowAll} className="shrink-0 text-blue-700 underline">
+          Haritada göster
+        </button>
+      </div>
+      <dl aria-label="Ölçüm sonuçları" className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
+        {rows.map(([label, display, raw]) => (
+          <div key={label} className="contents">
+            <dt className="text-slate-600">{label}</dt>
+            <dd className="tabular-nums">
+              <strong>{display}</strong>
+              <span className="block text-xs text-slate-500">
+                {raw.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} {label === 'Alan' ? 'm²' : 'm'}
+              </span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-1 text-xs text-slate-500">
+        EPSG:{m.calculationSrid} ({m.calculationCrs}) projeksiyonunda, ST_Transform sonrası. Sferoid (geography) çapraz kontrolüyle fark: %{difference}.
+      </p>
     </div>
   )
 }
