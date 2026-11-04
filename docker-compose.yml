@@ -1,0 +1,42 @@
+# Yerel demo ortamı. Portlar yalnızca 127.0.0.1'e bağlanır; anonim yazma API'si dış ağa açılmaz.
+# Değişkenler .env dosyasından (bkz. .env.example); yoksa yerel geliştirme varsayılanları kullanılır.
+name: geoscope
+
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-geoscope}
+      POSTGRES_USER: ${POSTGRES_USER:-geoscope}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geoscope_dev}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - geoscope-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__GeoScope: "Host=db;Port=5432;Database=${POSTGRES_DB:-geoscope};Username=${POSTGRES_USER:-geoscope};Password=${POSTGRES_PASSWORD:-geoscope_dev};Timeout=5"
+      Cors__AllowedOrigins__0: "http://localhost:${WEB_PORT:-8080}"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${API_PORT:-5080}:8080"
+
+  web:
+    build: ./frontend
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+
+volumes:
+  geoscope-db:

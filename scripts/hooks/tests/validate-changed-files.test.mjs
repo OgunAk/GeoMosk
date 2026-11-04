@@ -56,6 +56,22 @@ test('bozuk JSON exit 2 ve açıklama üretir', () => {
   assert.match(r.stderr, /JSON parse hatası/);
 });
 
+test('tsconfig JSONC yorum ve sondaki virgülle kabul edilir', () => {
+  const jsonc = '{\n  /* Bundler */\n  "compilerOptions": { "strict": true, // yorum\n  "paths": {"@/*": ["src/*"]}, },\n  "x": "http://a//b"\n}\n';
+  const r = runHook(edit(write('frontend/tsconfig.app.json', jsonc)));
+  assert.equal(r.status, 0, r.stderr);
+});
+
+test('JSONC olmayan JSON dosyasında yorum reddedilir', () => {
+  const r = runHook(edit(write('frontend/package.json', '{ // yorum\n "a": 1 }')));
+  assert.equal(r.status, 2);
+});
+
+test('JSONC içinde gerçek sözdizimi hatası yakalanır', () => {
+  const r = runHook(edit(write('tsconfig.json', '{ /* c */ "a": }')));
+  assert.equal(r.status, 2);
+});
+
 test('BOM ile başlayan JSON reddedilir', () => {
   const r = runHook(edit(write('bom.json', '﻿{}')));
   assert.equal(r.status, 2);
@@ -121,7 +137,9 @@ test('mjs sözdizimi hatası yakalanır', () => {
 });
 
 test('özel anahtar içeriği reddedilir', () => {
-  const r = runHook(edit(write('notes.md', '-----BEGIN PRIVATE KEY-----\nabc\n')));
+  // Kalıp çalışma anında birleştirilir; bu test dosyası kendi hook'unu tetiklemesin.
+  const marker = ['-----BEGIN', 'PRIVATE KEY-----'].join(' ');
+  const r = runHook(edit(write('notes.md', `${marker}\nabc\n`)));
   assert.equal(r.status, 2);
 });
 

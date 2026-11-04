@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoScope.Application\GeoScope.Application.csproj" />
+    <ProjectReference Include="..\GeoScope.Domain\GeoScope.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
