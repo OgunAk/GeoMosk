@@ -1,12 +1,48 @@
 # GeoScope — İlerleme kaydı
 
 ## Kısa durum (4 Kasım 2026)
-- **Son doğrulanan faz:** Faz 2 — Gerçek veri dikey dilimi (`validate-project --phase 2` exit 0).
-- **Git:** `master` = Faz 0 + Faz 1 (db3ba4f, GitHub'da, CI yeşil). Faz 2 değişiklikleri `faz-2-veri` dalında, henüz commit edilmedi.
-- **Çalışan ortam:** compose db/migrate/api/web ayakta; volume `geoscope_geoscope-db` gerçek veriyle dolu (17 ilçe, 911 tesis).
-- **Sonraki adım:** Faz 3 — `/api/layers`, tekil Feature + PATCH override (C01), sunucu tarafı arama + vurgu + zoom (M04), katman aç/kapa (M02), popup/panel (M03), ikinci altlık + stil değişiminde katman koruma (M05), bbox ile yükleme.
-- **Faz 3'e taşınan notlar:** 12 adsız tesis için arayüz metni; MapLibre paketi 500 KB üstü (kod bölme Faz 7); ilçe GeoJSON tam çözünürlükte (gzip 115 KB).
-- **İlgili master prompt bölümleri:** §9 (API), §11 (frontend/MapLibre).
+- **Son doğrulanan faz:** Faz 3 — Katman, arama ve API (`validate-project --phase 3` exit 0).
+- **Git:** `master` = Faz 0-1 (GitHub). Faz 2 `faz-2-veri` dalında commit'li (09392ec, push edilmedi). Faz 3 `faz-3-katman-arama` dalında, henüz commit edilmedi.
+- **Çalışan ortam:** compose db/migrate/api/web ayakta; volume `geoscope_geoscope-db` gerçek veriyle dolu (17 ilçe, 911 tesis). E2E testleri bu ortama karşı koşar.
+- **Sonraki adım:** Faz 4 — Terra Draw (P04) erken deneyi; `/api/features` CRUD (C02-C04); kullanıcı katmanı; ardından **geliştirici kontrol noktası 2** (docs/DEVELOPER-REVIEW.md).
+- **Faz 7'ye taşınan notlar:** MapLibre paketi 500 KB üstü (kod bölme); ilçe GeoJSON tam çözünürlükte (gzip 115 KB); arama için trigram indeksi ölçümü; bbox yüklemesi (ADR-0010).
+- **İlgili master prompt bölümleri:** §9 (API), §12 (çizim/CRUD), §8 (GeoJSON doğrulama).
+
+## Faz 3 raporu
+
+```text
+Faz: 3 — Katman, arama ve API
+Durum: doğrulandı
+Karşılanan gereksinimler: M02, M03, M04, M05, C01 doğrulandı; Q01 devam ediyor (bağımsız inceleme Faz 7).
+Oluşturulan/değişen dosyalar:
+  backend: FeatureQuery (q/type/districtId), OverridePatch(+Parser), IOverrideCommands, LayerInfo/VersionedFeature;
+    SourceFeatureQueries (katalog, tekil, arama, ilçe filtresi), OverrideCommands (xmin sürüm, ABA önlemi),
+    SearchFunctions + migration SearchNormalization (unaccent + geoscope_search_normalize), Http/ETags,
+    SourceLayersController (GET layers/{id}, PATCH), Program (2 MiB gövde sınırı, BadHttpRequestException durum kodu)
+  backend testleri: SourceFeatureDetailAndEditTests (28 durum); test DB'lerinde Pooling=false
+  frontend: MapView (iki altlık, style.load ile idempotent yeniden kurulum, vurgu/seçim katmanları, tıklama),
+    LayerPanel (aç/kapa + altlık), SearchPanel (+displayName), FeatureDetailsPanel, FeatureEditor, useFeatureDetail,
+    useDebouncedValue, geometry.bboxOf, services (requestJson+ETag, search/fetch/patch)
+  frontend testleri: LayerPanel 5, SearchPanel 5, FeatureEditor 5 (Vitest); tests/e2e/map.spec.ts 5 (Playwright 1.64.1)
+  docs: API-CONTRACT, DECISIONS (ADR-0007 güncel, 0008-0010), DATABASE, DATA-SOURCES; CI'a e2e işi
+Çalıştırılan komutlar ve sonuç/exit code:
+  OpenFreeMap stil/font/sprite/TileJSON → 200, CORS *
+  dotnet test backend → 67/67. Ara bulgular: (1) toplu çalıştırmada 53300 "too many clients" — her test DB'si için
+    havuzda kalan bağlantılar → test DB'lerinde havuz kapatıldı; (2) 42804 "CASE types integer and xid" — override
+    sürüm projeksiyonu → nullable xid; (3) silinmiş kayıt testinin kurgusu düzeltildi (v1→v2 import)
+  npm --prefix frontend run typecheck / lint / test (18/18) / e2e (5/5) → exit 0. Ara bulgular: lint
+    set-state-in-effect (durum istek anahtarından türetildi); debounce'a nesne verilmesi sonsuz render riski (metin anahtarı);
+    E2E'de kayıt bitmeden sayfa yenilenip PATCH iptal ediliyordu (test kaydın tamamlanmasını bekleyecek şekilde düzeltildi)
+  curl: 3 MiB PATCH → önce 500 (bulgu), BadHttpRequestException durum kodu korunarak → 413 (API ve nginx üzerinden)
+  curl: If-Match olmadan PATCH → 428 problem+json + traceId
+  Gerçek veri: "nilufer" → Nilüfer; "devlet hastanesi" → 18 sonuç (Çekirge, Bursa, Karacabey Eski Devlet Hastanesi…)
+  node scripts/validate-project.mjs --phase 3 → GEÇTİ, exit 0
+Veri/CRS/analiz kanıtları: ilçe filtresi sınır dahil (ST_Covers): ortak sınırdaki tesis iki ilçede, delikteki tesis hiçbirinde (test).
+İnceleme bulguları ve çözümleri: yukarıda. Alt ajan incelemesi yapılmadı.
+Çalıştırılamayan kontroller ve nedeni: Faz 2-3 CI çalışması (push edilmedi); mobil yerleşim E2E'de yok; ekran okuyucu ile manuel test yapılmadı.
+Kalan risk/engel: OpenFreeMap ücretsiz hizmet, süreklilik garantisi yok (uyarı + diğer altlık).
+Sonraki somut adım: Faz 4 (Terra Draw deneyi).
+```
 
 ## Faz 2 raporu
 
@@ -142,4 +178,5 @@ Sonraki somut adım: Docker Desktop'ı başlat → Faz 1 iskeleti.
 | 0 | doğrulandı (statik) / runtime kısmi | 2026-11-04 | Yukarıdaki rapor |
 | 1 | doğrulandı (CI uzakta çalışmadı) | 2026-11-04 | Faz 1 raporu |
 | 2 | doğrulandı | 2026-11-04 | Faz 2 raporu |
-| 3 | bekliyor | — | — |
+| 3 | doğrulandı | 2026-11-04 | Faz 3 raporu |
+| 4 | bekliyor | — | — |

@@ -54,7 +54,8 @@ Unique: `(source, source_object_type, source_id)`. İndeks: `ix_districts_geom` 
 | updated_at | timestamptz | |
 | xmin (Version) | xid | iyimser eşzamanlılık (EF row version) |
 
-Import bu tablolara yazmaz. "Alanı temizle" ile "kaynağa dön" ayrımı Faz 3 PATCH sözleşmesinde tanımlanacak.
+Import bu tablolara yazmaz. PATCH semantiği (`docs/API-CONTRACT.md`): `name: null` = kaynak adına dön, `description: null` = temizle,
+gönderilmeyen alan = değişmez. Satır silinmez; `xmin` ETag olarak kullanılır (ADR-0009).
 
 ### `user_features` — kullanıcı çizimleri
 | Kolon | Tip | Not |
@@ -78,6 +79,7 @@ quality_report (jsonb). İndeks `(dataset, started_at)`. Başarısız denemeler 
 |---|---|---|
 | `20261104171011_InitialSchema` | Tüm tablolar, CHECK'ler, GiST + geography indeksi | Tabloları siler (veri kaybı) |
 | `20261104172500_AppRoleWriteGrants` | `geoscope_app` varsa yazma izinleri | İzinleri geri alır |
+| `20261104183939_SearchNormalization` | `CREATE EXTENSION unaccent`; `public.geoscope_search_normalize(text)` (IMMUTABLE, `lower(unaccent(...))`) | Fonksiyonu siler (uzantı kalır) |
 
 Uygulama: `docker compose up` sırasında `migrate` servisi (EF migration bundle, şema sahibi rolü). Elle:
 `dotnet tool run dotnet-ef database update --project backend/GeoScope.Infrastructure --startup-project backend/GeoScope.Infrastructure`

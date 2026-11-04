@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddDbContext<GeoScopeDbContext>(options => ConfigureDbContext(options, connectionString));
         services.AddScoped<IDatabaseStatusProbe, PostGisStatusProbe>();
         services.AddScoped<ISourceFeatureQueries, SourceFeatureQueries>();
+        services.AddScoped<IOverrideCommands, OverrideCommands>();
         return services;
     }
 

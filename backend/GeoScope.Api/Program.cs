@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using NetTopologySuite.IO.Converters;
 
 var builder = WebApplication.CreateBuilder(args);
+// Gövde sınırı (security.md): 2 MiB; aşılırsa Kestrel 413 döner.
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 2 * 1024 * 1024);
 
 var connectionString = builder.Configuration.GetConnectionString("GeoScope")
     ?? throw new InvalidOperationException("ConnectionStrings:GeoScope yapılandırılmamış (ortam değişkeni: ConnectionStrings__GeoScope).");
@@ -25,7 +27,11 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    // Kestrel istemci hatalarını (ör. 413 gövde sınırı, bozuk istek) kendi durum koduyla bildirir; 500'e çevrilmez.
+    StatusCodeSelector = ex => ex is BadHttpRequestException badRequest ? badRequest.StatusCode : StatusCodes.Status500InternalServerError,
+});
 app.UseStatusCodePages();
 app.UseCors();
 

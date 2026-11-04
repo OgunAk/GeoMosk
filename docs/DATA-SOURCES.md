@@ -10,7 +10,9 @@ PDF D02 (en az iki farklı geometri tipi) dış kaynaktan karşılanır: poligon
 
 ## Lisans ve atıf
 - **Veri:** © OpenStreetMap katkıcıları, [Open Database License (ODbL) 1.0](https://www.openstreetmap.org/copyright). Atıf haritada (altlık atfı) ve yan panelde ("Veri: © OpenStreetMap katkıcıları, ODbL") gösterilir. Depodaki snapshot (`data/samples/osm-bursa/`) ODbL kapsamında yeniden dağıtılan bir veritabanı türevidir; aynı lisansla paylaşılır.
-- **Yazılım lisansı** ve **altlık karo hizmeti koşulları** ayrıdır. Faz 2 altlığı `tile.openstreetmap.org` raster karolarıdır; [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/) yalnızca hafif kullanıma izin verir ve görünür atıf ister. Yoğun/üretim kullanımı için uygun değildir (Faz 3'te ikinci altlıkla birlikte yeniden değerlendirilecek).
+- **Yazılım lisansı** ve **altlık karo hizmeti koşulları** ayrıdır. İki altlık (ADR-0007):
+  - `tile.openstreetmap.org` raster karoları: [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/) yalnızca hafif kullanıma izin verir ve görünür atıf ister; yoğun/üretim kullanımı için uygun değildir.
+  - [OpenFreeMap](https://openfreemap.org) Positron vektör stili: anahtar gerektirmez; atıf "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" haritada otomatik gösterilir. Ücretsiz hizmetin süreklilik garantisi yoktur; erişilemezse uygulama uyarı gösterir ve diğer altlık kullanılabilir.
 
 ## Edinme
 - **Uç nokta:** `https://overpass-api.de/api/interpreter` (POST). Script: `scripts/import/fetch-osm.mjs`, sorgular: `scripts/import/overpass-queries.mjs`.
@@ -58,7 +60,7 @@ Import, dosya checksum'ı manifestle uyuşmazsa çalışmaz.
 
 ## Bilinen eksikler
 - OSM gönüllü verisidir. Tesis kapsamı resmî Sağlık Bakanlığı kayıtlarıyla karşılaştırılmadı; eczaneler (765) baskındır, bazı aile sağlığı merkezleri etiketlenmemiş olabilir.
-- 12 tesisin adı yok. Arama ve listede "adsız" olarak gösterilmeleri gerekecek (Faz 3).
+- 12 tesisin adı yok. Arayüzde "Adsız tesis" olarak gösterilir; ad araması bunları bulmaz, tür/ilçe filtresi bulur.
 - Way/relation tesislerinin noktası temsilîdir (bkz. Dönüşümler 2).
 - 3 olası mükerrer çift otomatik birleştirilmedi.
 - İlçe sınırları OSM'deki idari sınırlardır; resmî kadastro/HGM sınırlarıyla birebir aynı olmayabilir.

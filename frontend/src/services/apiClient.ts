@@ -12,6 +12,13 @@ export class ApiError extends Error {
     this.status = status
     this.body = body
   }
+
+  /** ProblemDetails "errors" alanındaki ilk mesaj veya başlık; kullanıcıya gösterilebilir metin. */
+  get userMessage(): string {
+    const body = this.body as { title?: string; detail?: string; errors?: Record<string, string[]> } | null
+    const firstError = body?.errors ? Object.values(body.errors).flat()[0] : undefined
+    return firstError ?? body?.detail ?? body?.title ?? this.message
+  }
 }
 
 async function readBody(response: Response): Promise<unknown> {
@@ -24,14 +31,23 @@ async function readBody(response: Response): Promise<unknown> {
   }
 }
 
-export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+export interface JsonResponse<T> {
+  data: T
+  etag: string | null
+}
+
+export async function requestJson<T>(path: string, init: RequestInit = {}): Promise<JsonResponse<T>> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { Accept: 'application/json' },
-    signal,
+    ...init,
+    headers: { Accept: 'application/json, application/geo+json', ...init.headers },
   })
   const body = await readBody(response)
   if (!response.ok) {
     throw new ApiError(response.status, body, `İstek başarısız (${response.status})`)
   }
-  return body as T
+  return { data: body as T, etag: response.headers.get('ETag') }
+}
+
+export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+  return (await requestJson<T>(path, { signal })).data
 }

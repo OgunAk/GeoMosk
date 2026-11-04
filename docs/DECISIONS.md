@@ -31,10 +31,29 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Karar:** API kısıtlı `geoscope_app` rolüyle çalışır (superuser değil; kaynak tablolarında yalnızca okuma). Migration, Compose'daki tek seferlik `migrate` servisiyle (EF migration bundle) şema sahibi rolüyle uygulanır; API açılışında migration çalışmaz. Böylece çok örnekli çalışmada migration yarışı olmaz. Import da şema sahibi rolünü kullanır.
 - **Sonuç:** Yeni volume'da rol init script'iyle oluşur. Var olan volume için tek komutluk elle adım belgelendi (`docs/DATABASE.md`).
 
-## ADR-0007 — Faz 2 altlığı
+## ADR-0007 — Altlıklar
 
-- **Durum:** Geçici (Faz 3'te iki altlıkla kesinleşecek).
-- **Karar:** OSM standart raster karoları (`tile.openstreetmap.org`), görünür atıfla. Yalnızca hafif/demo kullanım için uygundur (OSM Tile Usage Policy).
+- **Durum:** Kabul (Faz 3).
+- **Karar:** (1) OSM standart raster (`tile.openstreetmap.org`): yalnız hafif/demo kullanıma uygundur (OSM Tile Usage Policy), görünür atıf ister. (2) OpenFreeMap Positron vektör stili (`https://tiles.openfreemap.org/styles/positron`): anahtar gerektirmez, CORS'a açık, atıf TileJSON'dan otomatik gelir ("OpenFreeMap © OpenMapTiles Data from OpenStreetMap"). 4 Kasım 2026'da stil, font, sprite ve TileJSON 200 döndü.
+- **Uygulama:** `setStyle(…, { diff: false })` ve her `style.load` olayında kaynak/katmanlar idempotent yeniden kurulur; görünürlük, vurgu ve seçim React durumundan tekrar uygulanır (E2E ile doğrulandı). Altlık karosu yüklenemezse kullanıcıya uyarı gösterilir, veri katmanları çalışmaya devam eder.
+
+## ADR-0008 — Türkçe arama normalleştirmesi
+
+- **Durum:** Kabul (Faz 3).
+- **Bağlam:** Kullanıcılar "nilufer", "INEGOL", "cekirge" yazabilir. PostgreSQL `ILIKE`'ın Türkçe İ/ı eşlemesi veritabanı yereline bağlıdır.
+- **Karar:** `unaccent` uzantısı + `geoscope_search_normalize(text) = lower(unaccent('public.unaccent', x))` (IMMUTABLE, migration `SearchNormalization`). Önce aksan kaldırılır (İ→I, ı→i, ü→u, ş→s, ğ→g, ç→c, ö→o), sonra küçük harfe çevrilir. Sorgu ve veri aynı fonksiyondan geçer. LIKE özel karakterleri kaçışlanır.
+- **Sonuç:** Arama aksan duyarsızdır ("Ilgaz" ile "ılgaz" aynı sayılır). Bu Türkçe imla açısından kabul edilen bir genişlemedir. 911 satırda sıralı tarama yeterli; trigram/ifade indeksi ölçülen ihtiyaçla Faz 7'de değerlendirilecek.
+
+## ADR-0009 — Kaynak kayıt düzenlemede eşzamanlılık
+
+- **Durum:** Kabul (Faz 3).
+- **Karar:** ETag = override satırının PostgreSQL `xmin` değeri (yoksa `"0"`). PATCH'te `If-Match` zorunlu (428), uyuşmazlık 412. Override satırı silinmez: silinip yeniden oluşturulsa sürüm `"0"`'a döner ve eski istemcinin ETag'i yanlışlıkla eşleşirdi (ABA). Eşzamanlı ilk oluşturmada PK çakışması da 412'ye çevrilir.
+- **Not:** nginx gzip yanıtta ETag'i zayıflatır (`W/"n"`). Sunucu bu biçimi de kabul eder; sürüm karşılaştırması uygulama içinde yapılır.
+
+## ADR-0010 — Harita veri yükleme stratejisi
+
+- **Durum:** Kabul (Faz 3), Faz 7'de ölçümle yeniden değerlendirilecek.
+- **Karar:** 17 ilçe ve 911 tesis tek istekte yüklenir (gzip ile ≈ 115 + 32 KB). `moveend` + bbox yüklemesi şimdilik kullanılmıyor: arama zaten sunucu tarafında tüm veride çalışıyor ve görünüm değişince istek sayısı artmasın isteniyor. API bbox/sayfalamayı destekler; yanıt `hasMore` ise arayüz eksik veriyi bildirir. Veri büyürse bbox yüklemesine geçilir.
 
 ## ADR-0003 — Kök araç paketi ve YAML ayrıştırıcı
 

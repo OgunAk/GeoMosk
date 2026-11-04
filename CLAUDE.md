@@ -23,8 +23,8 @@ MapLibre haritası, katman/altlık, arama, sözel düzenleme, kullanıcı çizim
 | `scripts/verify-agent-setup.mjs`, `scripts/validate-project.mjs`, `scripts/hooks/` | Faz 0 ✓ |
 | `docs/` REQUIREMENTS, PROGRESS, DECISIONS, DEVELOPER-REVIEW, FILE-MANIFEST, AI-TOOLS | Faz 0 ✓ |
 | `backend/GeoScope.{Domain,Application,Infrastructure,Api,Tests}/`, `Directory.Packages.props` | Faz 1 ✓ |
-| `frontend/src/{components,features/{health,map,layers},services,test}/` | Faz 1-2 ✓ |
-| `frontend/src/features/{search,drawing,analysis}/`, `frontend/tests/` | Faz 3+ (planlanan) |
+| `frontend/src/{components,hooks,services,test}/`, `features/{health,map,layers,search,details}/`, `frontend/tests/e2e/` | Faz 1-3 ✓ |
+| `frontend/src/features/{drawing,analysis}/` | Faz 4+ (planlanan) |
 | `scripts/import/` (fetch/load OSM), `data/samples/osm-bursa/` (gerçek), `data/test-fixtures/` (SENTETİK) | Faz 2 ✓ |
 | `backend/GeoScope.Infrastructure/Persistence/Migrations/`, `docker/db/` (rol script'leri) | Faz 2 ✓ |
 | `docker-compose.yml` (db, migrate, api, web, import[tools]), `.env.example`, `.github/workflows/ci.yml` | Faz 1-2 ✓ |
@@ -42,6 +42,7 @@ node scripts/hooks/validate-changed-files.mjs --file <yol>   # tek dosya elle
 dotnet build backend                          # .NET 9 (global.json 9.0.320)
 dotnet test backend                           # Docker gerekli: Testcontainers postgis/postgis:17-3.5
 npm --prefix frontend run typecheck           # ayrıca: lint | test | build | dev
+npm --prefix frontend run e2e                 # Playwright; çalışan compose + import gerekir (yerelde Chrome)
 docker compose up --build -d                  # db → migrate → api → web :8080 (yalnız 127.0.0.1)
 docker compose --profile tools run --rm import   # gerçek OSM snapshot'ını yükler (idempotent)
 npm run import:fetch                          # Overpass'tan yeni snapshot (ağ; adil kullanım)

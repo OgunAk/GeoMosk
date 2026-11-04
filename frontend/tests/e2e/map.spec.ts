@@ -1,0 +1,135 @@
+import { expect, test, type Page } from '@playwright/test'
+
+// Harita örneğine yalnızca durum okumak için erişilir (window.__geoscopeMap); etkileşim kullanıcı gibi yapılır.
+type Probe = { layers: string[]; visibility: Record<string, string | undefined>; hasBasemapVector: boolean; zoom: number }
+
+const EMPTY: Probe = { layers: [], visibility: {}, hasBasemapVector: false, zoom: 0 }
+
+async function probe(page: Page): Promise<Probe> {
+  return page.evaluate((empty) => {
+    const map = window.__geoscopeMap
+    // Stil değişimi sırasında getStyle() kısa süre boş döner: "henüz hazır değil" olarak raporlanır.
+    const style = map?.getStyle()
+    if (!map || !style?.layers) return empty
+    const ours = style.layers.map((l) => l.id).filter((id) => id.startsWith('lyr-') && id !== 'lyr-basemap-osm')
+    return {
+      layers: ours,
+      visibility: Object.fromEntries(ours.map((id) => [id, map.getLayoutProperty(id, 'visibility') as string | undefined])),
+      hasBasemapVector: 'openmaptiles' in style.sources,
+      zoom: map.getZoom(),
+    }
+  }, EMPTY)
+}
+
+async function openApp(page: Page) {
+  const errors: string[] = []
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+  await page.goto('/')
+  await expect(page.getByRole('checkbox', { name: /Sağlık tesisleri/ })).toBeVisible()
+  await expect.poll(async () => (await probe(page)).layers.length, { timeout: 20_000 }).toBe(7)
+  return errors
+}
+
+test('harita gerçek veriyle iki katmanı gösterir', async ({ page }) => {
+  const errors = await openApp(page)
+
+  const layersSection = page.getByRole('region', { name: 'Katmanlar' })
+  await expect(layersSection.getByText('17')).toBeVisible()
+  await expect(layersSection.getByText('911')).toBeVisible()
+  await expect(page.locator('.maplibregl-ctrl-attrib')).toContainText('OpenStreetMap')
+  expect(errors).toEqual([])
+})
+
+test('katman aç/kapa ve altlık değişiminde katmanlar ve durum korunur', async ({ page }) => {
+  await openApp(page)
+  await page.getByRole('checkbox', { name: /Sağlık tesisleri/ }).uncheck()
+  await expect.poll(async () => (await probe(page)).visibility['lyr-facilities-circle']).toBe('none')
+
+  await page.getByRole('radio', { name: /Positron/ }).check()
+
+  await expect.poll(async () => (await probe(page)).hasBasemapVector, { timeout: 20_000 }).toBe(true)
+  await expect.poll(async () => (await probe(page)).layers.length).toBe(7)
+  const afterSwitch = await probe(page)
+  expect(afterSwitch.visibility['lyr-facilities-circle']).toBe('none') // gizli kalmalı
+  expect(afterSwitch.visibility['lyr-districts-line']).toBe('visible')
+
+  await page.getByRole('checkbox', { name: /Sağlık tesisleri/ }).check()
+  await page.getByRole('radio', { name: 'OSM Standart' }).check()
+  await expect.poll(async () => (await probe(page)).hasBasemapVector, { timeout: 20_000 }).toBe(false)
+  await expect.poll(async () => (await probe(page)).visibility['lyr-facilities-circle']).toBe('visible')
+})
+
+test('Türkçe aksansız arama sonucu vurgular, seçer ve objeye zoom yapar', async ({ page }) => {
+  await openApp(page)
+  const zoomBefore = (await probe(page)).zoom
+
+  await page.getByRole('combobox', { name: 'Aranacak katman' }).selectOption('districts')
+  await page.getByRole('searchbox', { name: 'Ad ile ara' }).fill('nilufer')
+  const result = page.getByRole('list', { name: 'Arama sonuçları' }).getByRole('button', { name: 'Nilüfer' })
+  await expect(result).toBeVisible()
+  await result.click()
+
+  await expect(page.getByRole('heading', { name: 'Nilüfer' })).toBeVisible()
+  await expect.poll(async () => (await probe(page)).zoom, { timeout: 10_000 }).toBeGreaterThan(zoomBefore)
+  const filters = await page.evaluate(() => ({
+    highlight: JSON.stringify(window.__geoscopeMap!.getFilter('lyr-districts-highlight')),
+    selected: JSON.stringify(window.__geoscopeMap!.getFilter('lyr-districts-selected')),
+  }))
+  expect(filters.highlight).not.toContain('[]')
+  expect(filters.selected).not.toContain('[]')
+})
+
+test('haritada tesise tıklayınca öznitelikler yan panelde görünür', async ({ page }) => {
+  await openApp(page)
+  // Bilinen gerçek kayıt: arama ile koordinatını al, harita üzerinde o piksele tıkla.
+  const feature = await page.evaluate(async () => {
+    const r = (await fetch('/api/facilities?q=%C3%A7ekirge%20devlet&limit=1').then((x) => x.json())) as {
+      features: { geometry: { coordinates: [number, number] }; properties: { name: string } }[]
+    }
+    return r.features[0]
+  })
+  await page.evaluate(([lon, lat]) => window.__geoscopeMap!.jumpTo({ center: [lon, lat], zoom: 15 }), feature.geometry.coordinates)
+  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
+  const point = await page.evaluate(([lon, lat]) => window.__geoscopeMap!.project([lon, lat]), feature.geometry.coordinates)
+  const box = (await page.getByTestId('map').boundingBox())!
+
+  await page.mouse.click(box.x + point.x, box.y + point.y)
+
+  const details = page.getByRole('region', { name: feature.properties.name })
+  await expect(details).toBeVisible()
+  await expect(details.getByText('Hastane', { exact: true })).toBeVisible() // lejanttaki "Hastane" ile karışmasın
+  await expect(details.getByText(/temsilî bir noktadır/)).toBeVisible() // OSM way'den üretilmiş nokta
+})
+
+test('yerel açıklama kaydedilir, yenilemede korunur ve geri alınır', async ({ page }) => {
+  const note = `E2E notu ${Date.now()}`
+  await openApp(page)
+  const openNilufer = async () => {
+    await page.getByRole('combobox', { name: 'Aranacak katman' }).selectOption('districts')
+    await page.getByRole('searchbox', { name: 'Ad ile ara' }).fill('nilufer')
+    await page.getByRole('list', { name: 'Arama sonuçları' }).getByRole('button', { name: 'Nilüfer' }).click()
+    await expect(page.getByRole('heading', { name: 'Nilüfer' })).toBeVisible()
+  }
+
+  const details = page.getByRole('region', { name: 'Nilüfer' })
+  // Kayıt bitene kadar beklenir (düzenleyici kapanır); aksi halde yenileme süren PATCH'i iptal eder.
+  const save = async (text: string) => {
+    await details.getByRole('button', { name: 'Düzenle' }).click()
+    await details.getByLabel('Açıklama').fill(text)
+    await details.getByRole('button', { name: 'Kaydet' }).click()
+    await expect(details.getByRole('button', { name: 'Düzenle' })).toBeVisible()
+  }
+
+  await openNilufer()
+  await save(note)
+  await expect(details.getByRole('definition').filter({ hasText: note })).toBeVisible()
+
+  await page.reload()
+  await openApp(page)
+  await openNilufer()
+  await expect(details.getByRole('definition').filter({ hasText: note })).toBeVisible()
+
+  // Paylaşılan veriyi temizle: açıklamayı kaldır.
+  await save('')
+  await expect(details.getByText(note)).toHaveCount(0)
+})
