@@ -55,7 +55,16 @@ const PHASES = [
     ],
     checks: [checkSampleSnapshot],
   },
-  { phase: 3, title: 'Katman, arama ve API', files: ['frontend/src/features/search'] },
+  {
+    phase: 3,
+    title: 'Katman, arama ve API',
+    files: [
+      'frontend/src/features/search/SearchPanel.tsx', 'frontend/src/features/details/FeatureEditor.tsx',
+      'frontend/src/features/layers/LayerPanel.tsx', 'frontend/tests/e2e/map.spec.ts', 'frontend/playwright.config.ts',
+    ],
+    // Çalışan Compose ortamı + import edilmiş veri gerekir (bkz. frontend/playwright.config.ts).
+    commands: [{ name: 'frontend e2e (Playwright, compose)', cmd: npm, args: ['--prefix', 'frontend', 'run', 'e2e'] }],
+  },
   { phase: 4, title: 'Çizim ve CRUD', files: ['frontend/src/features/drawing', 'docs/DEVELOPER-REVIEW.md'] },
   { phase: 5, title: 'Üç MVP analizi', files: ['frontend/src/features/analysis', 'docs/TEST-PLAN.md'] },
   { phase: 6, title: 'Güçlü teslim analizleri', files: [] },
@@ -64,7 +73,6 @@ const PHASES = [
     phase: 8,
     title: 'Teslim',
     files: ['README.md', 'docs/DELIVERY-CHECKLIST.md', 'docs/FILE-MANIFEST.md'],
-    commands: [{ name: 'frontend e2e', cmd: npm, args: ['--prefix', 'frontend', 'run', 'e2e'] }],
   },
 ];
 

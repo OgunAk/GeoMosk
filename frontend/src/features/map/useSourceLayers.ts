@@ -17,7 +17,10 @@ export type SourceLayersState =
       facilities: PagedCollection<Point, FacilityProperties>
     }
 
-/** İlçe ve tesis katmanlarını API'den yükler; unmount/yeniden denemede eski isteği iptal eder. */
+/**
+ * İlçe ve tesis katmanlarını API'den yükler; unmount/yeniden denemede eski isteği iptal eder.
+ * <c>refresh</c> mevcut veriyi göstermeye devam ederek arka planda yeniler (düzenleme sonrası).
+ */
 export function useSourceLayers() {
   const [state, setState] = useState<SourceLayersState>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -29,7 +32,7 @@ export function useSourceLayers() {
       .catch((error: unknown) => {
         if (!controller.signal.aborted) {
           console.error('Katman verisi alınamadı', error)
-          setState({ kind: 'error' })
+          setState((current) => (current.kind === 'loaded' ? current : { kind: 'error' }))
         }
       })
     return () => controller.abort()
@@ -40,5 +43,7 @@ export function useSourceLayers() {
     setAttempt((n) => n + 1)
   }, [])
 
-  return { state, retry }
+  const refresh = useCallback(() => setAttempt((n) => n + 1), [])
+
+  return { state, retry, refresh }
 }

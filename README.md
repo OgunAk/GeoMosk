@@ -2,11 +2,17 @@
 
 Bursa ilçeleri ve sağlık tesisleri üzerine Web CBS uygulaması (ASP.NET Core + PostgreSQL/PostGIS + React/MapLibre).
 
-> **Durum:** Faz 2 — gerçek veri dikey dilimi. Haritada 17 ilçe sınırı ve 911 sağlık tesisi (OpenStreetMap) gösteriliyor.
-> Katman aç/kapa, arama, popup, ikinci altlık, düzenleme, çizim ve analizler sonraki fazlarda.
+> **Durum:** Faz 3 tamamlandı. Kullanıcı çizimleri (CRUD) ve geometrik analizler sonraki fazlarda.
 > Faz durumu: [docs/PROGRESS.md](docs/PROGRESS.md), gereksinimler: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md).
 
-![Faz 2 harita](docs/screenshots/faz2-map.png)
+## Özellikler (bugün çalışan)
+- Gerçek veri: Bursa'nın 17 ilçe sınırı (MultiPolygon) ve 911 sağlık tesisi (Point), OpenStreetMap.
+- Katmanları açıp kapatma; iki altlık (OSM Standart / OpenFreeMap Positron). Altlık değişince veri katmanları, görünürlük ve seçim korunur.
+- Haritada tıklanan ilçe/tesisin öznitelikleri yan panelde: tür, ilçe, kaynak OSM etiketleri ve bağlantısı.
+- Sunucu tarafı arama ve filtre (ad, tesis türü, ilçe). Büyük/küçük harf ve Türkçe aksan duyarsızdır ("nilufer" → Nilüfer). Sonuçlar vurgulanır, seçilen sonuca zoom yapılır.
+- İçe aktarılan kayıtlara yerel ad/açıklama verilebilir. OSM verisi değişmez, yeniden import bu düzenlemeyi ezmez. Eşzamanlı düzenleme ETag/If-Match ile korunur.
+
+![Arama ve detay paneli](docs/screenshots/faz3-search-details.png)
 
 ## Teknolojiler
 | Bileşen | Sürüm |
@@ -16,7 +22,7 @@ Bursa ilçeleri ve sağlık tesisleri üzerine Web CBS uygulaması (ASP.NET Core
 | PostgreSQL + PostGIS | `postgis/postgis:17-3.5` |
 | Frontend | React 19, TypeScript, Vite 8, Tailwind CSS 4, MapLibre GL JS 6.15.0 |
 | Import | Node.js 24 + `pg` 8.23.1 |
-| Test | xUnit + Testcontainers (gerçek PostGIS), Vitest + Testing Library, Playwright CLI |
+| Test | xUnit + Testcontainers (gerçek PostGIS), Vitest + Testing Library, Playwright 1.64.1 |
 
 **.NET 9 notu:** Ödev .NET 9'u tercih ediyor. Microsoft destek takvimine göre .NET 9 desteği 10 Kasım 2026'da sona eriyor; bu bilinen bir kısıttır.
 
@@ -67,7 +73,8 @@ dotnet test backend                                # Docker çalışıyor olmal�
 npm --prefix frontend run typecheck
 npm --prefix frontend run lint
 npm --prefix frontend run test
-node scripts/validate-project.mjs --phase 2        # faz kapısı
+npm --prefix frontend run e2e                      # Playwright: çalışan compose + import edilmiş veri gerekir
+node scripts/validate-project.mjs --phase 3        # faz kapısı (e2e dahil)
 ```
 
 ## Mimari ve belgeler

@@ -34,7 +34,9 @@ public sealed class PostGisContainerFixture : IAsyncLifetime
             await cmd.ExecuteNonQueryAsync();
         }
 
-        var connectionString = new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name }.ConnectionString;
+        // Her test kendi veritabanını kullanır; havuz açık kalırsa boşta bağlantılar birikir ve
+        // PostgreSQL max_connections (100) aşılır (53300). Test veritabanlarında havuz kapalı.
+        var connectionString = new NpgsqlConnectionStringBuilder(ConnectionString) { Database = name, Pooling = false }.ConnectionString;
         await using var db = CreateDbContext(connectionString);
         await db.Database.MigrateAsync();
         return connectionString;

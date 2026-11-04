@@ -2,9 +2,9 @@ import type { ExpressionSpecification, StyleSpecification } from 'maplibre-gl'
 import type { FacilityType } from '../../services/sourceLayers'
 import { LAYER_IDS, SOURCE_IDS } from './layerIds'
 
-// Faz 2 altlığı: OSM standart raster karoları. Kullanım politikası: hafif/demo kullanım ve görünür atıf.
-// İkinci altlık ve altlık değiştirici Faz 3'te (M05).
-export const baseStyle: StyleSpecification = {
+export type BasemapId = 'osm' | 'positron'
+
+const osmRasterStyle: StyleSpecification = {
   version: 8,
   sources: {
     [SOURCE_IDS.basemap]: {
@@ -16,6 +16,16 @@ export const baseStyle: StyleSpecification = {
     },
   },
   layers: [{ id: LAYER_IDS.basemap, type: 'raster', source: SOURCE_IDS.basemap }],
+}
+
+/**
+ * İki altlık (M05). Koşullar docs/DATA-SOURCES.md'de:
+ * - OSM standart raster: OSM Tile Usage Policy, yalnız hafif kullanım, görünür atıf.
+ * - OpenFreeMap Positron (vektör): anahtar gerekmez; atıf TileJSON'dan otomatik gelir.
+ */
+export const BASEMAPS: Record<BasemapId, { label: string; style: StyleSpecification | string }> = {
+  osm: { label: 'OSM Standart', style: osmRasterStyle },
+  positron: { label: 'Sade (OpenFreeMap Positron)', style: 'https://tiles.openfreemap.org/styles/positron' },
 }
 
 /** Tesis türü renkleri; lejant ve harita aynı tabloyu kullanır (renk tek bilgi taşıyıcısı değildir: lejantta ad var). */
@@ -43,3 +53,6 @@ export const facilityColorExpression: ExpressionSpecification = [
   ...Object.entries(FACILITY_COLORS).flat(),
   '#7f8c8d',
 ] as unknown as ExpressionSpecification
+
+export const HIGHLIGHT_COLOR = '#f1c40f'
+export const SELECTED_COLOR = '#1d4ed8'

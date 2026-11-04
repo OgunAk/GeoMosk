@@ -70,4 +70,16 @@ Makine tarafından denetlenen liste: `scripts/agent-setup.manifest.json` (`node 
 | `frontend/src/features/{map,layers}/**`, `services/sourceLayers.ts` | Harita ve katman özeti | oluşturuldu | typecheck/lint | Vitest 6/6, Playwright CLI | `docs/screenshots/faz2-map.png` | 2+ |
 | `docs/DATA-SOURCES.md`, `DATABASE.md`, `API-CONTRACT.md` | Faz 2 belgeleri | oluşturuldu | `validate-project --phase 2` | — | — | tümü |
 
+## Faz 3 dosyaları
+
+| yol | amaç | oluşturuldu/güncellendi | statik doğrulama | runtime keşfi | kanıt | kullanılacak faz |
+|---|---|---|---|---|---|---|
+| `backend/GeoScope.Application/Features/{FeatureQuery,OverridePatch,IOverrideCommands,ISourceFeatureQueries}.cs` | Arama/filtre, PATCH sözleşmesi | oluşturuldu/güncellendi | build 0 uyarı | 67/67 | PROGRESS Faz 3 | 3+ |
+| `backend/GeoScope.Infrastructure/Features/{SourceFeatureQueries,OverrideCommands}.cs`, `Persistence/SearchFunctions.cs` | Sorgular, override yazma, arama fonksiyonu | oluşturuldu/güncellendi | build | 67/67 | PROGRESS Faz 3 | 3+ |
+| `backend/GeoScope.Infrastructure/Persistence/Migrations/20261104183939_SearchNormalization.cs` | unaccent + normalleştirme fonksiyonu | oluşturuldu | migration testleri | compose migrate uygulandı | DATABASE | 3+ |
+| `backend/GeoScope.Api/Controllers/SourceLayersController.cs`, `Api/Http/ETags.cs`, `Program.cs` | GET/PATCH uç noktaları, ETag, 413 | güncellendi/oluşturuldu | build | API testleri + curl | API-CONTRACT | 3+ |
+| `frontend/src/features/{layers,search,details}/**`, `features/map/{MapView,geometry,layerIds,mapStyle}.ts(x)`, `hooks/useDebouncedValue.ts` | Katman paneli, arama, detay/düzenleme, altlık | oluşturuldu/güncellendi | typecheck/lint | Vitest 18/18, E2E 5/5 | `docs/screenshots/faz3-search-details.png` | 3+ |
+| `frontend/playwright.config.ts`, `frontend/tests/e2e/**`, `frontend/tsconfig.e2e.json` | Kalıcı uçtan uca testler | oluşturuldu | typecheck | 5/5 (yerel Chrome) | TEST-PLAN | 3-8 |
+| `.github/workflows/ci.yml` (e2e işi) | CI'da compose + import + Playwright | güncellendi | — | çalıştırılmadı (push yok) | — | 3-8 |
+
 Henüz yazılmayan belgeler (ilgili fazda): `DELIVERY-CHECKLIST.md` (Faz 8), `CLAUDE-CODE-SETUP.md`, `docs/adr/`.

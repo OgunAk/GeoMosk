@@ -18,6 +18,10 @@ public sealed class GeoScopeDbContext(DbContextOptions<GeoScopeDbContext> option
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("postgis");
+        modelBuilder.HasPostgresExtension("unaccent");
+        modelBuilder.HasDbFunction(typeof(SearchFunctions).GetMethod(nameof(SearchFunctions.Normalize))!)
+            .HasName(SearchFunctions.SqlName)
+            .HasSchema("public");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(GeoScopeDbContext).Assembly);
     }
 }
