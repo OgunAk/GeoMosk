@@ -1,0 +1,34 @@
+{
+  "source": "OpenStreetMap via Overpass API",
+  "endpoint": "https://overpass-api.de/api/interpreter",
+  "license": "ODbL-1.0",
+  "attribution": "© OpenStreetMap contributors",
+  "snapshotId": "2026-11-04T17-05-11-619Z",
+  "fetchedAt": "2026-11-04T17:05:11.619Z",
+  "files": {
+    "districts": {
+      "file": "districts.json",
+      "query": "[out:json][timeout:180];\narea[\"boundary\"=\"administrative\"][\"admin_level\"=\"4\"][\"name\"=\"Bursa\"]->.prov;\nrel(area.prov)[\"boundary\"=\"administrative\"][\"admin_level\"=\"6\"];\nout geom;",
+      "osmBase": "2026-11-04T17:04:44Z",
+      "sha256": "99d8e0a7526be27eb96897f5a1ca3198e0d38e04ced7acfd27c090c536db83fb",
+      "bytes": 775692,
+      "elements": 17,
+      "byType": {
+        "relation": 17
+      }
+    },
+    "facilities": {
+      "file": "facilities.json",
+      "query": "[out:json][timeout:180];\narea[\"boundary\"=\"administrative\"][\"admin_level\"=\"4\"][\"name\"=\"Bursa\"]->.prov;\n(\n  nwr(area.prov)[\"amenity\"~\"^(hospital|clinic|doctors|dentist|pharmacy)$\"];\n  nwr(area.prov)[\"healthcare\"][\"amenity\"!~\".\"];\n);\nout geom;",
+      "osmBase": "2026-11-04T17:05:45Z",
+      "sha256": "04b02ed44630bd711e5bc9b2739b8b82f987b1dbf849172c2636649aa605140d",
+      "bytes": 292046,
+      "elements": 911,
+      "byType": {
+        "node": 816,
+        "way": 94,
+        "relation": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,130 @@
+{
+ "version": 0.6,
+ "generator": "GeoScope synthetic fixture",
+ "osm3s": {
+  "timestamp_osm_base": "2026-01-01T00:00:00Z"
+ },
+ "elements": [
+  {
+   "type": "relation",
+   "id": 1,
+   "tags": {
+    "boundary": "administrative",
+    "admin_level": "6",
+    "name": "Sentetik İlçe A"
+   },
+   "members": [
+    {
+     "type": "way",
+     "ref": 101,
+     "role": "outer",
+     "geometry": [
+      {
+       "lat": 40,
+       "lon": 29
+      },
+      {
+       "lat": 40,
+       "lon": 29.1
+      },
+      {
+       "lat": 40.1,
+       "lon": 29.1
+      }
+     ]
+    },
+    {
+     "type": "way",
+     "ref": 102,
+     "role": "outer",
+     "geometry": [
+      {
+       "lat": 40.1,
+       "lon": 29.1
+      },
+      {
+       "lat": 40.1,
+       "lon": 29
+      },
+      {
+       "lat": 40,
+       "lon": 29
+      }
+     ]
+    },
+    {
+     "type": "way",
+     "ref": 103,
+     "role": "inner",
+     "geometry": [
+      {
+       "lat": 40.04,
+       "lon": 29.04
+      },
+      {
+       "lat": 40.04,
+       "lon": 29.06
+      },
+      {
+       "lat": 40.06,
+       "lon": 29.06
+      },
+      {
+       "lat": 40.06,
+       "lon": 29.04
+      },
+      {
+       "lat": 40.04,
+       "lon": 29.04
+      }
+     ]
+    },
+    {
+     "type": "node",
+     "ref": 999,
+     "role": "admin_centre",
+     "lat": 40.02,
+     "lon": 29.02
+    }
+   ]
+  },
+  {
+   "type": "relation",
+   "id": 2,
+   "tags": {
+    "boundary": "administrative",
+    "admin_level": "6",
+    "name": "Sentetik İlçe B"
+   },
+   "members": [
+    {
+     "type": "way",
+     "ref": 201,
+     "role": "outer",
+     "geometry": [
+      {
+       "lat": 40,
+       "lon": 29.1
+      },
+      {
+       "lat": 40,
+       "lon": 29.2
+      },
+      {
+       "lat": 40.1,
+       "lon": 29.2
+      },
+      {
+       "lat": 40.1,
+       "lon": 29.1
+      },
+      {
+       "lat": 40,
+       "lon": 29.1
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

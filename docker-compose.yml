@@ -1,6 +1,11 @@
 # Yerel demo ortamı. Portlar yalnızca 127.0.0.1'e bağlanır; anonim yazma API'si dış ağa açılmaz.
 # Değişkenler .env dosyasından (bkz. .env.example); yoksa yerel geliştirme varsayılanları kullanılır.
+#
+# Roller: POSTGRES_USER = şema sahibi (migration + import), geoscope_app = API çalışma rolü (superuser değil).
+# Veri importu otomatik değildir:  docker compose --profile tools run --rm import
 name: geoscope
+
+x-owner-connection: &owner-connection "Host=db;Port=5432;Database=${POSTGRES_DB:-geoscope};Username=${POSTGRES_USER:-geoscope};Password=${POSTGRES_PASSWORD:-geoscope_dev};Timeout=5"
 
 services:
   db:
@@ -9,25 +14,41 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-geoscope}
       POSTGRES_USER: ${POSTGRES_USER:-geoscope}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geoscope_dev}
+      GEOSCOPE_APP_USER: geoscope_app
+      GEOSCOPE_APP_PASSWORD: ${GEOSCOPE_APP_PASSWORD:-geoscope_app_dev}
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - geoscope-db:/var/lib/postgresql/data
+      - ./docker/db/initdb:/docker-entrypoint-initdb.d:ro
+      - ./docker/db/sql:/geoscope-sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 20
 
-  api:
-    build: ./backend
+  migrate:
+    build:
+      context: ./backend
+      target: migrator
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__GeoScope: "Host=db;Port=5432;Database=${POSTGRES_DB:-geoscope};Username=${POSTGRES_USER:-geoscope};Password=${POSTGRES_PASSWORD:-geoscope_dev};Timeout=5"
-      Cors__AllowedOrigins__0: "http://localhost:${WEB_PORT:-8080}"
+      MIGRATION_CONNECTION: *owner-connection
     depends_on:
       db:
         condition: service_healthy
+
+  api:
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__GeoScope: "Host=db;Port=5432;Database=${POSTGRES_DB:-geoscope};Username=geoscope_app;Password=${GEOSCOPE_APP_PASSWORD:-geoscope_app_dev};Timeout=5"
+      Cors__AllowedOrigins__0: "http://localhost:${WEB_PORT:-8080}"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:${API_PORT:-5080}:8080"
 
@@ -37,6 +58,19 @@ services:
       - api
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:80"
+
+  import:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: scripts/import/Dockerfile
+    environment:
+      GEOSCOPE_IMPORT_DATABASE_URL: "postgres://${POSTGRES_USER:-geoscope}:${POSTGRES_PASSWORD:-geoscope_dev}@db:5432/${POSTGRES_DB:-geoscope}"
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   geoscope-db:

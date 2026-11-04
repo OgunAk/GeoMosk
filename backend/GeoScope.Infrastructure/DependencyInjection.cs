@@ -1,4 +1,6 @@
+using GeoScope.Application.Features;
 using GeoScope.Application.Health;
+using GeoScope.Infrastructure.Features;
 using GeoScope.Infrastructure.Health;
 using GeoScope.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,9 +14,14 @@ public static class DependencyInjection
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
-        services.AddDbContext<GeoScopeDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite()));
+        services.AddDbContext<GeoScopeDbContext>(options => ConfigureDbContext(options, connectionString));
         services.AddScoped<IDatabaseStatusProbe, PostGisStatusProbe>();
+        services.AddScoped<ISourceFeatureQueries, SourceFeatureQueries>();
         return services;
     }
+
+    internal static void ConfigureDbContext(DbContextOptionsBuilder options, string connectionString) =>
+        options
+            .UseNpgsql(connectionString, npgsql => npgsql.UseNetTopologySuite())
+            .UseSnakeCaseNamingConvention();
 }

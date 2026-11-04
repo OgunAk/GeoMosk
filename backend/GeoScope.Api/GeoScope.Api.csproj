@@ -2,8 +2,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <!-- dotnet ef için başlangıç projesinde gerekli; yayın çıktısına girmez. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="NetTopologySuite.IO.GeoJSON4STJ" />
   </ItemGroup>
 
   <ItemGroup>

@@ -9,9 +9,14 @@
   "scripts": {
     "verify:agents": "node scripts/verify-agent-setup.mjs",
     "validate": "node scripts/validate-project.mjs",
-    "test:hooks": "node --test \"scripts/hooks/tests/*.test.mjs\""
+    "test:hooks": "node --test \"scripts/hooks/tests/*.test.mjs\"",
+    "import:fetch": "node scripts/import/fetch-osm.mjs",
+    "import:load": "node scripts/import/load-osm.mjs"
   },
   "devDependencies": {
     "yaml": "2.9.1"
+  },
+  "dependencies": {
+    "pg": "8.23.1"
   }
 }

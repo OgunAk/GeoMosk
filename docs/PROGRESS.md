@@ -1,12 +1,61 @@
 # GeoScope — İlerleme kaydı
 
 ## Kısa durum (4 Kasım 2026)
-- **Son doğrulanan faz:** Faz 1 — Çalışan iskelet (`validate-project --phase 1` exit 0).
-- **Git:** Faz 0 commit'i `faz-0-altyapi` dalında (379c637, yazar OgunAk). Faz 1 değişiklikleri `faz-1-iskelet` dalında, henüz commit edilmedi.
-- **Çalışan ortam:** `docker compose up --build -d` ile db/api/web ayakta (volume `geoscope_geoscope-db`).
-- **Sonraki adım:** Faz 2 — gis-specialist ile Bursa ilçe (MultiPolygon) + sağlık tesisi (Point) kaynak/lisans doğrulaması; migration'lar; tekrarlanabilir import; `docs/DATA-SOURCES.md`, `docs/DATABASE.md`; MapLibre ile ilk harita (M01).
-- **Faz 2 açık kararları:** uygulama için superuser olmayan DB rolü; NTS tiplerinin Domain'de kullanımı (ADR-0002 alt kararı).
-- **İlgili master prompt bölümleri:** §6 (veri), §7 (şema), §8 (CRS).
+- **Son doğrulanan faz:** Faz 2 — Gerçek veri dikey dilimi (`validate-project --phase 2` exit 0).
+- **Git:** `master` = Faz 0 + Faz 1 (db3ba4f, GitHub'da, CI yeşil). Faz 2 değişiklikleri `faz-2-veri` dalında, henüz commit edilmedi.
+- **Çalışan ortam:** compose db/migrate/api/web ayakta; volume `geoscope_geoscope-db` gerçek veriyle dolu (17 ilçe, 911 tesis).
+- **Sonraki adım:** Faz 3 — `/api/layers`, tekil Feature + PATCH override (C01), sunucu tarafı arama + vurgu + zoom (M04), katman aç/kapa (M02), popup/panel (M03), ikinci altlık + stil değişiminde katman koruma (M05), bbox ile yükleme.
+- **Faz 3'e taşınan notlar:** 12 adsız tesis için arayüz metni; MapLibre paketi 500 KB üstü (kod bölme Faz 7); ilçe GeoJSON tam çözünürlükte (gzip 115 KB).
+- **İlgili master prompt bölümleri:** §9 (API), §11 (frontend/MapLibre).
+
+## Faz 2 raporu
+
+```text
+Faz: 2 — Gerçek veri dikey dilimi
+Durum: doğrulandı
+Karşılanan gereksinimler: T03, T04, D01, D02, D03, D04, D05, M01 doğrulandı; D06, L03, Q03, P05, P06 devam ediyor.
+Oluşturulan/değişen dosyalar:
+  scripts/import/{overpass-queries,fetch-osm,load-osm}.mjs, scripts/import/Dockerfile, .dockerignore
+  data/samples/osm-bursa/2026-11-04T17-05-11-619Z/ (gerçek, ODbL), data/raw/osm-bursa.manifest.json
+  data/test-fixtures/osm-mini/{v1,v2} (SENTETİK, README ile etiketli)
+  backend: Domain entity'leri (District, HealthFacility, overrides, UserFeature, ImportRun), EF yapılandırmaları,
+    migration'lar InitialSchema + AppRoleWriteGrants, DesignTimeDbContextFactory, SourceFeatureQueries,
+    SourceLayersController (GET /api/districts, /api/facilities), GeometrySchemaTransformer; .config/dotnet-tools.json (dotnet-ef 9.0.22)
+  docker/db/{initdb/10-app-role.sh, sql/app-role.sql}; docker-compose.yml (migrate, import servisleri); Dockerfile migrator aşaması
+  frontend: MapView, layerIds, mapStyle, maplibreSetup, useSourceLayers, LayerSummary (+test), services/sourceLayers.ts; nginx gzip + .mjs MIME
+  docs: DATA-SOURCES, DATABASE, API-CONTRACT; DECISIONS (ADR-0005..0007); README; CI'a Node adımı
+Çalıştırılan komutlar ve sonuç/exit code:
+  node scripts/import/fetch-osm.mjs → exit 0; iki sorgu da ilk denemede Overpass 502, yeniden denemede başarılı;
+    districts 17 relation, facilities 911 (816 node/94 way/1 relation)
+  dotnet tool run dotnet-ef migrations add InitialSchema → başarılı
+  docker compose up -d --build db migrate → migrate Exited (0), 2 migration uygulandı
+  10-app-role.sh (var olan volume) → geoscope_app rolsuper=f; yazma yalnız 3 tabloda (information_schema kanıtı)
+  load-osm.mjs 1. deneme → exit 1, import_history sayaç kolonlarında NOT NULL (transaction öncesi; veri yok) → düzeltildi
+  load-osm.mjs 2. deneme → exit 1 "cannot insert multiple commands into a prepared statement"; import_history'de 2 'failed',
+    kaynak tabloları 0 satır (rollback kanıtı) → staging sorgusu ikiye bölündü
+  load-osm.mjs 3. deneme → exit 0: 17 + 911 eklendi, reddedilen 0, geçersiz 0, hiçbir ilçede olmayan tesis 0, olası mükerrer 3
+  load-osm.mjs 4. deneme (aynı snapshot) → ekleme 0, güncelleme 0, değişmeyen 17/911; satır sayısı 911 = farklı kaynak anahtarı 911
+  dotnet build backend → 0 uyarı (MSB3277 EF Core sürüm çakışması bulundu, EF Core 9.0.22 açıkça sabitlendi, MSB3277 artık hata)
+  dotnet test backend → 41/41 (ilk çalıştırmalarda: aynı adla CREATE DATABASE, [Produces] nedeniyle problem+json yerine
+    geo+json, doğrulama yanıtında traceId eksikliği bulundu ve düzeltildi; geometry_columns'ın yanıltıcı tipi test kaynağı değiştirildi)
+  npm --prefix frontend run typecheck / lint / test (6/6) / build → exit 0 (500 KB chunk uyarısı)
+  curl :8080/api/districts → 200 application/geo+json 318 042 B (gzip 115 169 B); facilities 276 663 B (gzip 31 835 B);
+    limit=0 → 400 application/problem+json
+  Playwright CLI: ilk denemede harita boş — (1) MapLibre worker 404 → setWorkerUrl + Vite ?url, (2) nginx .mjs'i
+    application/octet-stream sunuyordu → .mjs için text/javascript, (3) maplibre-gl.css katmansız
+    position:relative Tailwind "absolute"ı eziyordu → kap açık boyutla. Son durum: tuval 960×651, konsol hatası 0, ekran görüntüsü alındı.
+  Temiz kurulum: docker compose -p geoscope-cleancheck (yeni volume, farklı portlar) up → init script rolü oluşturdu,
+    migration 3 tabloya yazma izni verdi, import container'ı 17/911 ekledi, web üzerinden API 200; yalnız bu proje down -v ile kaldırıldı.
+  node scripts/validate-project.mjs --phase 2 → GEÇTİ, exit 0
+Veri/CRS/analiz kanıtları: tüm geometriler SRID 4326; ilçe extent boylam 28.09–29.91 / enlem 39.59–40.61; bbox sorgusunda
+  koordinatlar [29.04, 40.19] biçiminde (boylam, enlem); harita sınırları OSM altlığıyla örtüşüyor; deliğin içindeki
+  bbox ilçeyi döndürmüyor (gerçek geometri kesişimi testi).
+İnceleme bulguları ve çözümleri: yukarıdaki komut satırlarında. Alt ajan incelemesi yapılmadı.
+Çalıştırılamayan kontroller ve nedeni: Faz 2 CI çalışması (push edilmedi). Mobil yerleşim tarayıcıda denenmedi.
+  Resmî Sağlık Bakanlığı listesiyle kapsam karşılaştırması yapılmadı (DATA-SOURCES "Bilinen eksikler").
+Kalan risk/engel: OSM karo politikası yoğun kullanıma uygun değil (Faz 3 altlık kararı).
+Sonraki somut adım: Faz 3.
+```
 
 ## Faz 1 raporu
 
@@ -92,4 +141,5 @@ Sonraki somut adım: Docker Desktop'ı başlat → Faz 1 iskeleti.
 |---|---|---|---|
 | 0 | doğrulandı (statik) / runtime kısmi | 2026-11-04 | Yukarıdaki rapor |
 | 1 | doğrulandı (CI uzakta çalışmadı) | 2026-11-04 | Faz 1 raporu |
-| 2 | bekliyor | — | — |
+| 2 | doğrulandı | 2026-11-04 | Faz 2 raporu |
+| 3 | bekliyor | — | — |

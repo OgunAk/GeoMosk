@@ -56,4 +56,18 @@ Makine tarafından denetlenen liste: `scripts/agent-setup.manifest.json` (`node 
 | `docs/ARCHITECTURE.md`, `ROADMAP.md`, `TEST-PLAN.md`, `README.md` | Faz 1 belgeleri | oluşturuldu | — | — | — | tümü |
 | `docs/screenshots/faz1-system-status.png` | Çalışan uygulamadan ekran görüntüsü | oluşturuldu | — | Playwright CLI | TEST-PLAN | 8 |
 
-Henüz yazılmayan belgeler (ilgili fazda): `DATABASE.md`, `API-CONTRACT.md`, `DATA-SOURCES.md` (Faz 2-3), `DELIVERY-CHECKLIST.md` (Faz 8), `CLAUDE-CODE-SETUP.md`, `docs/adr/`.
+## Faz 2 dosyaları
+
+| yol | amaç | oluşturuldu/güncellendi | statik doğrulama | runtime keşfi | kanıt | kullanılacak faz |
+|---|---|---|---|---|---|---|
+| `scripts/import/{overpass-queries,fetch-osm,load-osm}.mjs`, `scripts/import/Dockerfile`, `.dockerignore` | OSM edinme ve PostGIS importu | oluşturuldu | hook `node --check` | gerçek import + ImportPipelineTests | PROGRESS Faz 2 | 2, 8 |
+| `data/samples/osm-bursa/2026-11-04T17-05-11-619Z/` | Gerçek veri snapshot'ı (ODbL) | oluşturuldu | checksum (`validate-project --phase 2`) | import 17/911 | DATA-SOURCES | 2, 8 |
+| `data/raw/osm-bursa.manifest.json` | Son indirmenin manifesti | oluşturuldu | JSON | — | DATA-SOURCES | 2 |
+| `data/test-fixtures/osm-mini/` | SENTETİK import fixture'ı | oluşturuldu | checksum | ImportPipelineTests | README (fixture) | 2+ |
+| `backend/GeoScope.Domain/**`, `Infrastructure/Persistence/**`, `Infrastructure/Features/**`, `Api/Controllers/**`, `Api/OpenApi/**` | Entity, şema, sorgu, GeoJSON API | oluşturuldu | build 0 uyarı | 41/41 test | PROGRESS Faz 2 | 2+ |
+| `docker/db/initdb/10-app-role.sh`, `docker/db/sql/app-role.sql` | Kısıtlı uygulama rolü | oluşturuldu | — | var olan + yeni volume'da çalıştı | DATABASE | 2+ |
+| `.config/dotnet-tools.json` | dotnet-ef 9.0.22 | oluşturuldu | — | migration add | — | 2+ |
+| `frontend/src/features/{map,layers}/**`, `services/sourceLayers.ts` | Harita ve katman özeti | oluşturuldu | typecheck/lint | Vitest 6/6, Playwright CLI | `docs/screenshots/faz2-map.png` | 2+ |
+| `docs/DATA-SOURCES.md`, `DATABASE.md`, `API-CONTRACT.md` | Faz 2 belgeleri | oluşturuldu | `validate-project --phase 2` | — | — | tümü |
+
+Henüz yazılmayan belgeler (ilgili fazda): `DELIVERY-CHECKLIST.md` (Faz 8), `CLAUDE-CODE-SETUP.md`, `docs/adr/`.
