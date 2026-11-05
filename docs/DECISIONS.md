@@ -106,6 +106,21 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **nginx → API (Faz 8 temiz kurulum bulgusu):** `proxy_pass http://api:8080` adı açılışta bir kez çözüyordu; API container'ı yeniden
   başlayıp IP değişince web 502 veriyordu. Docker iç DNS'i (`resolver 127.0.0.11 valid=10s`) + değişkenli `proxy_pass` ile her istekte çözülür.
 
+## ADR-0015 — Harici WMS raster katmanı (PDF §5, opsiyonel)
+
+- **Durum:** Kabul (2026-11-05, geliştirici isteği: "WMS ekle").
+- **Bağlam:** PDF en az bir harici WMS servisinin (örneğin TUCBS) raster kaynak olarak gösterilebileceğini söylüyor (opsiyonel).
+- **Denenen:** TUCBS `tucbs-public-api.csb.gov.tr` (ör. `trk_dkmpgm_milli_parklar_wms`): GetCapabilities ve GetMap tarayıcıdan da
+  HTTP 500 + Layer7 "Policy Falsified" döndü; servis kayıt/izin istiyor olmalı. Kullanıcı tarayıcısında çalışmayacağı için seçilmedi.
+- **Karar:** EEA Copernicus CORINE Land Cover 2018 WMS (katman 12, raster). Gerekçe: Türkiye/Bursa kapsamda; EPSG:3857; erişim
+  kısıtı ve ücret yok; tarayıcıdan CORS ile 200 doğrulandı; arazi örtüsü tesislerin dağılımıyla (kentsel/kırsal) anlamlı bir bağlam verir.
+  Alternatifler de doğrulandı (EOX Sentinel-2 cloudless, terrestris OSM-WMS) ama ya lisans koşulu ya da OSM tekrarı nedeniyle seçilmedi.
+- **Uygulama:** MapLibre raster kaynak, WMS 1.1.1 `GetMap`, `SRS=EPSG:3857`, `BBOX={bbox-epsg-3857}`, 256 px, PNG saydam,
+  opaklık 0,6; altlığın üstünde, veri katmanlarının altında (`LAYER_ORDER`). Varsayılan kapalı (kapalıyken dış servise istek yok);
+  altlık değişiminde korunur. Servis hata verirse ayrı uyarı, ilk başarılı karoda kalkar. Backend'den geçmez (yalnız görüntü).
+- **Sonuç:** Dış servise bağımlılık: E2E'de istekler yakalanıp fixture PNG ile yanıtlanır; gerçek servis elle doğrulanır.
+  CORINE lejantı uygulamada yok (renk sınıfları EEA'nın CLC nomenklatürü).
+
 ## ADR-0010 — Harita veri yükleme stratejisi
 
 - **Durum:** Kabul (Faz 3), Faz 7'de ölçümle yeniden değerlendirilecek.

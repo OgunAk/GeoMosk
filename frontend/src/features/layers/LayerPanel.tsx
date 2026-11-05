@@ -2,6 +2,7 @@ import type { SourceLayersState } from '../map/useSourceLayers'
 import type { LayerKey } from '../map/layerIds'
 import { BASEMAPS, FACILITY_COLORS, FACILITY_LABELS, USER_COLOR, type BasemapId } from '../map/mapStyle'
 import type { FacilityType } from '../../services/sourceLayers'
+import { WMS_LAYER } from '../map/wms'
 
 interface LayerPanelProps {
   state: SourceLayersState
@@ -17,6 +18,9 @@ interface LayerPanelProps {
   /** Haritada gösterilen tesis türleri (geliştirici geri bildirimi G2). */
   facilityTypes: Record<FacilityType, boolean>
   onToggleFacilityType: (type: FacilityType, visible: boolean) => void
+  /** Harici WMS raster katmanı (PDF §5, opsiyonel); varsayılan kapalı. */
+  wmsVisible?: boolean
+  onToggleWms?: (visible: boolean) => void
 }
 
 const LAYER_TITLES: Record<LayerKey, string> = {
@@ -27,7 +31,7 @@ const LAYER_TITLES: Record<LayerKey, string> = {
 
 /** Katman aç/kapa (M02), altlık seçimi (M05), sayılar, tesis türü lejantı ve kaynak atfı. */
 export function LayerPanel(props: LayerPanelProps) {
-  const { state, userCount, userHasMore = false, onRetry, visibility, onToggle, basemap, onBasemapChange, facilityTypes, onToggleFacilityType } = props
+  const { state, userCount, userHasMore = false, onRetry, visibility, onToggle, basemap, onBasemapChange, facilityTypes, onToggleFacilityType, wmsVisible = false, onToggleWms } = props
   const facilityCounts = Object.fromEntries((Object.keys(FACILITY_LABELS) as FacilityType[]).map((t) => [t, 0])) as Record<FacilityType, number>
   if (state.kind === 'loaded') for (const f of state.facilities.features) facilityCounts[f.properties.facilityType]++
   return (
@@ -122,6 +126,23 @@ export function LayerPanel(props: LayerPanelProps) {
           </label>
         ))}
       </fieldset>
+      {onToggleWms && (
+        <fieldset className="mt-4">
+          <legend className="font-medium text-slate-900">Harici WMS (raster)</legend>
+          <label className="mt-1 flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={wmsVisible}
+              onChange={(e) => onToggleWms(e.target.checked)}
+              className="size-4 accent-blue-700"
+            />
+            {WMS_LAYER.label}
+          </label>
+          <p className="mt-1 text-xs text-slate-500">
+            Avrupa Çevre Ajansı (Copernicus) servisinden yarı saydam görüntü; karolar doğrudan servisten gelir.
+          </p>
+        </fieldset>
+      )}
       <p className="mt-3 text-xs text-slate-500">Veri: © OpenStreetMap katkıcıları, ODbL.</p>
     </section>
   )

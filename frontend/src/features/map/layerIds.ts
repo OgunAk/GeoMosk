@@ -5,10 +5,12 @@ export const SOURCE_IDS = {
   facilities: 'src-facilities',
   userFeatures: 'src-user-features',
   analysis: 'src-analysis',
+  wms: 'src-wms-corine',
 } as const
 
 export const LAYER_IDS = {
   basemap: 'lyr-basemap-osm',
+  wms: 'lyr-wms-corine',
   districtsFill: 'lyr-districts-fill',
   districtsChoropleth: 'lyr-districts-choropleth',
   districtsLine: 'lyr-districts-line',
@@ -33,6 +35,7 @@ export const LAYER_IDS = {
  * Katmanlar farklı efektlerde ve altlık değişiminden sonra farklı sırayla eklenebildiği için her kurulumdan sonra uygulanır.
  */
 export const LAYER_ORDER: readonly string[] = [
+  LAYER_IDS.wms, // harici raster: altlığın hemen üstünde, veri katmanlarının altında
   LAYER_IDS.districtsFill,
   LAYER_IDS.districtsChoropleth,
   LAYER_IDS.districtsLine,

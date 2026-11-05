@@ -21,8 +21,8 @@ async function probe(page: Page): Promise<Probe> {
   }, EMPTY)
 }
 
-// Uygulamanın kendi rendering katmanları: 7 kaynak (ilçe/tesis) + 5 kullanıcı çizimi + 4 analiz katmanı.
-const OUR_LAYER_COUNT = 17
+// Uygulamanın kendi rendering katmanları: 8 kaynak (ilçe/tesis + choropleth) + 5 kullanıcı çizimi + 4 analiz + 1 WMS.
+const OUR_LAYER_COUNT = 18
 
 async function openApp(page: Page) {
   const errors: string[] = []
