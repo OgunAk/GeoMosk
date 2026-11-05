@@ -110,6 +110,9 @@ doğrusal büyüme varsayımıyla ~100.000 kayıtta ~200 ms — o ölçekte ADR-
 | 2026-11-04 | curl, compose API: 3 MiB PATCH gövdesi | 413 (önce 500 bulundu ve düzeltildi); nginx üzerinden de 413. TestServer bu sınırı uygulamadığı için otomatik test yok |
 | 2026-11-04 | Playwright CLI ekran görüntüsü (Positron + arama + detay) | `docs/screenshots/faz3-search-details.png`, konsol hatası 0 |
 
+| 2026-11-05 | Temiz kurulum (Faz 8): yeni `git clone` 029445b, Compose projesi `geoscope-clean`, yeni volume, portlar 55432/55080/58080, `.env` yok | `up --build` exit 0; ready 200; import 17/911, ikinci import değişiklik yok; E2E 22/22 üretim imajı (nginx); db+api restart sonrası çizim kalıcı. **Bulgu:** API restart sonrası nginx 502 (eski IP) → resolver düzeltmesi, tekrar E2E 22/22 |
+| 2026-11-05 | Ekran görüntüleri (Playwright, üretim imajı) | `docs/screenshots/faz8-*.png`: tampon 2000 m (26 tesis), en yakın 5, Nilüfer ölçümü 524,42 km² (sferoid farkı −%0,021), dar ekran |
+
 Test verisi ayrımı: gerçek veri `data/samples/osm-bursa/`, sentetik fixture `data/test-fixtures/osm-mini/` (README'de etiketli).
 
 E2E ortamı notu (Faz 4): Docker Desktop container ağı çalışmadığından Faz 4 E2E'leri `E2E_BASE_URL=http://127.0.0.1:5173` ile

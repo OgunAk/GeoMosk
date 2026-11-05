@@ -102,4 +102,17 @@ Makine tarafından denetlenen liste: `scripts/agent-setup.manifest.json` (`node 
 | `frontend/tests/e2e/analysis.spec.ts` | Analiz E2E | oluşturuldu | typecheck | 4/4 | TEST-PLAN | 5-8 |
 | `scripts/sql/analysis-plans.sql`, `analysis-plans.2026-11-04.txt` | EXPLAIN kayıtları | oluşturuldu | psql exit 0 | — | API-CONTRACT | 5, 7 |
 
-Henüz yazılmayan belgeler (ilgili fazda): `DELIVERY-CHECKLIST.md` (Faz 8), `CLAUDE-CODE-SETUP.md`, `docs/adr/`.
+## Faz 6-8 dosyaları
+
+| yol | amaç | oluşturuldu/güncellendi | statik doğrulama | runtime keşfi | kanıt | kullanılacak faz |
+|---|---|---|---|---|---|---|
+| `backend/GeoScope.Application/Analysis/DistrictStats.cs`, `AnalysisRequests.cs` (MeasureRequest, MetricProjection) | A04/A05 sözleşmesi | oluşturuldu/güncellendi | build 0 uyarı | API testleri | PROGRESS Faz 6 | 6+ |
+| `backend/GeoScope.Tests/Analysis/{TransverseMercatorReference,MeasureAndDistrictStatsApiTests}.cs` | Bağımsız referanslı ölçüm/sayım testleri | oluşturuldu | build | 13/13 | TEST-PLAN | 6+ |
+| `frontend/src/features/analysis/{DistrictStatsPanel,choropleth}.ts(x)` | Tablo, lejant, choropleth sınıfları | oluşturuldu | typecheck/lint | Vitest + E2E | TEST-PLAN | 6+ |
+| `scripts/perf/{measure-api.mjs,seed-synthetic.sql,results-*.json}` | p50/p95 ölçümü (sentetik veri yalnız `geoscope_perf`) | oluşturuldu | node --check | ölçüldü | TEST-PLAN "Performans ölçümü" | 7 |
+| `frontend/tests/e2e/accessibility.spec.ts` | Dar ekran, klavye, altlık hatası | oluşturuldu | typecheck | 3/3 | TEST-PLAN | 7+ |
+| `frontend/nginx.conf` | Docker DNS resolver (API restart sonrası 502 düzeltmesi) | güncellendi | — | temiz kurulumda doğrulandı | DECISIONS ADR-0014 | 8 |
+| `README.md`, `docs/DELIVERY-CHECKLIST.md`, `docs/DEVELOPER-REVIEW.md` | Teslim belgeleri, kontrol noktası 3 rehberi | güncellendi/oluşturuldu | hook | — | PROGRESS Faz 8 | 8 |
+| `docs/screenshots/faz8-*.png` | Üretim imajından ekran görüntüleri | oluşturuldu | — | Playwright | TEST-PLAN | 8 |
+
+Yazılmayan (gerek görülmedi): `CLAUDE-CODE-SETUP.md` (kurulum bilgisi `docs/AI-TOOLS.md` ve bu manifestte), `docs/adr/` (kararlar `docs/DECISIONS.md` içinde).
