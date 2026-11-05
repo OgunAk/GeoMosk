@@ -1,16 +1,47 @@
 # GeoScope — İlerleme kaydı
 
 ## Kısa durum (5 Kasım 2026)
-- **Son doğrulanan faz:** Faz 7 — Sağlamlaştırma (`validate-project --phase 7` exit 0, E2E yerel sunuculara karşı). A00-A05, Q01-Q03 doğrulandı.
+- **Son doğrulanan faz:** Faz 8 — Teslim, teknik kapı (`validate-project --full` exit 0, E2E üretim imajına karşı). **Geliştirici son kabulü (kontrol noktası 3) bekliyor.**
 - **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. G3 ("ad en az 3 karakter") geliştirici 2026-11-05'te AI'ya bıraktı; uygulandı (backend 134/134, Vitest 58/58).
 - **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
 - **Geliştirici bildirimi (2026-11-05):** başka ilçe seçilince eski analiz sonucu kalıyordu → `keepAnalysisFor` kuralı: yalnız analiz kaynağı veya sonuç listesindeki tesis seçilince sonuç korunur, aksi halde temizlenir (Vitest 6 + E2E). Commit 734d642.
 - **Geliştirici bildirimi (2026-11-05):** "En yakın N" modunda "Haritada nokta seç" düğmesi ve Tür kutusu 320 px yan panelde taşıyordu → nokta bilgisi/düğme ayrı satır, N+Tür ızgarası (`minmax(0,1fr)`), seçim kutusu `min-w-0`; E2E: üç modda ve nokta seçildikten sonra içerik alanını aşan öğe yok. Commit 734d642.
-- **Git:** `master` = Faz 0-3 (GitHub). Faz 4-5 `faz-4-cizim-crud` dalında (push edildi, 734d642). Faz 6 commit 6a85751 (push edildi, CI yeşil). Faz 7 + G3 commit edilmedi.
+- **Git:** `master` = Faz 0-3 (GitHub). Faz 4-5 `faz-4-cizim-crud` dalında (push edildi, 734d642). Faz 6 commit 6a85751 (push edildi, CI yeşil). Faz 7 + G3 commit 40e16a2, odak düzeltmesi 029445b (push edildi). Faz 8 commit edilmedi. PR #5 açık; depo private.
 - **Çalışan ortam:** compose `db` ayakta (gerçek veri). Compose `api`/`web` durdurulmuş (Docker Desktop container ağı sorunu); API `dotnet run` (5080) + Vite (5173) yerelde.
-- **Sonraki adım:** Faz 8 — teslim: temiz Compose kurulumu (ayrı proje + yeni volume), README son hali, DELIVERY-CHECKLIST, ekran görüntüleri, GitHub yayın hazırlığı (izinle), geliştirici kontrol noktası 3.
+- **Sonraki adım (geliştirici):** kontrol noktası 3 — manuel demo, teknik sahiplik soruları (DEVELOPER-REVIEW), PR #5 birleştirme, depo erişimi/lisans kararı (DELIVERY-CHECKLIST).
 - **Açık kalan (bilinçli) kısıtlar:** klavye ile çizim yok; ilçe GeoJSON tam çözünürlük (gzip 97 KB, ölçülen ihtiyaç yok); arama trigram indeksi gerekmedi (10.000'de p95 17 ms); nearest 100.000+ kayıtta KNN değerlendirilir (ADR-0012).
 - **İlgili master prompt bölümleri:** §17 (Docker/CI/teslim), §18 (demo), §19 (DoD), §20.2 (kontrol noktası 3), §22.
+
+## Faz 8 raporu
+
+```text
+Faz: 8 — Teslim
+Durum: teknik kapı doğrulandı; geliştirici son kabulü (kontrol noktası 3) bekliyor
+Karşılanan gereksinimler: D06, L02, L03, P05 doğrulandı; L01 devam ediyor (depo yayımlandı ama private; erişim kararı geliştiricide);
+  P09 devam ediyor (kontrol noktası 3).
+Oluşturulan/değişen dosyalar:
+  README.md (§17 başlıkları: amaç, beş analiz + SRID, ortam, migration, API, demo, kısıtlar, sorun giderme)
+  docs/DELIVERY-CHECKLIST.md (yeni), docs/DEVELOPER-REVIEW.md (kontrol noktası 3 rehberi + teknik sahiplik soruları ve kod işaretçileri),
+  docs/FILE-MANIFEST.md, REQUIREMENTS, TEST-PLAN, DECISIONS (ADR-0014 nginx), ROADMAP
+  frontend/nginx.conf (Docker DNS resolver — temiz kurulum bulgusu)
+  docs/screenshots/faz8-{tampon-2000m,en-yakin-5,olcum-nilufer,dar-ekran}.png (üretim imajından, Playwright)
+Çalıştırılan komutlar ve sonuç/exit code:
+  git clone (029445b) → docker compose -p geoscope-clean up --build -d (DB/API/WEB portları 55432/55080/58080, .env yok) → exit 0;
+    Docker Desktop ağı bu kez çalıştı, imajlar sıfırdan derlendi
+  /api/health/ready → 200 (PostGIS 3.5.2); import 1 → 17/911 eklendi; import 2 → 0 ekleme/0 güncelleme (17/911 değişmedi)
+  geoscope_app rolü superuser değil
+  E2E_BASE_URL=http://127.0.0.1:58080 npm --prefix frontend run e2e → 22/22 (üretim imajı, nginx — önceki fazlarda yapılamayan doğrulama)
+  db + api restart → BULGU: web /api 502 (nginx eski API IP'sini önbellekte tutuyordu) → resolver 127.0.0.11 + değişkenli proxy_pass;
+    web yeniden derlendi → restart sonrası 200, kullanıcı çizimi kalıcı; E2E tekrar 22/22
+  validate-project --full: ilk koşu 2 HATA (dotnet build/test: çalışan yerel API DLL kilidi MSB3027 — ortam, kod değil) →
+    yerel API durduruldu, E2E üretim yığınına karşı → GEÇTİ, exit 0 (backend 141/141 dahil)
+Veri/CRS/analiz kanıtları: değişmedi; ekran görüntüsünde Nilüfer 524,42 km² (EPSG:32635), sferoid farkı −%0,021.
+İnceleme bulguları ve çözümleri: nginx DNS önbelleği (yukarıda).
+Çalıştırılamayan kontroller ve nedeni: geliştirici manuel demosu ve teknik sahiplik yanıtları (geliştiricide); uzak depo herkese açık değil.
+Temizlik: geoscope-clean container'ları durduruldu; volume `geoscope-clean_geoscope-db` ve `geoscope_perf` DB'si geliştirici onayı için bırakıldı.
+Kalan risk/engel: değerlendirici erişimi (private repo); .NET 9 destek sonu 10 Kasım 2026.
+Sonraki somut adım: kontrol noktası 3 (geliştirici).
+```
 
 ## Faz 7 raporu
 

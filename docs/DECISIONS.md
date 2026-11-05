@@ -103,6 +103,8 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Geç gelen analiz yanıtı:** yanıt geldiğinde seçim değişmiş ve sonuç onunla ilgisizse gösterilmez (`keepAnalysisFor`).
 - **Paket bölme:** MapLibre, Terra Draw ve React ayrı parçalar (önbellek); uyarı eşiği yalnız MapLibre parçası için 1100 kB.
 - **Dar ekran:** yan panel en çok 40vh ve kendi içinde kayar; harita kalan yüksekliği doldurur. Görünür odak `:focus-visible` ile global.
+- **nginx → API (Faz 8 temiz kurulum bulgusu):** `proxy_pass http://api:8080` adı açılışta bir kez çözüyordu; API container'ı yeniden
+  başlayıp IP değişince web 502 veriyordu. Docker iç DNS'i (`resolver 127.0.0.11 valid=10s`) + değişkenli `proxy_pass` ile her istekte çözülür.
 
 ## ADR-0010 — Harita veri yükleme stratejisi
 

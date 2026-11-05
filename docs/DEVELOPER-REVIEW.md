@@ -34,5 +34,32 @@ Seçilen küçük değişiklik: **1. Kullanıcı çizimi adına en az 3 karakter
 | G2 | Sağlık tesisleri kendi içinde (türe göre) filtrelensin | Lejanttaki 6 tür, sayılarıyla haritada aç/kapa anahtarı oldu; vurgu/seçim halkalarına da uygulanır, altlık değişiminde korunur, tesis katmanı kapalıyken devre dışı. Kanıt: `LayerPanel.test.tsx` (+2), E2E "tesis türü filtresi…" | uygulandı (AI), geliştirici yeniden denemesi bekliyor |
 | G3 | Seçilen değişiklik: ad en az 3 karakter | Geliştirici 2026-11-05'te "değişikliği sana bırakıyorum" dedi; AI uyguladı: `ReadName` (kırpılmış ad, grafem sayısı ≥ 3, 400), `UserFeatureApiTests` (+3 durum: "ab", "  ab  ", PATCH " x " kaydı değiştirmez; "  Çağ  " kabul), `CreateFeatureForm` ipucu + `aria-invalid`, `UserFeaturePanel` düzenleme mesajı; Vitest +1. Mevcut kısa adlı kayıtlar korunur; kural yalnız yeni ad yazılırken uygulanır | uygulandı |
 
-## Teknik sahiplik soruları (Faz 8 öncesi)
-Master prompt §20.4'teki sorular teslim öncesinde geliştiriciyle kod üzerinde ele alınacak; yanıtlar burada gerçek kayıt olarak tutulacak.
+## Kontrol noktası 3 — son kabul rehberi (geliştirici dolduracak)
+
+Otomatik doğrulamalar ve teslim paketi hazır (DELIVERY-CHECKLIST, PROGRESS Faz 8). Aşağıdakiler geliştirici yapmadan "kabul edildi"
+veya "manuel test geçti" yazılmaz.
+
+1. **Manuel demo:** README "Demo senaryosu" 10 adımı kendi makinenizde (`docker compose up --build -d` + import) deneyin.
+   Her adım için çalıştı/çalışmadı ve gözleminizi aşağıdaki tabloya yazın.
+2. **Teknik sahiplik:** aşağıdaki soruları kendi sözlerinizle yanıtlayın; ilgili koda bakarak gösterin.
+3. **Teslim kapsamı:** bilinen kısıtları (README) kabul ediyor musunuz; PR #5 birleştirme, depo erişimi ve lisans kararınız.
+4. **İsteğe bağlı (§20.1):** G3'ü AI uyguladığı için, bizzat yapacağınız küçük bir değişiklik (ör. arama sonuç sınırını
+   yapılandırılabilir yapmak: `SearchPanel.tsx` + `SearchPanel.test.tsx`, ya da "yalnız hastaneler" kısayolu).
+
+| Demo adımı | Sonuç | Geliştirici notu |
+|---|---|---|
+| 1-10 | geliştirici incelemesi bekliyor | — |
+
+## Teknik sahiplik soruları (master prompt §20.4)
+Kod işaretçileri yanıtı bulmanız içindir; yanıtı geliştirici yazar. Yanıt yoksa durum `geliştirici incelemesi bekliyor`.
+
+| Soru | Nereye bakmalı | Geliştiricinin yanıtı |
+|---|---|---|
+| Veri neden 4326 saklanıyor; metre hesabı nerede, nasıl? | `.claude/rules/spatial-data.md`; `Infrastructure/Analysis/AnalysisService.cs` (`::geography`, `ST_Transform(…, 32635)`) | geliştirici incelemesi bekliyor |
+| `ST_SetSRID` ile `ST_Transform` farkı? | ADR-0013; `scripts/import/load-osm.mjs` (etiket) vs `MeasureAsync` (dönüşüm) | geliştirici incelemesi bekliyor |
+| Sınırdaki tesis seçime ve ilçe sayımına nasıl giriyor? | `WithinAsync` (`ST_Covers`/`ST_Within`), `DistrictStatsAsync` (tekil atama) | geliştirici incelemesi bekliyor |
+| Nearest sıralaması neden doğru; indeks hangi sorguyu hızlandırıyor? | `NearestAsync`, ADR-0012, `scripts/sql/analysis-plans.2026-11-05.txt` | geliştirici incelemesi bekliyor |
+| Yeni çizim tarayıcıdan DB'ye hangi katmanlardan geçiyor? | `useTerraDraw.ts` → `CreateFeatureForm.tsx` → `services/userFeatures.ts` → `UserFeaturesController` → `UserFeatureRequests`/`UserGeometryParser` → `UserFeatureStore` → `user_features` | geliştirici incelemesi bekliyor |
+| Import neden mükerrer üretmiyor, kullanıcı düzenlemesini neden ezmiyor? | `load-osm.mjs` (kaynak anahtarı upsert, `IS DISTINCT FROM`), `*_overrides` tabloları | geliştirici incelemesi bekliyor |
+| Altlık değişiminde katmanlar nasıl korunuyor? | `MapView.tsx` (`style.load` → `styleRevision`, `ensure*`, `LAYER_ORDER`), `useTerraDraw.ts` (taslak saklama) | geliştirici incelemesi bekliyor |
+| Bir testi bozup hatanın sebebini nasıl bulursunuz; yeni filtre nasıl eklenir? | `MeasureAndDistrictStatsApiTests.cs`; filtre: `FeatureQuery` → `SourceFeatureQueries` → `SearchPanel` | geliştirici incelemesi bekliyor |
