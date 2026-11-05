@@ -37,6 +37,10 @@ function readSnapshot(dir) {
   for (const name of ['districts', 'facilities']) {
     const meta = manifest.files?.[name];
     if (!meta) throw new Error(`manifest'te ${name} yok`);
+    // Manifest güvenilmeyen girdidir: dosya adı snapshot klasörünün dışına çıkamaz.
+    if (typeof meta.file !== 'string' || path.basename(meta.file) !== meta.file) {
+      throw new Error(`${name}: manifest dosya adı geçersiz (yalnız snapshot klasöründeki dosya adı kabul edilir)`);
+    }
     const text = fs.readFileSync(path.join(dir, meta.file), 'utf8');
     const sha = crypto.createHash('sha256').update(text).digest('hex');
     if (sha !== meta.sha256) throw new Error(`${name}: checksum uyuşmuyor (manifest ${meta.sha256.slice(0, 12)}…, dosya ${sha.slice(0, 12)}…)`);
@@ -143,6 +147,19 @@ WITH up AS (
 SELECT count(*) FILTER (WHERE inserted)::int AS inserted, count(*) FILTER (WHERE NOT inserted)::int AS updated FROM up;
 `;
 
+// Toplu silme koruması: eksik/boş snapshot (ör. Overpass'ın boş yanıtı) tüm kayıtları "kaynakta silindi" diye işaretlemesin.
+// Aktif kaydın yarısından azı snapshot'ta kalıyorsa import geri alınır; bilinçli durumlar için --allow-mass-delete.
+const MIN_KEEP_RATIO = 0.5;
+async function guardMassDelete(client, table, stg, name) {
+  const { rows: [r] } = await client.query(
+    `SELECT (SELECT count(*) FROM ${stg})::int AS staged,
+            (SELECT count(*) FROM ${table} WHERE source = 'osm' AND source_deleted_at IS NULL)::int AS active`);
+  if (r.active > 0 && r.staged < r.active * MIN_KEEP_RATIO && !process.argv.includes('--allow-mass-delete')) {
+    throw new Error(`${name}: snapshot ${r.staged} kayıt içeriyor, veritabanında ${r.active} aktif kayıt var. ` +
+      'Toplu "silindi" işaretlemesi engellendi; snapshot doğruysa --allow-mass-delete ile tekrar çalıştırın.');
+  }
+}
+
 // Kaynaktan kalkan kayıt silinmez: override'ları korumak için işaretlenir.
 const MARK_DELETED = (table, stg) => `
 WITH m AS (
@@ -217,6 +234,8 @@ async function main() {
     const rejected = (await client.query(REJECT_SQL)).rows;
     const d = (await client.query(UPSERT_DISTRICTS, [datasets.districts.meta.osmBase, runIds.districts])).rows[0];
     const f = (await client.query(UPSERT_FACILITIES, [datasets.facilities.meta.osmBase, runIds.facilities])).rows[0];
+    await guardMassDelete(client, 'districts', 'stg_districts', 'districts');
+    await guardMassDelete(client, 'health_facilities', 'stg_facilities', 'facilities');
     const dDel = (await client.query(MARK_DELETED('districts', 'stg_districts'))).rows[0].n;
     const fDel = (await client.query(MARK_DELETED('health_facilities', 'stg_facilities'))).rows[0].n;
     const { minLon, minLat, maxLon, maxLat } = STUDY_AREA;

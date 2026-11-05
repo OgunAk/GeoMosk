@@ -67,8 +67,22 @@ const PHASES = [
   },
   { phase: 4, title: 'Çizim ve CRUD', files: ['frontend/src/features/drawing', 'docs/DEVELOPER-REVIEW.md'] },
   { phase: 5, title: 'Üç MVP analizi', files: ['frontend/src/features/analysis', 'docs/TEST-PLAN.md'] },
-  { phase: 6, title: 'Güçlü teslim analizleri', files: [] },
-  { phase: 7, title: 'Sağlamlaştırma', files: [] },
+  {
+    phase: 6,
+    title: 'Güçlü teslim analizleri',
+    files: [
+      'backend/GeoScope.Tests/Analysis/MeasureAndDistrictStatsApiTests.cs', 'backend/GeoScope.Tests/Analysis/TransverseMercatorReference.cs',
+      'frontend/src/features/analysis/DistrictStatsPanel.tsx', 'frontend/src/features/analysis/choropleth.ts',
+    ],
+  },
+  {
+    phase: 7,
+    title: 'Sağlamlaştırma',
+    files: [
+      'scripts/perf/measure-api.mjs', 'scripts/perf/seed-synthetic.sql', 'scripts/perf/results-10k.2026-11-05.json',
+      'scripts/perf/results-real.2026-11-05.json', 'frontend/tests/e2e/accessibility.spec.ts',
+    ],
+  },
   {
     phase: 8,
     title: 'Teslim',

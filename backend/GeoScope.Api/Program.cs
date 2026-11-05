@@ -23,7 +23,9 @@ builder.Services.AddHealthChecks()
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-    policy.WithOrigins(allowedOrigins).AllowAnyHeader().WithMethods("GET", "POST", "PATCH", "DELETE")));
+    // ETag çapraz origin kurulumda (VITE_API_BASE_URL) okunabilmeli; aksi halde If-Match gönderilemez.
+    policy.WithOrigins(allowedOrigins).AllowAnyHeader().WithMethods("GET", "POST", "PATCH", "DELETE")
+        .WithExposedHeaders("ETag", "Location")));
 
 var app = builder.Build();
 

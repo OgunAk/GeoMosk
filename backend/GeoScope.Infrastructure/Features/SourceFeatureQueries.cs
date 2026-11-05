@@ -104,10 +104,11 @@ internal sealed class SourceFeatureQueries(GeoScopeDbContext db) : ISourceFeatur
             .SingleOrDefaultAsync(cancellationToken);
         if (row is null) return null;
 
-        // Bilgi amaçlı: tesisi kapsayan ilçe (sınır dahil); birden fazlaysa en küçük id.
+        // Tesisin ilçesi A05 ile aynı tekil atama kuralıyla (ADR-0013): sınır dahil kapsayanlar içinden önce iç eşleşme, sonra en küçük id.
         var districtName = await db.Districts.AsNoTracking()
             .Where(d => d.SourceDeletedAt == null && d.Geom.Covers(row.Geom))
-            .OrderBy(d => d.Id)
+            .OrderByDescending(d => d.Geom.Contains(row.Geom))
+            .ThenBy(d => d.Id)
             .Select(d => d.Override != null && d.Override.Name != null ? d.Override.Name : d.Name)
             .FirstOrDefaultAsync(cancellationToken);
         return new VersionedFeature(ToFeature(row, detail: true, districtName), row.Version ?? 0u);

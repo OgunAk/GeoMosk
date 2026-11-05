@@ -46,6 +46,22 @@ describe('CreateFeatureForm', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('ad kırpıldıktan sonra 3 karakterden kısaysa kaydetmez; 3 karakterde kaydedilebilir', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    setup()
+    const name = screen.getByLabelText('Ad (zorunlu)')
+
+    await userEvent.type(name, ' ab ')
+    expect(screen.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
+    expect(name).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByText('En az 3 karakter.')).toHaveClass('text-red-700')
+
+    await userEvent.type(name, 'c')
+    expect(screen.getByRole('button', { name: 'Kaydet' })).toBeEnabled()
+    expect(name).toHaveAttribute('aria-invalid', 'false')
+  })
+
   it('sunucu geometri hatasını gösterir, formu korur ve tekrar gönderime izin verir', async () => {
     const problem = { title: 'One or more validation errors occurred.', status: 422, errors: { geometry: ['Geçersiz geometri: kendini kesiyor (29.05, 40.15).'] } }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(422, problem)))

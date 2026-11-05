@@ -29,11 +29,12 @@ test('analiz paneli hiçbir modda dar yan panelden taşmaz', async ({ page }) =>
         .map((e) => e.textContent?.trim().slice(0, 30))
     })
 
-  for (const mode of ['Alan içindekiler', 'Tampon (yakınlık)', 'En yakın N']) {
+  for (const mode of ['Alan içindekiler', 'Tampon (yakınlık)', 'En yakın N', 'Ölçüm']) {
     await analysis(page).getByRole('radio', { name: mode }).check()
     expect(await overflowing(), mode).toEqual([])
   }
   // Nokta seçildikten sonra (koordinat metni ve "Başka nokta seç") da taşma yok.
+  await analysis(page).getByRole('radio', { name: 'En yakın N' }).check()
   await analysis(page).getByRole('button', { name: 'Haritada nokta seç' }).click()
   const box = (await page.getByTestId('map').boundingBox())!
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
@@ -149,4 +150,82 @@ test('analiz için çizilen alan kullanıcı katmanına kaydedilmez', async ({ p
   await expect(analysis(page).getByText(/Alan içinde \d+ tesis/)).toBeVisible()
   const after = await page.evaluate(async () => ((await fetch('/api/features').then((r) => r.json())) as { features: unknown[] }).features.length)
   expect(after).toBe(before)
+})
+
+test('A04: ilçe alanı UTM 35N ile ölçülür; sonuç API ile aynı, sferoid farkı %0,1 altında', async ({ page }) => {
+  await openApp(page)
+  await searchAndPick(page, 'districts', 'nilufer', 'Nilüfer')
+  await analysis(page).getByRole('radio', { name: 'Ölçüm' }).check()
+  await analysis(page).getByRole('button', { name: 'Analizi çalıştır' }).click()
+  const result = analysis(page).getByLabel('Ölçüm sonuçları')
+  await expect(result).toContainText('km²')
+  await expect(analysis(page).getByText(/EPSG:32635 \(WGS 84 \/ UTM zone 35N\) projeksiyonunda/)).toBeVisible()
+
+  const api = await page.evaluate(async () => {
+    const d = (await fetch('/api/districts?q=nilufer').then((r) => r.json())) as { features: { id: number }[] }
+    const r = (await fetch('/api/analysis/measure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sourceFeature: { layerId: 'districts', id: d.features[0].id } }),
+    }).then((x) => x.json())) as { measurement: { areaSquareMeters: number; calculationSrid: number; geodesicCheck: { relativeDifference: number } } }
+    return r.measurement
+  })
+  expect(api.calculationSrid).toBe(32635)
+  expect(Math.abs(api.geodesicCheck.relativeDifference)).toBeLessThan(1e-3)
+  // Nilüfer ≈ 500 km² mertebesinde (makullük; kesin doğruluk backend testlerinde bağımsız referansla).
+  expect(api.areaSquareMeters / 1e6).toBeGreaterThan(300)
+  expect(api.areaSquareMeters / 1e6).toBeLessThan(800)
+  const shown = (api.areaSquareMeters / 1e6).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  await expect(result).toContainText(`${shown} km²`)
+})
+
+test('A05: ilçe başına tesis sayısı tabloda ve haritada; toplamlar çifte sayımsız', async ({ page }) => {
+  await openApp(page)
+  const panel = page.getByRole('region', { name: 'İlçe başına tesis sayısı' })
+  await panel.getByRole('button', { name: 'Hesapla' }).click()
+  const table = panel.getByRole('table', { name: 'İlçe başına tesis sayısı' })
+  await expect(table).toBeVisible()
+
+  const stats = await page.evaluate(async () => {
+    const s = (await fetch('/api/analysis/district-stats').then((r) => r.json())) as {
+      districts: { id: number; facilityCount: number }[]
+      totals: { facilities: number; assigned: number; unassigned: number }
+    }
+    const all = (await fetch('/api/facilities?limit=2000').then((r) => r.json())) as { features: unknown[] }
+    return { ...s, listed: all.features.length }
+  })
+  expect(stats.districts.reduce((sum, d) => sum + d.facilityCount, 0)).toBe(stats.totals.assigned)
+  expect(stats.totals.assigned + stats.totals.unassigned).toBe(stats.totals.facilities)
+  expect(stats.totals.facilities).toBe(stats.listed)
+  await expect(table.getByRole('row')).toHaveCount(stats.districts.length + 1)
+  await expect(panel.getByRole('list', { name: 'Harita lejantı' }).getByRole('listitem').first()).toBeVisible()
+
+  // Choropleth katmanı her ilçeyi boyar ve altlık değişiminden sonra da kalır.
+  const painted = () =>
+    page.evaluate(() => {
+      const map = window.__geoscopeMap!
+      // Altlık değişirken stil yeniden kurulur; katman henüz yoksa -1 (poll tekrar dener).
+      if (!map.isStyleLoaded() || !map.getLayer('lyr-districts-choropleth')) return -1
+      const filter = map.getFilter('lyr-districts-choropleth') as unknown as [string, unknown, [string, number[]]]
+      return filter[2][1].length
+    })
+  await expect.poll(painted).toBe(stats.districts.length)
+  await page.getByRole('radio', { name: /Positron/ }).check()
+  await expect.poll(painted).toBe(stats.districts.length)
+  // Altlık değişiminden sonra çizim sırası korunur: kaynak < analiz < kullanıcı < Terra Draw taslağı (kod incelemesi bulgusu 1).
+  const order = await page.evaluate(() => window.__geoscopeMap!.getStyle().layers.map((l) => l.id))
+  const at = (id: string) => order.indexOf(id)
+  expect(at('lyr-districts-choropleth')).toBeGreaterThan(-1)
+  expect(at('lyr-districts-choropleth')).toBeLessThan(at('lyr-analysis-fill'))
+  expect(at('lyr-analysis-fill')).toBeLessThan(at('lyr-user-fill'))
+  const firstDraw = order.findIndex((id) => id.startsWith('td'))
+  expect(firstDraw).toBeGreaterThan(at('lyr-user-selected-point'))
+
+  // Tablodan ilçe seçimi: harita seçimi ve satır vurgusu.
+  await table.getByRole('button', { name: 'Nilüfer' }).click()
+  await expect(table.getByRole('row', { name: /Nilüfer/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('heading', { name: 'Nilüfer' })).toBeVisible()
+
+  await panel.getByRole('button', { name: 'Kapat' }).click()
+  await expect.poll(painted).toBe(0)
 })

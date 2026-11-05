@@ -63,6 +63,7 @@ Durdurma: `docker compose down` (veri volume'u korunur).
   export GEOSCOPE_IMPORT_DATABASE_URL=postgres://geoscope:geoscope_dev@localhost:5432/geoscope
   npm run import:load                               # en yeni snapshot: data/raw/osm, yoksa data/samples
   ```
+  Snapshot aktif kaynak kaydının yarısından azını içeriyorsa (ör. boş Overpass yanıtı) import geri alınır; bilinçli durumda `--allow-mass-delete`.
   Import checksum'ı doğrular, geometriyi PostGIS'te kurar ve doğrular (EPSG:4326, GiST indeksli tablolar), tek transaction'da yazar ve `import_history` tablosuna kalite raporu kaydeder.
 
 ## Elle geliştirme

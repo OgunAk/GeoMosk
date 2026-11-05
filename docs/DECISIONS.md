@@ -67,6 +67,43 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Doğruluk kanıtı:** Beklenen mesafeler PostGIS'ten bağımsız WGS84 meridyen/paralel yayı formülüyle hesaplanır (`GeodesicReference`); fark 5 cm toleransın altında. Aynı ölçüde 0.02° boylam (~1705 m) tampon içinde, 0.02° enlem (~2221 m) dışında kalır; derece ile metre karıştırılsa bu test başarısız olurdu.
 - **Arayüz:** Ölçüm ve mesafe değerleri yalnız backend'den gelir. Bağlantı çizgileri kuş uçuşu ilişkiyi gösterir ve rota olmadığı belirtilir. Analiz için çizilen alan kullanıcı katmanına kaydedilmez.
 
+## ADR-0013 — Ölçüm projeksiyonu (A04) ve ilçe sayımında tekil atama (A05)
+
+- **Durum:** Kabul (Faz 6).
+- **Bağlam:** PDF ölçüm için uygun metrik SRID ister; 4326 derecesiyle ve EPSG:3857 ile ölçüm yapılmaz. İlçe sayımında sınırdaki tesis
+  iki ilçede sayılmamalı (master prompt §8.7-8.9, §10).
+- **Veri kapsamı (2026-11-05, `ST_Extent`):** ilçeler 28.088–29.910°D, 39.594–40.614°K; tesisler 28.184–29.723°D.
+- **Karar (A04):** EPSG:32635 (WGS 84 / UTM 35N, merkez meridyen 27°D, k₀ = 0.9996, kullanım alanı 24–30°D). Veri tamamen zonun içinde.
+  Ölçek faktörü Bursa'da k ≈ 0.99970–1.00020 → alan ölçeği k² ≈ 0.9994–1.0004 (en kötü %0,06), uzunlukta %0,03.
+  - Değerlendirilen alternatifler: TUREF / TM27 (EPSG:5253, 25.5–28.5°D) ve TM30 (EPSG:5254, 28.5–31.5°D) 3° dilimli ulusal
+    projeksiyonlardır; Bursa iki dilime bölünür (batı ucu 28.09°D) ve TUREF datumu ayrıca dönüşüm gerektirir. EPSG:3857 ölçüm için reddedildi.
+  - Kullanım alanı dışı (boylam < 24 veya > 30) geometri 422 ile reddedilir; Bursa çalışma alanı 30.1°D'ye uzandığından bu durum gerçekten
+    oluşabilir. Sessiz yaklaşık ölçüm yapılmaz.
+  - Geography (sferoid) değeri yanıtta yalnız çapraz kontrol olarak döner; PDF'nin metrik SRID beklentisi projeksiyondaki ölçümle karşılanır.
+- **Karar (A05):** her tesis en çok bir ilçeye: sınır dahil kapsayan ilçeler (`ST_Covers`) içinden önce iç eşleşme (`ST_Contains`),
+  sonra en küçük ilçe id. Atanamayan ve çoklu eşleşen sayıları ayrıca raporlanır; `count(*)` değil `count(tesis_id)`.
+  Choropleth: 0 ayrı nötr sınıf, sıfırdan büyük değerler en çok 4 kuantil sınıf (aynı değer bölünmez); tablo ve lejant sayıları
+  gösterir, renk tek bilgi taşıyıcısı değildir. Ad/sayı bilgisi harita açılır penceresi yerine yan paneldeki tabloda verilir;
+  tablodan ilçe seçimi haritada seçer ve zoom yapar, haritadan seçilen ilçenin satırı vurgulanır.
+- **Doğrulama:** bağımsız referans — elipsoid dörtgen alanı (kapalı formül) × UTM ölçek faktörü k² (Snyder 1987); göreli tolerans 1e-5
+  (gerekçesi testte). 28.2°D'de projeksiyon ile sferoid farkı (≈ −%0,055) testte ayrıca beklenir.
+
+## ADR-0014 — Faz 7 sağlamlaştırma kararları
+
+- **Durum:** Kabul (Faz 7, bağımsız kod incelemesi sonrası).
+- **Import toplu silme koruması:** snapshot'taki kayıt sayısı aktif kaynak kaydının yarısının altındaysa import geri alınır
+  (`import_history.status = failed`); bilinçli durumda `--allow-mass-delete`. Gerekçe: Overpass'ın boş/eksik ama geçerli yanıtı
+  tüm kayıtları "kaynakta silindi" diye işaretleyip haritayı boşaltabiliyordu. Manifest güvenilmeyen girdidir: dosya adı yalnız
+  snapshot klasöründeki bir ad olabilir. `--snapshot` operatör girdisidir (testler geçici klasör kullanır), kök dışında da kabul edilir.
+- **Katman çizim sırası:** sabit `LAYER_ORDER` (kaynak < analiz < kullanıcı < Terra Draw `td-*`) her kaynak/katman kurulumundan sonra
+  `moveLayer` ile uygulanır; altlık değişiminde efektlerin sırası değişse de sonuç aynıdır.
+- **Tek ilçe atama kuralı:** tesis detayındaki ilçe adı A05 ile aynı kuralı kullanır (ADR-0013).
+- **CORS:** `ETag` ve `Location` açığa çıkarılır (çapraz origin kurulumda If-Match için). CORS yetkilendirme değildir.
+- **DB CHECK ihlali:** kullanıcı çizimi yazımında `23514` → 422 (500 değil); NTS ile GEOS geçerlilik kenar durumları için ikinci hat.
+- **Geç gelen analiz yanıtı:** yanıt geldiğinde seçim değişmiş ve sonuç onunla ilgisizse gösterilmez (`keepAnalysisFor`).
+- **Paket bölme:** MapLibre, Terra Draw ve React ayrı parçalar (önbellek); uyarı eşiği yalnız MapLibre parçası için 1100 kB.
+- **Dar ekran:** yan panel en çok 40vh ve kendi içinde kayar; harita kalan yüksekliği doldurur. Görünür odak `:focus-visible` ile global.
+
 ## ADR-0010 — Harita veri yükleme stratejisi
 
 - **Durum:** Kabul (Faz 3), Faz 7'de ölçümle yeniden değerlendirilecek.

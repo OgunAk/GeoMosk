@@ -23,6 +23,7 @@ import {
   CLICKABLE_LAYERS,
   INITIAL_ZOOM,
   LAYER_IDS,
+  LAYER_ORDER,
   LAYER_OF_RENDERING,
   OVERLAY_GROUPS,
   SOURCE_IDS,
@@ -62,6 +63,8 @@ interface MapViewProps {
   /** true iken harita tıklaması seçim yerine nokta verir (en yakın N). */
   pickingPoint: boolean
   onPickPoint: (lngLat: [number, number]) => void
+  /** A05 choropleth: ilçe id → sınıf rengi; null iken katman gizli. */
+  choropleth: Record<number, string> | null
   /** Geometrisi düzenlenen kullanıcı çizimi: kayıtlı hali gizlenir, taslakla üst üste görünmez. */
   editingId: string | null
   onSelect: (selection: Selection | null) => void
@@ -79,7 +82,7 @@ declare global {
 export function MapView(props: MapViewProps) {
   const { layers, userFeatures, basemap, visibility, selection, highlight, focus, draw, drawCallbacks, finishSignal, facilityTypes, editingId, onSelect } =
     props
-  const { analysis, pickingPoint, onPickPoint } = props
+  const { analysis, pickingPoint, onPickPoint, choropleth } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const appliedBasemap = useRef<BasemapId>(basemap)
@@ -186,6 +189,7 @@ export function MapView(props: MapViewProps) {
     upsertGeoJson(map, SOURCE_IDS.districts, layers.districts)
     upsertGeoJson(map, SOURCE_IDS.facilities, layers.facilities)
     ensureSourceLayers(map)
+    enforceLayerOrder(map)
   }, [styleRevision, layers])
 
   useEffect(() => {
@@ -193,6 +197,7 @@ export function MapView(props: MapViewProps) {
     if (!map || styleRevision === 0 || userFeatures.kind !== 'loaded') return
     upsertGeoJson(map, SOURCE_IDS.userFeatures, withFeatureIdProperty(userFeatures.collection))
     ensureUserLayers(map)
+    enforceLayerOrder(map)
   }, [styleRevision, userFeatures])
 
   // Analiz sonucu: girdi (alan/tampon/nokta) + en yakın N için kuş uçuşu bağlantılar; eşleşen tesisler halkayla vurgulanır.
@@ -201,9 +206,25 @@ export function MapView(props: MapViewProps) {
     if (!map || styleRevision === 0) return
     upsertGeoJson(map, SOURCE_IDS.analysis, analysisCollection(analysis))
     ensureAnalysisLayers(map)
+    enforceLayerOrder(map)
     const ids = analysis ? analysis.matches.features.map((f) => Number(f.id)) : []
     if (map.getLayer(LAYER_IDS.analysisMatches)) map.setFilter(LAYER_IDS.analysisMatches, idFilter(ids))
   }, [styleRevision, analysis, layers])
+
+  // A05 choropleth: renkler ilçe id'sine göre match ifadesiyle; altlık değişiminde de yeniden uygulanır.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || styleRevision === 0 || !map.getLayer(LAYER_IDS.districtsChoropleth)) return
+    const entries = Object.entries(choropleth ?? {})
+    map.setFilter(LAYER_IDS.districtsChoropleth, idFilter(entries.map(([id]) => Number(id))))
+    map.setPaintProperty(
+      LAYER_IDS.districtsChoropleth,
+      'fill-color',
+      entries.length === 0
+        ? 'rgba(0,0,0,0)'
+        : (['match', ['id'], ...entries.flatMap(([id, color]) => [Number(id), color]), 'rgba(0,0,0,0)'] as unknown as string),
+    )
+  }, [styleRevision, layers, choropleth])
 
   // Görünürlük, vurgu, seçim ve düzenlenen kaydın gizlenmesi: her stil yenilemesinden sonra da yeniden uygulanır.
   useEffect(() => {
@@ -298,6 +319,13 @@ function ensureSourceLayers(map: MapLibreMap) {
   const below = map.getLayer(LAYER_IDS.userFill) ? LAYER_IDS.userFill : undefined
   const add = (spec: LayerSpec) => addOnce(map, spec, below)
   add({ id: LAYER_IDS.districtsFill, type: 'fill', source: SOURCE_IDS.districts, paint: { 'fill-color': '#2c3e50', 'fill-opacity': 0.06 } })
+  add({
+    id: LAYER_IDS.districtsChoropleth,
+    type: 'fill',
+    source: SOURCE_IDS.districts,
+    filter: idFilter([]),
+    paint: { 'fill-color': 'rgba(0,0,0,0)', 'fill-opacity': 0.65 },
+  })
   add({ id: LAYER_IDS.districtsLine, type: 'line', source: SOURCE_IDS.districts, paint: { 'line-color': '#2c3e50', 'line-width': 1.5 } })
   add({
     id: LAYER_IDS.districtsHighlight,
@@ -386,6 +414,14 @@ function ensureAnalysisLayers(map: MapLibreMap) {
       filter: idFilter([]),
       paint: { 'circle-radius': 9, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ANALYSIS_COLOR, 'circle-stroke-width': 3 },
     })
+  }
+}
+
+/** LAYER_ORDER'ı uygular; mevcut katmanlar sırayla ilk Terra Draw katmanının (yoksa en üstün) hemen altına taşınır. */
+function enforceLayerOrder(map: MapLibreMap) {
+  const firstDrawLayer = map.getStyle().layers.find((l) => l.id.startsWith('td'))?.id
+  for (const id of LAYER_ORDER) {
+    if (map.getLayer(id)) map.moveLayer(id, firstDrawLayer)
   }
 }
 

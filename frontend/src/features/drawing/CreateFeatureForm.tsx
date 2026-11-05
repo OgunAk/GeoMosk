@@ -5,6 +5,8 @@ import {
   MAX_VERTICES,
   USER_DESCRIPTION_MAX,
   USER_NAME_MAX,
+  USER_NAME_MIN,
+  nameLength,
   createUserFeature,
   vertexCount,
   type UserFeature,
@@ -22,7 +24,7 @@ interface CreateFeatureFormProps {
  * "kaydedildi" yalnızca sunucu 201 döndüğünde gösterilir. Çift gönderim düğme kilidiyle engellenir.
  */
 export function CreateFeatureForm({ geometry, onSaved, onCancel }: CreateFeatureFormProps) {
-  const ids = { name: useId(), description: useId() }
+  const ids = { name: useId(), nameHint: useId(), description: useId() }
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
@@ -30,10 +32,11 @@ export function CreateFeatureForm({ geometry, onSaved, onCancel }: CreateFeature
 
   const vertices = vertexCount(geometry)
   const tooManyVertices = vertices > MAX_VERTICES
+  const nameTooShort = nameLength(name) < USER_NAME_MIN
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (saving || !name.trim() || tooManyVertices) return
+    if (saving || nameTooShort || tooManyVertices) return
     setSaving(true)
     setError(null)
     try {
@@ -60,9 +63,14 @@ export function CreateFeatureForm({ geometry, onSaved, onCancel }: CreateFeature
             value={name}
             required
             maxLength={USER_NAME_MAX}
+            aria-describedby={ids.nameHint}
+            aria-invalid={name.trim() !== '' && nameTooShort}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded border border-slate-300 px-2 py-1"
           />
+          <p id={ids.nameHint} className={name.trim() !== '' && nameTooShort ? 'text-xs text-red-700' : 'text-xs text-slate-500'}>
+            En az {USER_NAME_MIN} karakter.
+          </p>
         </div>
         <div>
           <label htmlFor={ids.description} className="block text-xs font-medium text-slate-700">
@@ -89,7 +97,7 @@ export function CreateFeatureForm({ geometry, onSaved, onCancel }: CreateFeature
         <div className="flex gap-2">
           <button
             type="submit"
-            disabled={saving || !name.trim() || tooManyVertices}
+            disabled={saving || nameTooShort || tooManyVertices}
             className="rounded bg-blue-700 px-3 py-1 text-white hover:bg-blue-800 disabled:opacity-50"
           >
             {saving ? 'Kaydediliyor…' : 'Kaydet'}

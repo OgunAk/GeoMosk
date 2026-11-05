@@ -17,6 +17,8 @@ public sealed record RequestErrors(Dictionary<string, string[]> Errors, bool Unp
 
 public static class UserFeatureRequestParser
 {
+    /// <summary>Geliştirici kuralı (kontrol noktası 2): boşluklar kırpıldıktan sonra en az 3 karakter.</summary>
+    public const int MinNameLength = 3;
     public const int MaxNameLength = 200;
     public const int MaxDescriptionLength = 2000;
 
@@ -133,6 +135,8 @@ public static class UserFeatureRequestParser
         }
         var text = value.GetString()!.Trim();
         if (text.Length == 0) errors["name"] = ["name boş olamaz."];
+        else if (new System.Globalization.StringInfo(text).LengthInTextElements < MinNameLength)
+            errors["name"] = [$"name en az {MinNameLength} karakter olmalı (baştaki/sondaki boşluklar sayılmaz)."];
         else if (text.Length > MaxNameLength) errors["name"] = [$"name en çok {MaxNameLength} karakter olabilir."];
         return text.Length == 0 ? null : text;
     }

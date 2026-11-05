@@ -51,7 +51,9 @@ public sealed class UserFeaturesController(IUserFeatureStore store, IOptions<Fea
         var (request, errors) = UserFeatureRequestParser.ParseCreate(body);
         if (request is null) return Validation(errors);
 
-        var created = await store.CreateAsync(request, cancellationToken);
+        var result = await store.CreateAsync(request, cancellationToken);
+        if (result.Status == UserFeatureWriteStatus.GeometryRejected) return GeometryRejectedProblem();
+        var created = result.Feature!;
         Response.Headers.ETag = ETags.Format(created.Version);
         return new CreatedResult($"/api/features/{created.Feature.Id}", created.Feature) { ContentTypes = { GeoJson } };
     }
@@ -79,6 +81,7 @@ public sealed class UserFeaturesController(IUserFeatureStore store, IOptions<Fea
         {
             UserFeatureWriteStatus.NotFound => NotFoundProblem(),
             UserFeatureWriteStatus.VersionMismatch => ConflictProblem(),
+            UserFeatureWriteStatus.GeometryRejected => GeometryRejectedProblem(),
             _ => FeatureResult(result.Feature!),
         };
     }
@@ -98,6 +101,12 @@ public sealed class UserFeaturesController(IUserFeatureStore store, IOptions<Fea
             UserFeatureWriteStatus.VersionMismatch => ConflictProblem(),
             _ => NoContent(),
         };
+    }
+
+    private IActionResult GeometryRejectedProblem()
+    {
+        ModelState.AddModelError("geometry", "Geçersiz geometri: veritabanı geometri doğrulaması reddetti (kendini kesen veya bozuk şekil). Kayıt değişmedi.");
+        return ValidationProblem(statusCode: StatusCodes.Status422UnprocessableEntity, modelStateDictionary: ModelState);
     }
 
     private IActionResult FeatureResult(VersionedFeature feature)

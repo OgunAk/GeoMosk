@@ -1,16 +1,92 @@
 # GeoScope — İlerleme kaydı
 
-## Kısa durum (4 Kasım 2026)
-- **Son doğrulanan faz:** Faz 5 — Üç MVP analizi (`validate-project --phase 5` exit 0, E2E yerel sunuculara karşı). MVP gereksinimleri (A00-A03) tamam.
-- **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. **Bekleyen:** geliştiricinin kendi değişikliği ("ad en az 3 karakter") — kodda henüz yok; AI dokunmuyor.
+## Kısa durum (5 Kasım 2026)
+- **Son doğrulanan faz:** Faz 7 — Sağlamlaştırma (`validate-project --phase 7` exit 0, E2E yerel sunuculara karşı). A00-A05, Q01-Q03 doğrulandı.
+- **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. G3 ("ad en az 3 karakter") geliştirici 2026-11-05'te AI'ya bıraktı; uygulandı (backend 134/134, Vitest 58/58).
 - **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
-- **Geliştirici bildirimi (2026-11-05):** başka ilçe seçilince eski analiz sonucu kalıyordu → `keepAnalysisFor` kuralı: yalnız analiz kaynağı veya sonuç listesindeki tesis seçilince sonuç korunur, aksi halde temizlenir (Vitest 6 + E2E). Commit edilmedi.
-- **Geliştirici bildirimi (2026-11-05):** "En yakın N" modunda "Haritada nokta seç" düğmesi ve Tür kutusu 320 px yan panelde taşıyordu → nokta bilgisi/düğme ayrı satır, N+Tür ızgarası (`minmax(0,1fr)`), seçim kutusu `min-w-0`; E2E: üç modda ve nokta seçildikten sonra içerik alanını aşan öğe yok. Commit edilmedi.
-- **Git:** `master` = Faz 0-3 (GitHub). Faz 4 + Faz 5 `faz-4-cizim-crud` dalında, henüz commit edilmedi.
+- **Geliştirici bildirimi (2026-11-05):** başka ilçe seçilince eski analiz sonucu kalıyordu → `keepAnalysisFor` kuralı: yalnız analiz kaynağı veya sonuç listesindeki tesis seçilince sonuç korunur, aksi halde temizlenir (Vitest 6 + E2E). Commit 734d642.
+- **Geliştirici bildirimi (2026-11-05):** "En yakın N" modunda "Haritada nokta seç" düğmesi ve Tür kutusu 320 px yan panelde taşıyordu → nokta bilgisi/düğme ayrı satır, N+Tür ızgarası (`minmax(0,1fr)`), seçim kutusu `min-w-0`; E2E: üç modda ve nokta seçildikten sonra içerik alanını aşan öğe yok. Commit 734d642.
+- **Git:** `master` = Faz 0-3 (GitHub). Faz 4-5 `faz-4-cizim-crud` dalında (push edildi, 734d642). Faz 6 commit 6a85751 (push edildi, CI yeşil). Faz 7 + G3 commit edilmedi.
 - **Çalışan ortam:** compose `db` ayakta (gerçek veri). Compose `api`/`web` durdurulmuş (Docker Desktop container ağı sorunu); API `dotnet run` (5080) + Vite (5173) yerelde.
-- **Sonraki adım:** Faz 6 — A04 metrik SRID ölçümü (EPSG:32635 adaylığı extent ile doğrulanacak), A05 ilçe başına tesis sayısı (tekil atama) + choropleth.
-- **Faz 7'ye taşınan notlar:** MapLibre + Terra Draw paketi 500 KB üstü (kod bölme); ilçe GeoJSON tam çözünürlükte (gzip 115 KB); arama için trigram indeksi ölçümü; bbox yüklemesi (ADR-0010); mobil ve yalnız klavye ile çizim; nearest büyük veride KNN + kesin yeniden sıralama (ADR-0012).
-- **İlgili master prompt bölümleri:** §10 A04-A05, §8.7-8.8 (metrik SRID), §8.9 (tekil atama).
+- **Sonraki adım:** Faz 8 — teslim: temiz Compose kurulumu (ayrı proje + yeni volume), README son hali, DELIVERY-CHECKLIST, ekran görüntüleri, GitHub yayın hazırlığı (izinle), geliştirici kontrol noktası 3.
+- **Açık kalan (bilinçli) kısıtlar:** klavye ile çizim yok; ilçe GeoJSON tam çözünürlük (gzip 97 KB, ölçülen ihtiyaç yok); arama trigram indeksi gerekmedi (10.000'de p95 17 ms); nearest 100.000+ kayıtta KNN değerlendirilir (ADR-0012).
+- **İlgili master prompt bölümleri:** §17 (Docker/CI/teslim), §18 (demo), §19 (DoD), §20.2 (kontrol noktası 3), §22.
+
+## Faz 7 raporu
+
+```text
+Faz: 7 — Sağlamlaştırma
+Durum: doğrulandı
+Karşılanan gereksinimler: Q01, Q03, P06 doğrulandı (Q02 Faz 6'da). Geliştirici değişikliği G3 ("ad en az 3 karakter") geliştiricinin
+  isteğiyle AI tarafından uygulandı.
+Oluşturulan/değişen dosyalar:
+  G3: Application/UserFeatures/UserFeatureRequests (MinNameLength, grafem sayısı), services/userFeatures (USER_NAME_MIN, nameLength),
+    CreateFeatureForm (ipucu + aria-invalid), UserFeaturePanel; testler UserFeatureApiTests (+3), CreateFeatureForm.test (+1)
+  Performans: scripts/perf/measure-api.mjs, seed-synthetic.sql (yalnız geoscope_perf; başka DB'de hata verir), results-*.json
+  İnceleme düzeltmeleri: scripts/import/load-osm.mjs (toplu silme koruması, manifest dosya adı), Api/Program.cs (CORS ETag/Location),
+    SourceFeatureQueries (tek ilçe atama kuralı), AnalysisService (A05 toplamı aynı SQL'de), UserFeatureStore + IUserFeatureStore +
+    UserFeaturesController (CHECK ihlali → 422), MapView + layerIds (LAYER_ORDER), UserFeaturePanel (kısa adlı eski kayıt),
+    LayerPanel + App (kullanıcı katmanı sınır uyarısı, geç gelen analiz yanıtı)
+  Erişilebilirlik/UI: AppLayout (dar ekranda panel ≤40vh, harita kalan alan), index.css (:focus-visible), vite.config (paket bölme)
+  Testler: MeasureAndDistrictStatsApiTests (+2), ImportPipelineTests (+2), SourceFeatureDetailAndEditTests (+3 SQL injection),
+    ImportRunner UTF-8 çıktı, GeoScopeApiFactory ek ayar; Vitest +5 (XSS, kısa ad, sınır uyarısı); e2e accessibility.spec (3) +
+    analysis.spec katman sırası
+  docs: TEST-PLAN (performans ölçümü), DECISIONS ADR-0014, API-CONTRACT, REQUIREMENTS, README, DEVELOPER-REVIEW
+Çalıştırılan komutlar ve sonuç/exit code:
+  Bağımsız code-reviewer incelemesi (salt-okunur): kritik/yüksek 0, orta 4, düşük 6 → hepsi düzeltildi
+  dotnet test backend → 141/141 (ara bulgular: G3 kuralı "Ad" adlı test verisini doğru reddetti → test verisi düzeltildi;
+    import testi Node UTF-8 hata metnini OEM kod sayfasıyla okuyordu → ImportRunner UTF-8)
+  npm --prefix frontend run typecheck / lint / test (62/62) / build → exit 0 (lint: vite.config regex kaçışı düzeltildi)
+  E2E → 22/22 (ilk koşuda altlık-servis testi 0 kaynak öğesi gördü: veri işlenmeden okunuyordu → yoklama ile beklendi)
+  Performans: node scripts/perf/measure-api.mjs (10.000 ve gerçek veri) → tüm p95 < 75 ms (TEST-PLAN)
+  node scripts/validate-project.mjs --phase 7 (E2E_BASE_URL=http://127.0.0.1:5173) → GEÇTİ, exit 0
+Veri/CRS/analiz kanıtları: değişmedi (Faz 5-6); A05 toplam eşitliği tek SQL ifadesinde.
+İnceleme bulguları ve çözümleri: yukarıda; ayrıntı ADR-0014.
+Çalıştırılamayan kontroller ve nedeni: üretim imajıyla (nginx) E2E ve performans — Docker Desktop ağı; CI ve Faz 8 temiz kurulumunda.
+Kalan risk/engel: klavye ile çizim yok (bilinçli); ölçüm tek makinede.
+Sonraki somut adım: Faz 8.
+```
+
+## Faz 6 raporu
+
+```text
+Faz: 6 — Güçlü teslim analizleri
+Durum: doğrulandı
+Karşılanan gereksinimler: A04, A05, Q02 doğrulandı; Q03 devam ediyor (p50/p95 Faz 7).
+Oluşturulan/değişen dosyalar:
+  backend: Application/Analysis (MeasureRequest, MetricProjection EPSG:32635 + kullanım alanı, MeasurementResult/GeodesicCheck,
+    DistrictStats DTO'ları, ParseMeasure), Infrastructure/Analysis/AnalysisService (MeasureAsync: ST_Transform + ST_Length/ST_Area/
+    ST_Perimeter, geography çapraz kontrol; DistrictStatsAsync: tekil atama CTE), Api/Controllers/AnalysisController (measure, district-stats)
+  backend testleri: Analysis/TransverseMercatorReference (elipsoid dörtgen alanı + UTM ölçek faktörü, bağımsız),
+    Analysis/MeasureAndDistrictStatsApiTests (11)
+  frontend: services/analysis (runMeasure, fetchDistrictStats, formatArea, tipler), AnalysisPanel ("Ölçüm" modu + sonuç),
+    analysis/choropleth.ts (sınıflar), analysis/DistrictStatsPanel (tablo, lejant, tür filtresi), MapView (lyr-districts-choropleth),
+    layerIds, App (ilçe istatistiği durumu, tablodan seçim/zoom)
+  frontend testleri: choropleth.test.ts (4), DistrictStatsPanel.test.tsx (3), AnalysisPanel.test.tsx (+3); e2e analysis.spec (+2),
+    map.spec katman sayısı 17
+  scripts: validate-project faz 6 dosyaları; sql/analysis-plans.sql (+A04/A05) ve analysis-plans.2026-11-05.txt
+  docs: API-CONTRACT, DECISIONS ADR-0013, REQUIREMENTS, TEST-PLAN, screenshots/faz6-choropleth.jpg
+Çalıştırılan komutlar ve sonuç/exit code:
+  ST_Extent (gerçek veri): ilçeler 28.088–29.910°D → tamamen UTM 35N (24–30°D) içinde
+  dotnet build backend → exit 0 (0 hata)
+  dotnet test --filter MeasureAndDistrictStats → 11/11 (ilk koşu)
+  dotnet test backend → 131/131
+  npm --prefix frontend run typecheck / lint → exit 0; test → 57/57 (ilk koşuda test başlığındaki tırnak sözdizimi hatası düzeltildi)
+  E2E (E2E_BASE_URL=http://127.0.0.1:5173) → ilk koşu 16/19: üçü test kurgusu — taşma testinde "Ölçüm" modundan sonra nokta seçimi
+    "En yakın N"e dönmüyordu; EPSG metni panelde iki yerde (ipucu + sonuç) eşleşiyordu; altlık değişirken choropleth katmanı geçici
+    olarak yokken getFilter hata fırlatıyordu (yoklama -1 döndürecek şekilde düzeltildi). Düzeltme sonrası analysis.spec 8/8, tam paket 19/19
+  node scripts/validate-project.mjs --phase 6 (E2E_BASE_URL=http://127.0.0.1:5173) → GEÇTİ, exit 0
+Veri/CRS/analiz kanıtları:
+  A04: 0.01°×0.01° dörtgen alanı ve çevresi, 2.2 km çizgi, delikli alan, iki parçalı ilçe — bağımsız referansla göreli fark < 1e-5;
+  28.2°D'de projeksiyon–sferoid farkı −%0,04…−%0,07 aralığında (yalnız geography kullanılsaydı test başarısız olurdu);
+  gerçek veri: İznik 711,61 km² (sferoid 711,25 km², +%0,05), Nilüfer E2E'de arayüz = API, |fark| < %0,1.
+  A05: gerçek veri 911 tesis → 911 atandı, 0 atanamayan, 0 çoklu eşleşme; ilçe toplamı = atanan; sentetik sınır/örtüşme senaryoları testli.
+  Sorgu planı: A05 GiST ile 6.7 ms, A04 4.0 ms.
+İnceleme bulguları ve çözümleri: yukarıda. Alt ajan incelemesi yapılmadı (Faz 7'de code-reviewer).
+Çalıştırılamayan kontroller ve nedeni: üretim imajıyla E2E (Docker Desktop ağı; CI'da çalışır).
+Kalan risk/engel: choropleth sınıfları kuantil (17 ilçe); ad/sayı bilgisi harita açılır penceresi yerine yan panel tablosunda (ADR-0013).
+Sonraki somut adım: Faz 7.
+```
 
 ## Faz 5 raporu
 

@@ -13,6 +13,6 @@ Her faz kapısı: `node scripts/validate-project.mjs --phase N`.
 | 4 | doğrulandı (geliştirici kontrolü bekliyor) | Terra Draw, `/api/features` CRUD, validasyon, sürüm çakışması | C02-C04; refresh/import sonrası kalıcılık | Terra Draw adaptör sürümü → küçük deney | `Faz 4: çizim ve CRUD` |
 | — | — | **Geliştirici kontrol noktası 2** (DEVELOPER-REVIEW.md) | Geliştirici akışı dener, küçük değişikliği yapar | — | — |
 | 5 | doğrulandı | A01 within, A02 buffer, A03 nearest: API + UI + doğruluk testleri + EXPLAIN | A00-A03 | Sınır semantiği, geography indeksi | `Faz 5: üç MVP analizi` |
-| 6 | bekliyor | A04 metrik SRID ölçüm, A05 ilçe sayımı + choropleth | A04-A05 | UTM 35N kapsamı → extent doğrulaması | `Faz 6: ölçüm ve ilçe istatistiği` |
-| 7 | bekliyor | Regresyon, performans ölçümü (p50/p95), güvenlik, erişilebilirlik, code-reviewer | Q01-Q03; kritik bulgu yok | Ölçmeden başarı yazmama | `Faz 7: sağlamlaştırma` |
+| 6 | doğrulandı | A04 metrik SRID ölçüm, A05 ilçe sayımı + choropleth | A04-A05 | UTM 35N kapsamı → extent doğrulaması | `Faz 6: ölçüm ve ilçe istatistiği` |
+| 7 | doğrulandı | Regresyon, performans ölçümü (p50/p95), güvenlik, erişilebilirlik, code-reviewer | Q01-Q03; kritik bulgu yok | Ölçmeden başarı yazmama | `Faz 7: sağlamlaştırma` |
 | 8 | bekliyor | Temiz Compose kurulumu, README, ekran görüntüleri, teslim listesi | L01-L03; **geliştirici kontrol noktası 3** | Uzak yayın izni | `Faz 8: teslim` |

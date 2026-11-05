@@ -5,7 +5,7 @@ Bu dosyaya yalnızca gerçekleşen kayıt yazılır. Geliştirici adına görü�
 | # | Kontrol noktası | Zaman | Karar/bulgu | Geliştiricinin gerekçesi/geri bildirimi | İlgili değişiklik | Test sonucu | Durum |
 |---|---|---|---|---|---|---|---|
 | 1 | Kapsam/mimari | Faz 0 sonu | Bursa ilçeleri + sağlık tesisleri senaryosu; katmanlı monolit | Master prompt §22'de "geliştirici tarafından onaylanmıştır" kaydı var; bu oturumda ayrıca soru sorulmadı | docs/DECISIONS.md ADR-0002 | — | önceden onaylı (master prompt §22) |
-| 2 | Ürün ve kod | Faz 4 sonu (2026-11-04) | Geliştirici uygulamayı denedi. İki iyileştirme istendi; kendi yapacağı değişikliği seçti: "Ad en az 3 karakter" | Bkz. "Geliştirici geri bildirimi (2026-11-04)" | Geri bildirim 1-2: AI tarafından uygulanıyor. Seçilen değişiklik: geliştirici yapacak | — | geri bildirim alındı; geliştirici değişikliği bekliyor |
+| 2 | Ürün ve kod | Faz 4 sonu (2026-11-04) | Geliştirici uygulamayı denedi. İki iyileştirme istendi; kendi yapacağı değişikliği seçti: "Ad en az 3 karakter" | Bkz. "Geliştirici geri bildirimi (2026-11-04)" | Geri bildirim 1-2 uygulandı. Seçilen değişikliği geliştirici 2026-11-05'te AI'ya bıraktı; AI uyguladı | — | tamamlandı (G3 AI tarafından, geliştirici isteğiyle) |
 | 3 | Son kabul | Faz 8 sonu | Manuel demo, teknik açıklama, teslim kapsamı | — | — | — | geliştirici incelemesi bekliyor |
 
 ## Kontrol noktası 2 — deneme rehberi (geliştirici dolduracak)
@@ -32,7 +32,7 @@ Seçilen küçük değişiklik: **1. Kullanıcı çizimi adına en az 3 karakter
 |---|---|---|---|
 | G1 | Çizgi/alan bitirmek için başlangıç noktasına dokunmak zor | "Çizimi bitir" düğmesi + Enter tuşu (Terra Draw'ın bitirme tuşu tuvale gönderilir); alan otomatik kapanır; ipucu metni güncellendi. Kanıt: `DrawingToolbar.test.tsx` (3), E2E çizgi Enter ile 3 köşe, alan düğmeyle 3 köşe + kapanış | uygulandı (AI), geliştirici yeniden denemesi bekliyor |
 | G2 | Sağlık tesisleri kendi içinde (türe göre) filtrelensin | Lejanttaki 6 tür, sayılarıyla haritada aç/kapa anahtarı oldu; vurgu/seçim halkalarına da uygulanır, altlık değişiminde korunur, tesis katmanı kapalıyken devre dışı. Kanıt: `LayerPanel.test.tsx` (+2), E2E "tesis türü filtresi…" | uygulandı (AI), geliştirici yeniden denemesi bekliyor |
-| G3 | Seçilen değişiklik: ad en az 3 karakter | Geliştirici: `UserFeatureRequestParser.ReadName` + `UserFeatureApiTests` + `CreateFeatureForm`/`UserFeaturePanel` ipucu | geliştirici değişikliği bekliyor |
+| G3 | Seçilen değişiklik: ad en az 3 karakter | Geliştirici 2026-11-05'te "değişikliği sana bırakıyorum" dedi; AI uyguladı: `ReadName` (kırpılmış ad, grafem sayısı ≥ 3, 400), `UserFeatureApiTests` (+3 durum: "ab", "  ab  ", PATCH " x " kaydı değiştirmez; "  Çağ  " kabul), `CreateFeatureForm` ipucu + `aria-invalid`, `UserFeaturePanel` düzenleme mesajı; Vitest +1. Mevcut kısa adlı kayıtlar korunur; kural yalnız yeni ad yazılırken uygulanır | uygulandı |
 
 ## Teknik sahiplik soruları (Faz 8 öncesi)
 Master prompt §20.4'teki sorular teslim öncesinde geliştiriciyle kod üzerinde ele alınacak; yanıtlar burada gerçek kayıt olarak tutulacak.

@@ -153,12 +153,14 @@ public sealed class UserFeatureApiTests(PostGisContainerFixture postgis) : IAsyn
     }
 
     [Theory]
-    [InlineData("""{"type":"Feature","geometry":{"type":"Point","coordinates":"29,40"},"properties":{"name":"x"}}""", "geometry")]
-    [InlineData("""{"type":"Feature","properties":{"name":"x"}}""", "geometry")]
+    [InlineData("""{"type":"Feature","geometry":{"type":"Point","coordinates":"29,40"},"properties":{"name":"Test"}}""", "geometry")]
+    [InlineData("""{"type":"Feature","properties":{"name":"Test"}}""", "geometry")]
     [InlineData("""{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{}}""", "name")]
     [InlineData("""{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"  "}}""", "name")]
-    [InlineData("""{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"x","color":"red"}}""", "properties.color")]
-    [InlineData("""{"type":"Feature","id":"abc","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"x"}}""", "id")]
+    [InlineData("""{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"Test","color":"red"}}""", "properties.color")]
+    [InlineData("""{"type":"Feature","id":"abc","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"Test"}}""", "id")]
+    [InlineData("""{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"ab"}}""", "name")]
+    [InlineData("""{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"  ab  "}}""", "name")]
     [InlineData("""{"type":"Point","coordinates":[29.06,40.19]}""", "type")]
     [InlineData("""[1,2,3]""", "")]
     public async Task Malformed_create_body_is_rejected_with_400(string body, string field)
@@ -167,6 +169,23 @@ public sealed class UserFeatureApiTests(PostGisContainerFixture postgis) : IAsyn
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.True((await Json(response)).GetProperty("errors").TryGetProperty(field, out _));
+    }
+
+    [Fact]
+    public async Task Name_needs_at_least_three_characters_after_trimming()
+    {
+        var created = await Post("""{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"  Çağ  "}}""");
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal("Çağ", (await Json(created)).GetProperty("properties").GetProperty("name").GetString());
+
+        var tooShort = await Post("""{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"ab"}}""");
+        Assert.Contains("en az 3 karakter", (await Json(tooShort)).GetProperty("errors").GetProperty("name")[0].GetString());
+
+        // PATCH: kısa ad 400, kayıt değişmez.
+        var (url, etag, _) = await Create(PointJson, "Uzun ad");
+        var patch = await Send(HttpMethod.Patch, url, """{"name":" x "}""", etag);
+        Assert.Equal(HttpStatusCode.BadRequest, patch.StatusCode);
+        Assert.Equal("Uzun ad", (await Json(await _client.GetAsync(url))).GetProperty("properties").GetProperty("name").GetString());
     }
 
     [Fact]
@@ -195,7 +214,7 @@ public sealed class UserFeatureApiTests(PostGisContainerFixture postgis) : IAsyn
     [Fact]
     public async Task Patch_with_invalid_geometry_returns_422_and_changes_nothing()
     {
-        var (url, etag, _) = await Create(PolygonJson, "Ad");
+        var (url, etag, _) = await Create(PolygonJson, "Eski ad");
 
         var response = await Send(HttpMethod.Patch, url,
             """{"name":"Yeni ad","geometry":{"type":"Polygon","coordinates":[[[29.0,40.1],[29.1,40.2],[29.1,40.1],[29.0,40.2],[29.0,40.1]]]}}""", etag);
@@ -204,7 +223,7 @@ public sealed class UserFeatureApiTests(PostGisContainerFixture postgis) : IAsyn
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
         var current = await _client.GetAsync(url);
         Assert.Equal(etag, current.Headers.ETag?.Tag);
-        Assert.Equal("Ad", (await Json(current)).GetProperty("properties").GetProperty("name").GetString());
+        Assert.Equal("Eski ad", (await Json(current)).GetProperty("properties").GetProperty("name").GetString());
     }
 
     [Theory]
@@ -228,7 +247,7 @@ public sealed class UserFeatureApiTests(PostGisContainerFixture postgis) : IAsyn
         Assert.Equal(HttpStatusCode.OK, (await Send(HttpMethod.Patch, url, """{"name":"Birinci düzenleme"}""", etag)).StatusCode);
 
         var stale = await Send(HttpMethod.Patch, url, """{"name":"Eski sürümden"}""", etag);
-        var missing = await Send(HttpMethod.Patch, url, """{"name":"x"}""", ifMatch: null);
+        var missing = await Send(HttpMethod.Patch, url, """{"name":"Test"}""", ifMatch: null);
 
         Assert.Equal(HttpStatusCode.PreconditionFailed, stale.StatusCode);
         Assert.Equal(HttpStatusCode.PreconditionRequired, missing.StatusCode);
@@ -256,7 +275,7 @@ public sealed class UserFeatureApiTests(PostGisContainerFixture postgis) : IAsyn
     {
         Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/features/{Guid.NewGuid()}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/features/123")).StatusCode);
-        var patch = await Send(HttpMethod.Patch, $"/api/features/{Guid.NewGuid()}", """{"name":"x"}""", "\"1\"");
+        var patch = await Send(HttpMethod.Patch, $"/api/features/{Guid.NewGuid()}", """{"name":"Test"}""", "\"1\"");
         Assert.Equal(HttpStatusCode.NotFound, patch.StatusCode);
     }
 

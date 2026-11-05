@@ -1,8 +1,10 @@
 import type { Feature, Geometry, Polygon } from 'geojson'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnalysisPanel, type SelectedSource } from './features/analysis/AnalysisPanel'
 import { keepAnalysisFor } from './features/analysis/analysisSelection'
-import type { AnalysisResponse } from './services/analysis'
+import { choroplethClasses, colorByDistrict } from './features/analysis/choropleth'
+import { DistrictStatsPanel } from './features/analysis/DistrictStatsPanel'
+import type { AnalysisResponse, DistrictStatsResponse } from './services/analysis'
 import { AppLayout } from './components/AppLayout'
 import { FeatureDetailsPanel } from './features/details/FeatureDetailsPanel'
 import { useFeatureDetail, type SourceSelection } from './features/details/useFeatureDetail'
@@ -30,6 +32,11 @@ export default function App() {
   const [basemap, setBasemap] = useState<BasemapId>('osm')
   const [visibility, setVisibility] = useState<Record<LayerKey, boolean>>({ districts: true, facilities: true, 'user-features': true })
   const [selection, setSelection] = useState<Selection | null>(null)
+  // Analiz isteği sürerken seçim değişirse geç gelen yanıt ilgisizse gösterilmez (olay işleyicisinde okunur).
+  const selectionRef = useRef<Selection | null>(null)
+  useEffect(() => {
+    selectionRef.current = selection
+  }, [selection])
   const [highlight, setHighlight] = useState(NO_HIGHLIGHT)
   const [focus, setFocus] = useState<FocusRequest | null>(null)
   const [draw, setDraw] = useState<DrawRequest>({ kind: 'off', token: 0 })
@@ -42,6 +49,11 @@ export default function App() {
   const [drawingAnalysisArea, setDrawingAnalysisArea] = useState(false)
   const [pickingPoint, setPickingPoint] = useState(false)
   const [pickedPoint, setPickedPoint] = useState<[number, number] | null>(null)
+  const [districtStats, setDistrictStats] = useState<DistrictStatsResponse | null>(null)
+  const choropleth = useMemo(
+    () => (districtStats ? colorByDistrict(districtStats.districts, choroplethClasses(districtStats.districts)) : null),
+    [districtStats],
+  )
   // Çizimin amacı (kayıt mı analiz alanı mı) Terra Draw geri çağrısında okunur; olay işleyicilerinde güncellenir.
   const analysisDrawRef = useRef(false)
   const [facilityTypes, setFacilityTypes] = useState<Record<FacilityType, boolean>>(
@@ -152,16 +164,17 @@ export default function App() {
     if (!selection) return null
     if (selection.layer === 'user-features') {
       const f = user.state.kind === 'loaded' ? user.state.collection.features.find((x) => String(x.id) === String(selection.id)) : undefined
-      return f ? { ref: { layerId: 'user-features', id: String(f.id) }, label: f.properties.name, isArea: f.geometry.type === 'Polygon' } : null
+      return f ? { ref: { layerId: 'user-features', id: String(f.id) }, label: f.properties.name, isArea: f.geometry.type === 'Polygon', measurable: f.geometry.type !== 'Point' }
+        : null
     }
     if (state.kind !== 'loaded') return null
     const id = Number(selection.id)
     if (selection.layer === 'districts') {
       const f = state.districts.features.find((x) => Number(x.id) === id)
-      return f ? { ref: { layerId: 'districts', id }, label: f.properties.name, isArea: true } : null
+      return f ? { ref: { layerId: 'districts', id }, label: f.properties.name, isArea: true, measurable: true } : null
     }
     const f = state.facilities.features.find((x) => Number(x.id) === id)
-    return f ? { ref: { layerId: 'facilities', id }, label: f.properties.name ?? 'Adsız tesis', isArea: false } : null
+    return f ? { ref: { layerId: 'facilities', id }, label: f.properties.name ?? 'Adsız tesis', isArea: false, measurable: false } : null
   }, [selection, state, user.state])
 
   const onCreated = useCallback(
@@ -237,13 +250,26 @@ export default function App() {
               endDrawing()
               setPickingPoint(true)
             }}
-            onResult={setAnalysisResult}
+            onResult={(result) => setAnalysisResult(result && keepAnalysisFor(result, selectionRef.current) ? result : null)}
             onSelectMatch={(f) => {
               showLayer('facilities')
               setSelection({ layer: 'facilities', id: Number(f.id) })
               zoomTo([f.geometry])
             }}
             onShowAll={() => analysisResult && zoomTo([analysisResult.input.geometry, ...analysisResult.matches.features.map((f) => f.geometry)])}
+          />
+          <DistrictStatsPanel
+            stats={districtStats}
+            selectedDistrictId={selection?.layer === 'districts' ? Number(selection.id) : null}
+            onStats={(stats) => {
+              setDistrictStats(stats)
+              if (stats) showLayer('districts')
+            }}
+            onSelectDistrict={(id) => {
+              const feature = state.kind === 'loaded' ? state.districts.features.find((f) => Number(f.id) === id) : undefined
+              selectObject({ layer: 'districts', id })
+              if (feature) zoomTo([feature.geometry])
+            }}
           />
           <DrawingToolbar
             draw={draw}
@@ -261,6 +287,7 @@ export default function App() {
           <LayerPanel
             state={state}
             userCount={user.state.kind === 'loaded' ? user.state.collection.meta.returned : null}
+            userHasMore={user.state.kind === 'loaded' && user.state.collection.meta.hasMore}
             onRetry={retry}
             visibility={visibility}
             onToggle={(layer, visible) => setVisibility((v) => ({ ...v, [layer]: visible }))}
@@ -287,6 +314,7 @@ export default function App() {
         facilityTypes={visibleFacilityTypes}
         editingId={editing?.id ?? null}
         analysis={analysisResult}
+        choropleth={choropleth}
         pickingPoint={pickingPoint}
         onPickPoint={(point) => {
           setPickedPoint(point)
