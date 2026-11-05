@@ -88,6 +88,22 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Doğrulama:** bağımsız referans — elipsoid dörtgen alanı (kapalı formül) × UTM ölçek faktörü k² (Snyder 1987); göreli tolerans 1e-5
   (gerekçesi testte). 28.2°D'de projeksiyon ile sferoid farkı (≈ −%0,055) testte ayrıca beklenir.
 
+## ADR-0014 — Faz 7 sağlamlaştırma kararları
+
+- **Durum:** Kabul (Faz 7, bağımsız kod incelemesi sonrası).
+- **Import toplu silme koruması:** snapshot'taki kayıt sayısı aktif kaynak kaydının yarısının altındaysa import geri alınır
+  (`import_history.status = failed`); bilinçli durumda `--allow-mass-delete`. Gerekçe: Overpass'ın boş/eksik ama geçerli yanıtı
+  tüm kayıtları "kaynakta silindi" diye işaretleyip haritayı boşaltabiliyordu. Manifest güvenilmeyen girdidir: dosya adı yalnız
+  snapshot klasöründeki bir ad olabilir. `--snapshot` operatör girdisidir (testler geçici klasör kullanır), kök dışında da kabul edilir.
+- **Katman çizim sırası:** sabit `LAYER_ORDER` (kaynak < analiz < kullanıcı < Terra Draw `td-*`) her kaynak/katman kurulumundan sonra
+  `moveLayer` ile uygulanır; altlık değişiminde efektlerin sırası değişse de sonuç aynıdır.
+- **Tek ilçe atama kuralı:** tesis detayındaki ilçe adı A05 ile aynı kuralı kullanır (ADR-0013).
+- **CORS:** `ETag` ve `Location` açığa çıkarılır (çapraz origin kurulumda If-Match için). CORS yetkilendirme değildir.
+- **DB CHECK ihlali:** kullanıcı çizimi yazımında `23514` → 422 (500 değil); NTS ile GEOS geçerlilik kenar durumları için ikinci hat.
+- **Geç gelen analiz yanıtı:** yanıt geldiğinde seçim değişmiş ve sonuç onunla ilgisizse gösterilmez (`keepAnalysisFor`).
+- **Paket bölme:** MapLibre, Terra Draw ve React ayrı parçalar (önbellek); uyarı eşiği yalnız MapLibre parçası için 1100 kB.
+- **Dar ekran:** yan panel en çok 40vh ve kendi içinde kayar; harita kalan yüksekliği doldurur. Görünür odak `:focus-visible` ile global.
+
 ## ADR-0010 — Harita veri yükleme stratejisi
 
 - **Durum:** Kabul (Faz 3), Faz 7'de ölçümle yeniden değerlendirilecek.

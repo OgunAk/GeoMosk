@@ -1,16 +1,51 @@
 # GeoScope — İlerleme kaydı
 
 ## Kısa durum (5 Kasım 2026)
-- **Son doğrulanan faz:** Faz 6 — Güçlü teslim analizleri (`validate-project --phase 6` exit 0, E2E yerel sunuculara karşı). A00-A05 doğrulandı.
-- **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. **Bekleyen:** geliştiricinin kendi değişikliği ("ad en az 3 karakter") — kodda henüz yok; AI dokunmuyor.
+- **Son doğrulanan faz:** Faz 7 — Sağlamlaştırma (`validate-project --phase 7` exit 0, E2E yerel sunuculara karşı). A00-A05, Q01-Q03 doğrulandı.
+- **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. G3 ("ad en az 3 karakter") geliştirici 2026-11-05'te AI'ya bıraktı; uygulandı (backend 134/134, Vitest 58/58).
 - **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
 - **Geliştirici bildirimi (2026-11-05):** başka ilçe seçilince eski analiz sonucu kalıyordu → `keepAnalysisFor` kuralı: yalnız analiz kaynağı veya sonuç listesindeki tesis seçilince sonuç korunur, aksi halde temizlenir (Vitest 6 + E2E). Commit 734d642.
 - **Geliştirici bildirimi (2026-11-05):** "En yakın N" modunda "Haritada nokta seç" düğmesi ve Tür kutusu 320 px yan panelde taşıyordu → nokta bilgisi/düğme ayrı satır, N+Tür ızgarası (`minmax(0,1fr)`), seçim kutusu `min-w-0`; E2E: üç modda ve nokta seçildikten sonra içerik alanını aşan öğe yok. Commit 734d642.
-- **Git:** `master` = Faz 0-3 (GitHub). Faz 4-5 `faz-4-cizim-crud` dalında (push edildi, 734d642). Faz 6 aynı dalın üzerinde, commit edilmedi.
+- **Git:** `master` = Faz 0-3 (GitHub). Faz 4-5 `faz-4-cizim-crud` dalında (push edildi, 734d642). Faz 6 commit 6a85751 (push edildi, CI yeşil). Faz 7 + G3 commit edilmedi.
 - **Çalışan ortam:** compose `db` ayakta (gerçek veri). Compose `api`/`web` durdurulmuş (Docker Desktop container ağı sorunu); API `dotnet run` (5080) + Vite (5173) yerelde.
-- **Sonraki adım:** Faz 7 — sağlamlaştırma: p50/p95 performans ölçümü, hata/güvenlik gözden geçirmesi, erişilebilirlik (klavye, mobil), kod bölme, code-reviewer incelemesi.
-- **Faz 7'ye taşınan notlar:** MapLibre + Terra Draw paketi 500 KB üstü (kod bölme); ilçe GeoJSON tam çözünürlükte (gzip 115 KB); arama için trigram indeksi ölçümü; bbox yüklemesi (ADR-0010); mobil ve yalnız klavye ile çizim; nearest büyük veride KNN + kesin yeniden sıralama (ADR-0012).
-- **İlgili master prompt bölümleri:** §13 (güvenlik/performans), §14 (test), §16, §19.
+- **Sonraki adım:** Faz 8 — teslim: temiz Compose kurulumu (ayrı proje + yeni volume), README son hali, DELIVERY-CHECKLIST, ekran görüntüleri, GitHub yayın hazırlığı (izinle), geliştirici kontrol noktası 3.
+- **Açık kalan (bilinçli) kısıtlar:** klavye ile çizim yok; ilçe GeoJSON tam çözünürlük (gzip 97 KB, ölçülen ihtiyaç yok); arama trigram indeksi gerekmedi (10.000'de p95 17 ms); nearest 100.000+ kayıtta KNN değerlendirilir (ADR-0012).
+- **İlgili master prompt bölümleri:** §17 (Docker/CI/teslim), §18 (demo), §19 (DoD), §20.2 (kontrol noktası 3), §22.
+
+## Faz 7 raporu
+
+```text
+Faz: 7 — Sağlamlaştırma
+Durum: doğrulandı
+Karşılanan gereksinimler: Q01, Q03, P06 doğrulandı (Q02 Faz 6'da). Geliştirici değişikliği G3 ("ad en az 3 karakter") geliştiricinin
+  isteğiyle AI tarafından uygulandı.
+Oluşturulan/değişen dosyalar:
+  G3: Application/UserFeatures/UserFeatureRequests (MinNameLength, grafem sayısı), services/userFeatures (USER_NAME_MIN, nameLength),
+    CreateFeatureForm (ipucu + aria-invalid), UserFeaturePanel; testler UserFeatureApiTests (+3), CreateFeatureForm.test (+1)
+  Performans: scripts/perf/measure-api.mjs, seed-synthetic.sql (yalnız geoscope_perf; başka DB'de hata verir), results-*.json
+  İnceleme düzeltmeleri: scripts/import/load-osm.mjs (toplu silme koruması, manifest dosya adı), Api/Program.cs (CORS ETag/Location),
+    SourceFeatureQueries (tek ilçe atama kuralı), AnalysisService (A05 toplamı aynı SQL'de), UserFeatureStore + IUserFeatureStore +
+    UserFeaturesController (CHECK ihlali → 422), MapView + layerIds (LAYER_ORDER), UserFeaturePanel (kısa adlı eski kayıt),
+    LayerPanel + App (kullanıcı katmanı sınır uyarısı, geç gelen analiz yanıtı)
+  Erişilebilirlik/UI: AppLayout (dar ekranda panel ≤40vh, harita kalan alan), index.css (:focus-visible), vite.config (paket bölme)
+  Testler: MeasureAndDistrictStatsApiTests (+2), ImportPipelineTests (+2), SourceFeatureDetailAndEditTests (+3 SQL injection),
+    ImportRunner UTF-8 çıktı, GeoScopeApiFactory ek ayar; Vitest +5 (XSS, kısa ad, sınır uyarısı); e2e accessibility.spec (3) +
+    analysis.spec katman sırası
+  docs: TEST-PLAN (performans ölçümü), DECISIONS ADR-0014, API-CONTRACT, REQUIREMENTS, README, DEVELOPER-REVIEW
+Çalıştırılan komutlar ve sonuç/exit code:
+  Bağımsız code-reviewer incelemesi (salt-okunur): kritik/yüksek 0, orta 4, düşük 6 → hepsi düzeltildi
+  dotnet test backend → 141/141 (ara bulgular: G3 kuralı "Ad" adlı test verisini doğru reddetti → test verisi düzeltildi;
+    import testi Node UTF-8 hata metnini OEM kod sayfasıyla okuyordu → ImportRunner UTF-8)
+  npm --prefix frontend run typecheck / lint / test (62/62) / build → exit 0 (lint: vite.config regex kaçışı düzeltildi)
+  E2E → 22/22 (ilk koşuda altlık-servis testi 0 kaynak öğesi gördü: veri işlenmeden okunuyordu → yoklama ile beklendi)
+  Performans: node scripts/perf/measure-api.mjs (10.000 ve gerçek veri) → tüm p95 < 75 ms (TEST-PLAN)
+  node scripts/validate-project.mjs --phase 7 (E2E_BASE_URL=http://127.0.0.1:5173) → GEÇTİ, exit 0
+Veri/CRS/analiz kanıtları: değişmedi (Faz 5-6); A05 toplam eşitliği tek SQL ifadesinde.
+İnceleme bulguları ve çözümleri: yukarıda; ayrıntı ADR-0014.
+Çalıştırılamayan kontroller ve nedeni: üretim imajıyla (nginx) E2E ve performans — Docker Desktop ağı; CI ve Faz 8 temiz kurulumunda.
+Kalan risk/engel: klavye ile çizim yok (bilinçli); ölçüm tek makinede.
+Sonraki somut adım: Faz 8.
+```
 
 ## Faz 6 raporu
 

@@ -17,6 +17,9 @@ public static class ImportRunner
             WorkingDirectory = RepoRoot,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            // Node çıktısı UTF-8; Windows varsayılan kod sayfasıyla okunursa Türkçe hata metinleri bozulur.
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8,
             UseShellExecute = false,
         };
         // Argüman dizisi: yollar shell komutuna birleştirilmez.

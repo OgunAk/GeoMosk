@@ -43,7 +43,7 @@ internal sealed class UserFeatureStore(GeoScopeDbContext db) : IUserFeatureStore
         return entity is null ? null : new VersionedFeature(ToFeature(entity), entity.Version);
     }
 
-    public async Task<VersionedFeature> CreateAsync(UserFeatureCreate request, CancellationToken cancellationToken)
+    public async Task<UserFeatureWriteResult> CreateAsync(UserFeatureCreate request, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
         var entity = new UserFeature
@@ -56,8 +56,16 @@ internal sealed class UserFeatureStore(GeoScopeDbContext db) : IUserFeatureStore
             UpdatedAt = now,
         };
         db.UserFeatures.Add(entity);
-        await db.SaveChangesAsync(cancellationToken); // xmin SaveChanges sonrası entity'ye okunur
-        return new VersionedFeature(ToFeature(entity), entity.Version);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken); // xmin SaveChanges sonrası entity'ye okunur
+        }
+        catch (DbUpdateException ex) when (IsCheckViolation(ex))
+        {
+            db.ChangeTracker.Clear();
+            return new(UserFeatureWriteStatus.GeometryRejected);
+        }
+        return new(UserFeatureWriteStatus.Ok, new VersionedFeature(ToFeature(entity), entity.Version));
     }
 
     public async Task<UserFeatureWriteResult> UpdateAsync(Guid id, UserFeaturePatch patch, uint expectedVersion, CancellationToken cancellationToken)
@@ -80,8 +88,17 @@ internal sealed class UserFeatureStore(GeoScopeDbContext db) : IUserFeatureStore
         {
             return new(UserFeatureWriteStatus.VersionMismatch);
         }
+        catch (DbUpdateException ex) when (IsCheckViolation(ex))
+        {
+            db.ChangeTracker.Clear();
+            return new(UserFeatureWriteStatus.GeometryRejected);
+        }
         return new(UserFeatureWriteStatus.Ok, new VersionedFeature(ToFeature(entity), entity.Version));
     }
+
+    // NTS (IsValidOp) ile GEOS (ST_IsValid) kenar durumlarında ayrışabilir; DB kısıtı ikinci hattır ve 500 yerine 422 döner.
+    private static bool IsCheckViolation(DbUpdateException ex) =>
+        ex.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.CheckViolation };
 
     public async Task<UserFeatureWriteStatus> DeleteAsync(Guid id, uint expectedVersion, CancellationToken cancellationToken)
     {

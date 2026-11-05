@@ -104,6 +104,16 @@ describe('LayerPanel', () => {
     expect(screen.getByRole('status')).toHaveTextContent('yalnızca bir kısmı')
   })
 
+  it('kullanıcı çizimleri sınırı aşınca da eksik veriyi bildirir; aşılmadıysa uyarı yok', () => {
+    renderPanel({ userHasMore: true })
+    expect(screen.getByRole('status')).toHaveTextContent('yalnızca bir kısmı')
+  })
+
+  it('sınır aşılmadıysa eksik veri uyarısı yok', () => {
+    renderPanel()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
   it('hata durumunda tekrar dene çağırır', async () => {
     const props = renderPanel({ state: { kind: 'error' } })
 

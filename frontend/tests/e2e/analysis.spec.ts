@@ -212,6 +212,14 @@ test('A05: ilçe başına tesis sayısı tabloda ve haritada; toplamlar çifte s
   await expect.poll(painted).toBe(stats.districts.length)
   await page.getByRole('radio', { name: /Positron/ }).check()
   await expect.poll(painted).toBe(stats.districts.length)
+  // Altlık değişiminden sonra çizim sırası korunur: kaynak < analiz < kullanıcı < Terra Draw taslağı (kod incelemesi bulgusu 1).
+  const order = await page.evaluate(() => window.__geoscopeMap!.getStyle().layers.map((l) => l.id))
+  const at = (id: string) => order.indexOf(id)
+  expect(at('lyr-districts-choropleth')).toBeGreaterThan(-1)
+  expect(at('lyr-districts-choropleth')).toBeLessThan(at('lyr-analysis-fill'))
+  expect(at('lyr-analysis-fill')).toBeLessThan(at('lyr-user-fill'))
+  const firstDraw = order.findIndex((id) => id.startsWith('td'))
+  expect(firstDraw).toBeGreaterThan(at('lyr-user-selected-point'))
 
   // Tablodan ilçe seçimi: harita seçimi ve satır vurgusu.
   await table.getByRole('button', { name: 'Nilüfer' }).click()

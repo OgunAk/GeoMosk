@@ -29,6 +29,33 @@ function setup() {
 }
 
 describe('UserFeaturePanel', () => {
+  it('HTML içeren ad ve açıklamayı düz metin gösterir (XSS yok)', async () => {
+    const hostile = { ...feature, properties: { ...feature.properties, name: '<img src=x onerror=alert(1)>', description: '<script>window.__xss = 1</script>' } }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(200, hostile, '"1"')))
+    setup()
+
+    expect(await screen.findByRole('heading', { name: '<img src=x onerror=alert(1)>' })).toBeInTheDocument()
+    expect(screen.getByText('<script>window.__xss = 1</script>')).toBeInTheDocument()
+    expect(document.querySelector('img')).toBeNull()
+    expect(document.querySelector('section script')).toBeNull()
+  })
+
+  it('kural öncesi kısa adlı kayıtta yalnız açıklama değiştirilebilir; kısa yeni ad engellenir', async () => {
+    const old = { ...feature, properties: { ...feature.properties, name: 'ab' } }
+    const fetchMock = vi.fn().mockResolvedValueOnce(json(200, old, '"1"')).mockResolvedValueOnce(json(200, old, '"2"'))
+    vi.stubGlobal('fetch', fetchMock)
+    setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Düzenle' }))
+    await userEvent.type(screen.getByLabelText('Açıklama'), 'Yeni not')
+    expect(screen.getByRole('button', { name: 'Kaydet' })).toBeEnabled()
+
+    await userEvent.type(screen.getByLabelText('Ad'), 'x')
+    await userEvent.clear(screen.getByLabelText('Ad'))
+    await userEvent.type(screen.getByLabelText('Ad'), 'xy')
+    expect(screen.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
+    expect(screen.getByText('Ad en az 3 karakter olmalı.')).toBeInTheDocument()
+  })
+
   it('silme onay ister ve If-Match ile siler', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(json(200, feature, '"7"')).mockResolvedValueOnce(json(204, null))
     vi.stubGlobal('fetch', fetchMock)

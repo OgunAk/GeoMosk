@@ -28,6 +28,30 @@ export const LAYER_IDS = {
   analysisMatches: 'lyr-analysis-matches',
 } as const
 
+/**
+ * Alttan üste sabit çizim sırası: kaynak verisi < analiz sonucu < kullanıcı çizimleri < Terra Draw taslağı (td-*).
+ * Katmanlar farklı efektlerde ve altlık değişiminden sonra farklı sırayla eklenebildiği için her kurulumdan sonra uygulanır.
+ */
+export const LAYER_ORDER: readonly string[] = [
+  LAYER_IDS.districtsFill,
+  LAYER_IDS.districtsChoropleth,
+  LAYER_IDS.districtsLine,
+  LAYER_IDS.districtsHighlight,
+  LAYER_IDS.districtsSelected,
+  LAYER_IDS.facilitiesHighlight,
+  LAYER_IDS.facilities,
+  LAYER_IDS.facilitiesSelected,
+  LAYER_IDS.analysisFill,
+  LAYER_IDS.analysisLine,
+  LAYER_IDS.analysisPoint,
+  LAYER_IDS.analysisMatches,
+  LAYER_IDS.userFill,
+  LAYER_IDS.userLine,
+  LAYER_IDS.userPoint,
+  LAYER_IDS.userSelectedLine,
+  LAYER_IDS.userSelectedPoint,
+]
+
 /** Uygulama katman anahtarları (panel/seçim). */
 export type LayerKey = 'districts' | 'facilities' | 'user-features'
 

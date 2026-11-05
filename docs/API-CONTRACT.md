@@ -86,7 +86,7 @@ Feature `id` UUID metnidir. `properties`: `layer: "user-features"`, `name`, `des
 | PATCH | `/api/features/{id}` | `{"name"?, "description"?, "geometry"?}` + `If-Match` | 200 + yeni `ETag` (öznitelik ve geometri tek UPDATE'te) | 400, 404, 412, 422, 428 |
 | DELETE | `/api/features/{id}` | `If-Match` | **204** | 404, 412, 428 |
 
-**400 (biçim):** gövde nesne değil; `type` "Feature" değil; `geometry`/`properties`/`name` eksik; `name` boş, metin değil veya 200'den uzun;
+**400 (biçim):** gövde nesne değil; `type` "Feature" değil; `geometry`/`properties`/`name` eksik; `name` boş, metin değil, kırpıldıktan sonra 3 karakterden kısa (karakter = grafem; geliştirici kuralı, kontrol noktası 2) veya 200'den uzun;
 `description` 2000'den uzun; izin verilmeyen alan (`id` istemciden gönderilemez; `properties` yalnız `name`, `description`); koordinatlar dizi değil.
 PATCH'te `name: null` ve `geometry: null` 400 (çizimi silmek için DELETE).
 
@@ -94,7 +94,7 @@ PATCH'te `name: null` ve `geometry: null` 400 (çizimi silmek için DELETE).
 3 boyutlu konum; sonlu olmayan veya aralık dışı koordinat; LineString < 2 konum ya da tek farklı nokta; Polygon halkası < 4 konum
 veya kapalı değil; kendini kesme vb. (NTS `IsValidOp`, mesajda konum); 10 000'den fazla köşe; **Bursa çalışma alanı dışı**
 (boylam 28.0–30.1, enlem 39.5–40.8). Sonuncusu çoğunlukla ters koordinat sırasıdır; otomatik düzeltilmez.
-Doğrulama sunucuda yapılır; istemci kontrolleri yalnız erken uyarıdır. DB CHECK kısıtları ikinci savunma hattıdır.
+Doğrulama sunucuda yapılır; istemci kontrolleri yalnız erken uyarıdır. DB CHECK kısıtları ikinci savunma hattıdır; ihlal ederse (NTS/GEOS geçerlilik kenar durumu) yanıt 422 `errors.geometry` olur, kayıt değişmez. CORS yanıtları `ETag` ve `Location` başlıklarını açığa çıkarır.
 
 Örnek: `POST /api/features` `{"type":"Feature","geometry":{"type":"Point","coordinates":[29.06,40.19]},"properties":{"name":"Deneme çizimi","description":"Kullanıcı geometrisi"}}`
 → 201, `Location: /api/features/<uuid>`.

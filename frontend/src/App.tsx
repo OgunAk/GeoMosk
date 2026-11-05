@@ -1,5 +1,5 @@
 import type { Feature, Geometry, Polygon } from 'geojson'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnalysisPanel, type SelectedSource } from './features/analysis/AnalysisPanel'
 import { keepAnalysisFor } from './features/analysis/analysisSelection'
 import { choroplethClasses, colorByDistrict } from './features/analysis/choropleth'
@@ -32,6 +32,11 @@ export default function App() {
   const [basemap, setBasemap] = useState<BasemapId>('osm')
   const [visibility, setVisibility] = useState<Record<LayerKey, boolean>>({ districts: true, facilities: true, 'user-features': true })
   const [selection, setSelection] = useState<Selection | null>(null)
+  // Analiz isteği sürerken seçim değişirse geç gelen yanıt ilgisizse gösterilmez (olay işleyicisinde okunur).
+  const selectionRef = useRef<Selection | null>(null)
+  useEffect(() => {
+    selectionRef.current = selection
+  }, [selection])
   const [highlight, setHighlight] = useState(NO_HIGHLIGHT)
   const [focus, setFocus] = useState<FocusRequest | null>(null)
   const [draw, setDraw] = useState<DrawRequest>({ kind: 'off', token: 0 })
@@ -245,7 +250,7 @@ export default function App() {
               endDrawing()
               setPickingPoint(true)
             }}
-            onResult={setAnalysisResult}
+            onResult={(result) => setAnalysisResult(result && keepAnalysisFor(result, selectionRef.current) ? result : null)}
             onSelectMatch={(f) => {
               showLayer('facilities')
               setSelection({ layer: 'facilities', id: Number(f.id) })
@@ -282,6 +287,7 @@ export default function App() {
           <LayerPanel
             state={state}
             userCount={user.state.kind === 'loaded' ? user.state.collection.meta.returned : null}
+            userHasMore={user.state.kind === 'loaded' && user.state.collection.meta.hasMore}
             onRetry={retry}
             visibility={visibility}
             onToggle={(layer, visible) => setVisibility((v) => ({ ...v, [layer]: visible }))}

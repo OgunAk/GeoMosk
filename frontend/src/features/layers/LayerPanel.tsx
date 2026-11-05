@@ -7,6 +7,8 @@ interface LayerPanelProps {
   state: SourceLayersState
   /** Kullanıcı çizimi sayısı; yüklenmediyse null. */
   userCount: number | null
+  /** Kullanıcı çizimleri liste sınırını (2000) aştı: haritada hepsi yok. */
+  userHasMore?: boolean
   onRetry: () => void
   visibility: Record<LayerKey, boolean>
   onToggle: (layer: LayerKey, visible: boolean) => void
@@ -25,7 +27,7 @@ const LAYER_TITLES: Record<LayerKey, string> = {
 
 /** Katman aç/kapa (M02), altlık seçimi (M05), sayılar, tesis türü lejantı ve kaynak atfı. */
 export function LayerPanel(props: LayerPanelProps) {
-  const { state, userCount, onRetry, visibility, onToggle, basemap, onBasemapChange, facilityTypes, onToggleFacilityType } = props
+  const { state, userCount, userHasMore = false, onRetry, visibility, onToggle, basemap, onBasemapChange, facilityTypes, onToggleFacilityType } = props
   const facilityCounts = Object.fromEntries((Object.keys(FACILITY_LABELS) as FacilityType[]).map((t) => [t, 0])) as Record<FacilityType, number>
   if (state.kind === 'loaded') for (const f of state.facilities.features) facilityCounts[f.properties.facilityType]++
   return (
@@ -77,7 +79,7 @@ export function LayerPanel(props: LayerPanelProps) {
               </label>
             </li>
           </ul>
-          {(state.districts.meta.hasMore || state.facilities.meta.hasMore) && (
+          {(state.districts.meta.hasMore || state.facilities.meta.hasMore || userHasMore) && (
             <p role="status" className="mt-2 rounded bg-amber-50 px-2 py-1 text-amber-900">
               Kayıt sınırı aşıldı; haritada verinin yalnızca bir kısmı gösteriliyor.
             </p>

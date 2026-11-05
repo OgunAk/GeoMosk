@@ -182,29 +182,32 @@ internal sealed class AnalysisService(GeoScopeDbContext db) : IAnalysisService
                 FROM candidates
                 ORDER BY facility_id, interior DESC, district_id
             )
-            SELECT d.id, count(p.facility_id)::int, (count(p.facility_id) FILTER (WHERE p.match_count > 1))::int
+            SELECT d.id, count(p.facility_id)::int, (count(p.facility_id) FILTER (WHERE p.match_count > 1))::int,
+                   (SELECT count(*) FROM f)::int
             FROM d LEFT JOIN picked p ON p.district_id = d.id
             GROUP BY d.id
             ORDER BY d.id
             """;
-        const string totalSql = """
-            SELECT count(*)::int FROM health_facilities
-            WHERE source_deleted_at IS NULL AND (@type::text IS NULL OR facility_type = @type::text)
-            """;
         var connection = await OpenAsync(cancellationToken);
+        // Toplam aynı SQL ifadesinde (tek anlık görüntü): araya giren import "atanan + atanamayan = toplam" eşitliğini bozamaz.
         var counts = new List<(long Id, int Count, int Multi)>();
+        int? total = null;
         await using (var command = connection.CreateCommand())
         {
             command.CommandText = sql;
             command.Parameters.Add(TypeParameter(facilityType));
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
+            {
                 counts.Add((reader.GetInt64(0), reader.GetInt32(1), reader.GetInt32(2)));
+                total = reader.GetInt32(3);
+            }
         }
-        int total;
-        await using (var command = connection.CreateCommand())
+        // İlçe yoksa satır dönmez; o durumda tesislerin tümü atanamayandır.
+        if (total is null)
         {
-            command.CommandText = totalSql;
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT count(*)::int FROM health_facilities WHERE source_deleted_at IS NULL AND (@type::text IS NULL OR facility_type = @type::text)";
             command.Parameters.Add(TypeParameter(facilityType));
             total = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
         }
@@ -216,7 +219,7 @@ internal sealed class AnalysisService(GeoScopeDbContext db) : IAnalysisService
         var rows = counts.Select(c => new DistrictStatsRow(c.Id, names.GetValueOrDefault(c.Id, ""), c.Count, c.Multi)).ToList();
         var assigned = rows.Sum(r => r.FacilityCount);
         return new DistrictStatsResponse("district-stats", facilityType, rows,
-            new DistrictStatsTotals(total, assigned, total - assigned, rows.Sum(r => r.MultiMatchCount)),
+            new DistrictStatsTotals(total.Value, assigned, total.Value - assigned, rows.Sum(r => r.MultiMatchCount)),
             "Tekil atama: sınır dahil kapsayan ilçeler (ST_Covers) içinden önce tesisi iç bölgesinde içeren (ST_Contains), " +
             "eşitlikte en küçük ilçe id'si. Her tesis en çok bir ilçede sayılır; hiçbir ilçenin kapsamadığı tesisler atanamayandır.");
 

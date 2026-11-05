@@ -4,6 +4,8 @@ import {
   GEOMETRY_LABELS,
   USER_DESCRIPTION_MAX,
   USER_NAME_MAX,
+  USER_NAME_MIN,
+  nameLength,
   deleteUserFeature,
   fetchUserFeature,
   patchUserFeature,
@@ -238,10 +240,12 @@ function TextEditor({
   const ids = { name: useId(), description: useId() }
   const [name, setName] = useState(feature.properties.name)
   const [description, setDescription] = useState(feature.properties.description ?? '')
+  // Kural yalnız ad değiştiğinde uygulanır: kural öncesi kısa adla kaydedilmiş çizimin açıklaması yine düzenlenebilir.
+  const nameTooShort = name.trim() !== feature.properties.name && nameLength(name) < USER_NAME_MIN
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!name.trim() || busy) return
+    if (nameTooShort || busy) return
     const patch: { name?: string; description?: string | null } = {}
     if (name.trim() !== feature.properties.name) patch.name = name.trim()
     if (description.trim() !== (feature.properties.description ?? '')) patch.description = description.trim() || null
@@ -256,7 +260,11 @@ function TextEditor({
           Ad
         </label>
         <input id={ids.name} value={name} maxLength={USER_NAME_MAX} onChange={(e) => setName(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1" />
-        {!name.trim() && <p className="text-xs text-red-700">Ad boş olamaz.</p>}
+        {!name.trim() ? (
+          <p className="text-xs text-red-700">Ad boş olamaz.</p>
+        ) : (
+          nameTooShort && <p className="text-xs text-red-700">Ad en az {USER_NAME_MIN} karakter olmalı.</p>
+        )}
       </div>
       <div>
         <label htmlFor={ids.description} className="block text-xs font-medium text-slate-700">
@@ -272,7 +280,7 @@ function TextEditor({
         />
       </div>
       <div className="flex gap-2">
-        <button type="submit" disabled={busy || !name.trim()} className="rounded bg-blue-700 px-3 py-1 text-white hover:bg-blue-800 disabled:opacity-50">
+        <button type="submit" disabled={busy || nameTooShort} className="rounded bg-blue-700 px-3 py-1 text-white hover:bg-blue-800 disabled:opacity-50">
           {busy ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
         <button type="button" onClick={onCancel} disabled={busy} className="rounded border border-slate-300 px-3 py-1 hover:bg-slate-100">

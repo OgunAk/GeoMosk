@@ -105,6 +105,25 @@ public sealed class SourceFeatureDetailAndEditTests(PostGisContainerFixture post
         Assert.Equal(expected.Order(), (await Names(url)).Order());
     }
 
+    [Theory]
+    [InlineData("x' OR '1'='1")]
+    [InlineData("'; DROP TABLE health_facilities; --")]
+    [InlineData("\'); SELECT pg_sleep(5); --")]
+    public async Task Search_treats_sql_injection_payloads_as_plain_text(string payload)
+    {
+        // Parametreli sorgu: yük metin olarak aranır, eşleşme yok, tablo yerinde ve istek hızlı döner.
+        var before = await Sql.ScalarAsync<long>(_cs, "SELECT count(*) FROM health_facilities");
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var layer in new[] { "facilities", "districts" })
+        {
+            var response = await _client.GetAsync($"/api/{layer}?q={Uri.EscapeDataString(payload)}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Empty((await Json(response)).GetProperty("features").EnumerateArray());
+        }
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds(4), "pg_sleep çalışmış olmamalı");
+        Assert.Equal(before, await Sql.ScalarAsync<long>(_cs, "SELECT count(*) FROM health_facilities"));
+    }
+
     [Fact]
     public async Task District_filter_uses_boundary_inclusive_coverage()
     {

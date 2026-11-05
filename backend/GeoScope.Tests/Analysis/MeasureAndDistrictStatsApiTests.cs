@@ -266,6 +266,31 @@ public sealed class MeasureAndDistrictStatsApiTests(PostGisContainerFixture post
     }
 
     [Fact]
+    public async Task Facility_detail_district_uses_the_same_single_assignment_as_district_stats()
+    {
+        async Task<string?> DistrictOf(string facilityName)
+        {
+            var id = await Sql.ScalarAsync<long>(_cs, "SELECT id FROM health_facilities WHERE name = $1", facilityName);
+            var body = (await Get($"/api/facilities/{id}")).Body;
+            return body.GetProperty("properties").GetProperty("districtName").GetString();
+        }
+
+        Assert.Equal("d5", await DistrictOf("d1|d2 sınırı, d5 içi")); // iç eşleşme, küçük id'den önce
+        Assert.Equal("d1", await DistrictOf("d1|d2 sınırı"));         // yalnız sınır eşleşmeleri → küçük id
+    }
+
+    [Fact]
+    public async Task Cors_exposes_etag_for_cross_origin_clients()
+    {
+        await using var factory = new GeoScopeApiFactory(_cs, ("Cors:AllowedOrigins:0", "http://localhost:5173"));
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/districts?limit=1");
+        request.Headers.Add("Origin", "http://localhost:5173");
+        var response = await client.SendAsync(request);
+        Assert.Contains("ETag", string.Join(",", response.Headers.GetValues("Access-Control-Expose-Headers")));
+    }
+
+    [Fact]
     public async Task District_stats_type_filter_and_validation()
     {
         var (status, body) = await Get("/api/analysis/district-stats?type=hospital");

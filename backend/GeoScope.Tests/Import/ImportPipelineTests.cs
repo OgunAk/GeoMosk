@@ -111,4 +111,58 @@ public sealed class ImportPipelineTests(PostGisContainerFixture postgis)
             Directory.Delete(corrupt, recursive: true);
         }
     }
+
+    /// <summary>v2 fixture'ını geçici klasöre kopyalar; tesis dosyasını ve manifest'i değiştirip checksum'ı yeniden yazar.</summary>
+    private static string CopyFixtureWith(string facilitiesJson, string? facilitiesFileName = null)
+    {
+        var dir = Directory.CreateTempSubdirectory("geoscope-fixture-").FullName;
+        foreach (var file in Directory.GetFiles(ImportRunner.Fixture("v2")))
+            File.Copy(file, Path.Combine(dir, Path.GetFileName(file)));
+        File.WriteAllText(Path.Combine(dir, "facilities.json"), facilitiesJson);
+        var manifest = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "manifest.json")))!;
+        var meta = manifest["files"]!["facilities"]!;
+        meta["sha256"] = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(facilitiesJson)));
+        if (facilitiesFileName is not null) meta["file"] = facilitiesFileName;
+        File.WriteAllText(Path.Combine(dir, "manifest.json"), manifest.ToJsonString());
+        return dir;
+    }
+
+    [Fact]
+    public async Task Empty_snapshot_does_not_mark_every_record_deleted()
+    {
+        // Overpass'ın boş (ama geçerli) yanıtı tüm tesisleri "kaynakta silindi" diye işaretlememeli.
+        var cs = await postgis.CreateMigratedDatabaseAsync("import_mass_delete");
+        await RunOk(ImportRunner.Fixture("v1"), cs);
+        var dir = CopyFixtureWith("""{"elements":[]}""");
+        try
+        {
+            var (exit, _, stderr) = await ImportRunner.RunAsync(dir, cs);
+
+            Assert.NotEqual(0, exit);
+            Assert.Contains("--allow-mass-delete", stderr);
+            Assert.Equal(0, await Sql.ScalarAsync<int>(cs, "SELECT count(*) FROM health_facilities WHERE source_deleted_at IS NOT NULL"));
+            Assert.Equal("failed", await Sql.ScalarAsync<string>(cs, "SELECT status FROM import_history ORDER BY id DESC LIMIT 1"));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Manifest_file_name_cannot_leave_the_snapshot_folder()
+    {
+        var cs = await postgis.CreateMigratedDatabaseAsync("import_path");
+        var dir = CopyFixtureWith("""{"elements":[]}""", facilitiesFileName: "../facilities.json");
+        try
+        {
+            var (exit, _, stderr) = await ImportRunner.RunAsync(dir, cs);
+            Assert.NotEqual(0, exit);
+            Assert.Contains("dosya adı geçersiz", stderr);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
 }

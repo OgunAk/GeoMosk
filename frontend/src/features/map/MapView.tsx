@@ -23,6 +23,7 @@ import {
   CLICKABLE_LAYERS,
   INITIAL_ZOOM,
   LAYER_IDS,
+  LAYER_ORDER,
   LAYER_OF_RENDERING,
   OVERLAY_GROUPS,
   SOURCE_IDS,
@@ -188,6 +189,7 @@ export function MapView(props: MapViewProps) {
     upsertGeoJson(map, SOURCE_IDS.districts, layers.districts)
     upsertGeoJson(map, SOURCE_IDS.facilities, layers.facilities)
     ensureSourceLayers(map)
+    enforceLayerOrder(map)
   }, [styleRevision, layers])
 
   useEffect(() => {
@@ -195,6 +197,7 @@ export function MapView(props: MapViewProps) {
     if (!map || styleRevision === 0 || userFeatures.kind !== 'loaded') return
     upsertGeoJson(map, SOURCE_IDS.userFeatures, withFeatureIdProperty(userFeatures.collection))
     ensureUserLayers(map)
+    enforceLayerOrder(map)
   }, [styleRevision, userFeatures])
 
   // Analiz sonucu: girdi (alan/tampon/nokta) + en yakın N için kuş uçuşu bağlantılar; eşleşen tesisler halkayla vurgulanır.
@@ -203,6 +206,7 @@ export function MapView(props: MapViewProps) {
     if (!map || styleRevision === 0) return
     upsertGeoJson(map, SOURCE_IDS.analysis, analysisCollection(analysis))
     ensureAnalysisLayers(map)
+    enforceLayerOrder(map)
     const ids = analysis ? analysis.matches.features.map((f) => Number(f.id)) : []
     if (map.getLayer(LAYER_IDS.analysisMatches)) map.setFilter(LAYER_IDS.analysisMatches, idFilter(ids))
   }, [styleRevision, analysis, layers])
@@ -410,6 +414,14 @@ function ensureAnalysisLayers(map: MapLibreMap) {
       filter: idFilter([]),
       paint: { 'circle-radius': 9, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ANALYSIS_COLOR, 'circle-stroke-width': 3 },
     })
+  }
+}
+
+/** LAYER_ORDER'ı uygular; mevcut katmanlar sırayla ilk Terra Draw katmanının (yoksa en üstün) hemen altına taşınır. */
+function enforceLayerOrder(map: MapLibreMap) {
+  const firstDrawLayer = map.getStyle().layers.find((l) => l.id.startsWith('td'))?.id
+  for (const id of LAYER_ORDER) {
+    if (map.getLayer(id)) map.moveLayer(id, firstDrawLayer)
   }
 }
 

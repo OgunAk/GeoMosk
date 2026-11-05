@@ -17,7 +17,14 @@ export interface UserFeatureProperties {
 export type UserFeature = Feature<UserGeometry, UserFeatureProperties> & { id: string }
 export type UserFeatureCollection = FeatureCollection<UserGeometry, UserFeatureProperties> & { meta: PageMeta }
 
+/** Sunucu kuralıyla aynı: boşluklar kırpıldıktan sonra en az 3 karakter. */
+export const USER_NAME_MIN = 3
 export const USER_NAME_MAX = 200
+
+/** Kırpılmış adın karakter sayısı (birleşik karakterler tek sayılır, sunucudaki StringInfo ile aynı). */
+export function nameLength(name: string): number {
+  return [...new Intl.Segmenter('tr', { granularity: 'grapheme' }).segment(name.trim())].length
+}
 export const USER_DESCRIPTION_MAX = 2000
 export const MAX_VERTICES = 10_000
 
