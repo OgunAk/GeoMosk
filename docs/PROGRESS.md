@@ -6,9 +6,9 @@
 - **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
 - **Geliştirici bildirimi (2026-11-05):** başka ilçe seçilince eski analiz sonucu kalıyordu → `keepAnalysisFor` kuralı: yalnız analiz kaynağı veya sonuç listesindeki tesis seçilince sonuç korunur, aksi halde temizlenir (Vitest 6 + E2E). Commit 734d642.
 - **Geliştirici bildirimi (2026-11-05):** "En yakın N" modunda "Haritada nokta seç" düğmesi ve Tür kutusu 320 px yan panelde taşıyordu → nokta bilgisi/düğme ayrı satır, N+Tür ızgarası (`minmax(0,1fr)`), seçim kutusu `min-w-0`; E2E: üç modda ve nokta seçildikten sonra içerik alanını aşan öğe yok. Commit 734d642.
-- **Git:** `master` = Faz 0-3 (GitHub). Faz 4-5 `faz-4-cizim-crud` dalında (push edildi, 734d642). Faz 6 commit 6a85751 (push edildi, CI yeşil). Faz 7 + G3 commit 40e16a2, odak düzeltmesi 029445b (push edildi). Faz 8 commit edilmedi. PR #5 açık; depo private.
+- **Git:** `master` = Faz 0-8 (GitHub; PR #1-#6 geliştirici tarafından birleştirildi, son merge 1e1904e, PR #6 CI 8/8 yeşil). Depo private.
 - **Çalışan ortam:** compose `db` ayakta (gerçek veri). Compose `api`/`web` durdurulmuş (Docker Desktop container ağı sorunu); API `dotnet run` (5080) + Vite (5173) yerelde.
-- **Sonraki adım (geliştirici):** kontrol noktası 3 — manuel demo, teknik sahiplik soruları (DEVELOPER-REVIEW), PR #5 birleştirme, depo erişimi/lisans kararı (DELIVERY-CHECKLIST).
+- **Sonraki adım (geliştirici):** kontrol noktası 3 — manuel demo, teknik sahiplik soruları (DEVELOPER-REVIEW), depo erişimi/lisans kararı (DELIVERY-CHECKLIST).
 - **Açık kalan (bilinçli) kısıtlar:** klavye ile çizim yok; ilçe GeoJSON tam çözünürlük (gzip 97 KB, ölçülen ihtiyaç yok); arama trigram indeksi gerekmedi (10.000'de p95 17 ms); nearest 100.000+ kayıtta KNN değerlendirilir (ADR-0012).
 - **İlgili master prompt bölümleri:** §17 (Docker/CI/teslim), §18 (demo), §19 (DoD), §20.2 (kontrol noktası 3), §22.
 
