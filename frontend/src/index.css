@@ -11,3 +11,17 @@ body,
   outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
+
+/* Form kutularında halka dışarıda boşlukla değil, kutunun kendi kenarında görünür (geliştirici isteği 2026-11-05). */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: -1px;
+  border-color: #2563eb;
+}
+
+/* Onay ve seçenek kutularında kenar yok; halka kutuya bitişik. */
+input[type='checkbox']:focus-visible,
+input[type='radio']:focus-visible {
+  outline-offset: 1px;
+}
