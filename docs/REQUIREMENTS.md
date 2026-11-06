@@ -1,4 +1,4 @@
-# GeoScope — Gereksinim izlenebilirlik matrisi
+# GeoMosk — Gereksinim izlenebilirlik matrisi
 
 **Birincil kaynak:** `ODEV_WEB_CBS.pdf` (2 sayfa). 4 Kasım 2026'da pypdf 5.1.0 ile metni çıkarılıp baştan sona okundu; sayfa/başlık referansları bu çıktıyla doğrulandı. Görsel (render) kontrol yapılamadı: ortamda poppler yok. Metin, master prompt §2.1'deki aktarımla birebir uyumlu; çelişki bulunmadı.
 

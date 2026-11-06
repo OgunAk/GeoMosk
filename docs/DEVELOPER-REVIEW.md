@@ -72,6 +72,7 @@ Manuel demo: geliştirici 2026-11-05'te "henüz denemedim" dedi; sonuç sütunla
 | Depo erişimi | Şu an private; herkese açık yapmak ya da değerlendiriciyi ortak çalışan eklemek | **Herkese açık yapacak** (geliştiricinin sohbetteki yanıtı, 2026-11-05). Ayarı geliştirici değiştirecek; uzak URL açıkça erişilebilir olunca L01 doğrulanır |
 | Yazılım lisansı | Yok; ör. MIT ya da lisanssız bırakmak | **Lisans eklenmeyecek** (geliştiricinin sohbetteki yanıtı, 2026-11-05) |
 | Bizzat yapılacak küçük değişiklik (§20.1) | G3'ü AI uyguladı; isteğe bağlı yeni değişiklik (ör. arama sonuç sınırı, "yalnız hastaneler" kısayolu) | geliştirici incelemesi bekliyor |
+| Proje adı değişikliği | Geliştirici 2026-11-06'da istedi: "projemizin ismi GeoMosk olarak değişecek"; kapsam olarak "Görünen ad" seçildi | **Uygulandı (AI uyguladı, geliştirici isteği)** — ADR-0017. Kod/DB adları GeoScope kaldı. Bu değişikliği AI yaptığı için §20.1'deki "bizzat yapılan değişiklik" sayılmaz |
 
 ## Teknik sahiplik soruları (master prompt §20.4)
 Geliştirici 2026-11-05'te soruların AI tarafından yanıtlanmasını istedi. Aşağıdaki "AI açıklaması" sütunu **AI'nin** koda dayalı

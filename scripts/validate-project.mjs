@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// GeoScope faz kabul kapısı.
+// GeoMosk faz kabul kapısı.
 //   node scripts/validate-project.mjs --phase <0..8>
 //   node scripts/validate-project.mjs --full        (= --phase 8)
 // Çıkış: 0 geçti, 1 başarısız kontrol, 3 faz henüz uygulanmadı (gerekli dosya yok).

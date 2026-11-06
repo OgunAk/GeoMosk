@@ -121,6 +121,20 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Sonuç:** Dış servise bağımlılık: E2E'de istekler yakalanıp fixture PNG ile yanıtlanır; gerçek servis elle doğrulanır.
   CORINE lejantı uygulamada yok (renk sınıfları EEA'nın CLC nomenklatürü).
 
+## ADR-0017 — Proje adı: GeoMosk (görünen ad)
+
+- **Durum:** Kabul (2026-11-06, geliştirici isteği: "projemizin ismi GeoMosk olarak değişecek"; kapsam seçimi: "Görünen ad").
+- **Bağlam:** Proje GeoScope adıyla geliştirildi; ad kod, veritabanı, ortam değişkenleri ve depo adresinde geçiyor.
+- **Seçenekler:** (1) yalnız görünen ad; (2) görünen ad + kod adları (.NET projeleri, namespace, frontend tanımlayıcıları);
+  (3) tam yeniden adlandırma (veritabanı, roller, `GEOSCOPE_*` de dahil; mevcut volume ve kullanıcı çizimleri yeni DB'ye taşınmaz).
+- **Karar:** (1). Kullanıcının ve değerlendiricinin gördüğü yerler GeoMosk olur: arayüz başlığı ve sayfa başlığı, README,
+  belge başlıkları, OpenAPI başlığı (`GeoMosk API`), npm paket adı (`geomosk-frontend`), Overpass User-Agent, Claude ajan/skill açıklamaları.
+- **Değişmeyenler (kod adı GeoScope):** `backend/GeoScope.*` projeleri ve namespace'ler, `GeoScope.sln`, `GeoScopeDbContext`,
+  `ConnectionStrings:GeoScope`, `geoscope` veritabanı, `geoscope_app`/`geoscope_import` rolleri, `GEOSCOPE_*` değişkenleri,
+  `window.__geoscopeMap` (E2E kancası), migration'lar, sentetik fixture'lardaki `generator` alanı, master prompt dosyası.
+  GitHub depo adı ve yerel klasör adı geliştiricinin kararıdır; değiştirilirse README ve DELIVERY-CHECKLIST'teki adres güncellenir.
+- **Sonuç:** Mevcut veri, çizimler, `.env` ve CI değişmeden çalışır. Kod adı ile görünen ad farkı README ve CLAUDE.md başında belirtilir.
+
 ## ADR-0016 — Tesislerin görünen alana göre (bbox) yüklenmesi
 
 - **Durum:** Kabul (2026-11-06, geliştirici isteği: "PDF'te istenene göre bbox ile yükleme"). ADR-0010'u tesisler için değiştirir.

@@ -1,6 +1,6 @@
 ---
 name: maplibre
-description: GeoScope MapLibre GL JS + Terra Draw iş akışı (source/layer kimlikleri → lifecycle → stil yenileme → seçme/vurgulama → çizim entegrasyonu → görünür doğrulama). frontend/src/features/map, layers, drawing veya analysis altında harita davranışını değiştirirken kullan.
+description: GeoMosk MapLibre GL JS + Terra Draw iş akışı (source/layer kimlikleri → lifecycle → stil yenileme → seçme/vurgulama → çizim entegrasyonu → görünür doğrulama). frontend/src/features/map, layers, drawing veya analysis altında harita davranışını değiştirirken kullan.
 ---
 
 # maplibre

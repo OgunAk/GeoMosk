@@ -1,6 +1,6 @@
 ---
 name: geojson-validation
-description: GeoScope GeoJSON doğrulama iş akışı (yapı → koordinat/tip/sınır/topoloji → API round-trip → çıktı doğrulaması). Kullanıcı çizimi kabul eden endpoint, import edilen kaynak verisi veya GeoJSON yanıt şekli değiştiğinde kullan. RFC 7946 ve [boylam, enlem] sırasını korur.
+description: GeoMosk GeoJSON doğrulama iş akışı (yapı → koordinat/tip/sınır/topoloji → API round-trip → çıktı doğrulaması). Kullanıcı çizimi kabul eden endpoint, import edilen kaynak verisi veya GeoJSON yanıt şekli değiştiğinde kullan. RFC 7946 ve [boylam, enlem] sırasını korur.
 ---
 
 # geojson-validation

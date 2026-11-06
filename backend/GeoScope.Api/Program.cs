@@ -17,7 +17,16 @@ builder.Services.Configure<FeatureListOptions>(builder.Configuration.GetSection(
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new GeoJsonConverterFactory()));
 builder.Services.AddProblemDetails();
-builder.Services.AddOpenApi(o => o.AddSchemaTransformer<GeometrySchemaTransformer>());
+builder.Services.AddOpenApi(o =>
+{
+    o.AddSchemaTransformer<GeometrySchemaTransformer>();
+    // Görünen ad GeoMosk (ADR-0017); proje/derleme adı GeoScope.Api olarak kalır.
+    o.AddDocumentTransformer((document, _, _) =>
+    {
+        document.Info.Title = "GeoMosk API";
+        return Task.CompletedTask;
+    });
+});
 builder.Services.AddHealthChecks()
     .AddCheck<PostGisHealthCheck>("postgis", tags: ["ready"]);
 

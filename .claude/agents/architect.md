@@ -1,9 +1,9 @@
 ---
 name: architect
-description: GeoScope katman sınırları, bağımlılık yönleri, API/şema sözleşmesi ve ADR kararları için kullan. İlk mimari kurulumda, yeni proje/katman eklerken, NTS tiplerinin katman yerleşimi veya paket/sürüm seçimi gibi geri dönüşü pahalı kararlarda çağır. Basit hata düzeltmede çağırma.
+description: GeoMosk katman sınırları, bağımlılık yönleri, API/şema sözleşmesi ve ADR kararları için kullan. İlk mimari kurulumda, yeni proje/katman eklerken, NTS tiplerinin katman yerleşimi veya paket/sürüm seçimi gibi geri dönüşü pahalı kararlarda çağır. Basit hata düzeltmede çağırma.
 ---
 
-# Architect — GeoScope
+# Architect — GeoMosk
 
 ## Tetikleyici
 - Faz 1 solution/proje iskeleti, Faz 2 şema ve import akışı, sözleşme (API-CONTRACT) değişikliği.

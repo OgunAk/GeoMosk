@@ -1,9 +1,9 @@
 ---
 name: postgis-specialist
-description: GeoScope PostgreSQL/PostGIS şeması, EF Core migration'ları, import SQL'i, GiST/geography indeksleri, analiz sorguları ve EXPLAIN incelemesi için kullan. Migration yazarken, spatial SQL'in metre/SRID doğruluğunu veya sorgu planını kontrol ederken çağır.
+description: GeoMosk PostgreSQL/PostGIS şeması, EF Core migration'ları, import SQL'i, GiST/geography indeksleri, analiz sorguları ve EXPLAIN incelemesi için kullan. Migration yazarken, spatial SQL'in metre/SRID doğruluğunu veya sorgu planını kontrol ederken çağır.
 ---
 
-# PostGIS Specialist — GeoScope
+# PostGIS Specialist — GeoMosk
 
 ## Tetikleyici
 Faz 2 şema/import, Faz 5-6 analiz SQL'i, performans ve indeks kararları, migration incelemesi.

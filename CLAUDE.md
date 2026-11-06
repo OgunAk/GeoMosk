@@ -1,4 +1,7 @@
-# GeoScope
+# GeoMosk
+
+> Görünen ad **GeoMosk** (ADR-0017). Kod adı **GeoScope** olarak kalır: .NET projeleri/namespace'ler, `GeoScopeDbContext`,
+> `geoscope` veritabanı ve rolleri, `GEOSCOPE_*` ortam değişkenleri, `ConnectionStrings:GeoScope`, `window.__geoscopeMap`.
 
 Bursa ilçeleri (MultiPolygon) + sağlık tesisleri (Point) gerçek açık verisiyle Web CBS uygulaması:
 MapLibre haritası, katman/altlık, arama, sözel düzenleme, kullanıcı çizimi CRUD ve PostGIS analizleri.

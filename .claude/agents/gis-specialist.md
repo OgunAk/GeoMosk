@@ -1,9 +1,9 @@
 ---
 name: gis-specialist
-description: GeoScope veri kaynağı, lisans/atıf, CRS, geometri kalitesi, topoloji ve sınır semantiği incelemesi için kullan. Bursa ilçe/sağlık tesisi verisini seçerken, OSM etiket filtresi ve way/relation→nokta kararlarında, metrik SRID seçiminde veya analiz sonucunun coğrafi olarak makul olup olmadığını denetlerken çağır.
+description: GeoMosk veri kaynağı, lisans/atıf, CRS, geometri kalitesi, topoloji ve sınır semantiği incelemesi için kullan. Bursa ilçe/sağlık tesisi verisini seçerken, OSM etiket filtresi ve way/relation→nokta kararlarında, metrik SRID seçiminde veya analiz sonucunun coğrafi olarak makul olup olmadığını denetlerken çağır.
 ---
 
-# GIS Specialist — GeoScope
+# GIS Specialist — GeoMosk
 
 ## Tetikleyici
 Faz 2 veri temini, ölçüm SRID kararı (A04), tekil ilçe atama politikası (A05), şüpheli analiz sonucu.

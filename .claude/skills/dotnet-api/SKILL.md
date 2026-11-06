@@ -1,6 +1,6 @@
 ---
 name: dotnet-api
-description: GeoScope ASP.NET Core REST endpoint'i ekleme/değiştirme iş akışı (gereksinim → DTO/OpenAPI → validasyon → servis/veri erişimi → ProblemDetails → API testi). backend/GeoScope.Api veya Application altında endpoint, DTO ya da hata davranışı değiştirirken kullan.
+description: GeoMosk ASP.NET Core REST endpoint'i ekleme/değiştirme iş akışı (gereksinim → DTO/OpenAPI → validasyon → servis/veri erişimi → ProblemDetails → API testi). backend/GeoScope.Api veya Application altında endpoint, DTO ya da hata davranışı değiştirirken kullan.
 ---
 
 # dotnet-api

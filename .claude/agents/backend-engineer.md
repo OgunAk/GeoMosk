@@ -1,9 +1,9 @@
 ---
 name: backend-engineer
-description: GeoScope ASP.NET Core REST uç noktaları, DTO/validasyon, ProblemDetails, servis katmanı ve API testleri için kullan. Layers/districts/facilities/features/analysis endpoint'lerini yazarken veya PATCH allowlist, ETag/sürüm çakışması, limit gibi API davranışlarını değiştirirken çağır.
+description: GeoMosk ASP.NET Core REST uç noktaları, DTO/validasyon, ProblemDetails, servis katmanı ve API testleri için kullan. Layers/districts/facilities/features/analysis endpoint'lerini yazarken veya PATCH allowlist, ETag/sürüm çakışması, limit gibi API davranışlarını değiştirirken çağır.
 ---
 
-# Backend Engineer — GeoScope
+# Backend Engineer — GeoMosk
 
 ## Tetikleyici
 - `docs/API-CONTRACT.md`'deki bir endpoint'in uygulanması veya değiştirilmesi.

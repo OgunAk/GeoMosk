@@ -1,6 +1,6 @@
 ---
 name: spatial-analysis
-description: GeoScope PostGIS analiz iş akışı (girdi tipi/CRS → birim ve sınır semantiği → parametreli SQL → indeks → doğruluk/performans testi → harita çıktısı). Alan içinde (A01), buffer (A02), en yakın N (A03), metrik ölçüm (A04) veya ilçe başına sayım (A05) analizini yazarken ya da değiştirirken kullan.
+description: GeoMosk PostGIS analiz iş akışı (girdi tipi/CRS → birim ve sınır semantiği → parametreli SQL → indeks → doğruluk/performans testi → harita çıktısı). Alan içinde (A01), buffer (A02), en yakın N (A03), metrik ölçüm (A04) veya ilçe başına sayım (A05) analizini yazarken ya da değiştirirken kullan.
 ---
 
 # spatial-analysis

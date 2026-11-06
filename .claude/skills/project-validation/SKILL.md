@@ -1,6 +1,6 @@
 ---
 name: project-validation
-description: GeoScope faz kabul kapısı ve teslim doğrulaması (--phase 0..8 veya --full → komutlar → kanıt → requirement matrisi → geçiş/engel kararı). Bir fazı bitirmeden, PROGRESS.md'yi güncellemeden veya "doğrulandı" demeden önce kullan.
+description: GeoMosk faz kabul kapısı ve teslim doğrulaması (--phase 0..8 veya --full → komutlar → kanıt → requirement matrisi → geçiş/engel kararı). Bir fazı bitirmeden, PROGRESS.md'yi güncellemeden veya "doğrulandı" demeden önce kullan.
 ---
 
 # project-validation

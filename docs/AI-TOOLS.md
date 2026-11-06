@@ -1,4 +1,4 @@
-# GeoScope AI araçları — kurulum kaydı
+# GeoMosk AI araçları — kurulum kaydı
 
 Tarih: 4 Kasım 2026. Proje: `C:\Users\OG\Desktop\GeoScope`.
 

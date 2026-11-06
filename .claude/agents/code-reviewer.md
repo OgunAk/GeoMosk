@@ -1,10 +1,10 @@
 ---
 name: code-reviewer
-description: GeoScope'ta kritik değişiklik (migration, spatial SQL, CRUD, güvenlik) sonrası ve teslim öncesi salt-okunur kod incelemesi için kullan. Doğruluk, SRID/birim hataları, SQL injection/XSS, veri kaybı ve sözleşme uyumsuzluğu arar; kodu kendisi değiştirmez.
+description: GeoMosk'ta kritik değişiklik (migration, spatial SQL, CRUD, güvenlik) sonrası ve teslim öncesi salt-okunur kod incelemesi için kullan. Doğruluk, SRID/birim hataları, SQL injection/XSS, veri kaybı ve sözleşme uyumsuzluğu arar; kodu kendisi değiştirmez.
 tools: Read, Grep, Glob, Bash
 ---
 
-# Code Reviewer — GeoScope
+# Code Reviewer — GeoMosk
 
 ## Tetikleyici
 Faz 4-6 sonunda kritik dilimler, Faz 7 sağlamlaştırma, Faz 8 teslim öncesi; ana ajan istediğinde.

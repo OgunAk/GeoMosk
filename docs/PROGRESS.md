@@ -1,6 +1,8 @@
-# GeoScope — İlerleme kaydı
+# GeoMosk — İlerleme kaydı
 
-## Kısa durum (5 Kasım 2026)
+## Kısa durum (5 Kasım 2026; güncelleme 6 Kasım 2026)
+- **Ad değişikliği (2026-11-06, geliştirici isteği):** proje adı GeoScope → **GeoMosk** (görünen ad; kod/DB adları aynı, ADR-0017).
+- **Ek geliştirmeler (2026-11-06):** harici WMS katmanı (ADR-0015, PR #8) ve tesislerin bbox ile yüklenmesi (ADR-0016, PR #10) master'a birleşti; CI 4/4.
 - **Son doğrulanan faz:** Faz 8 — Teslim, teknik kapı (`validate-project --full` exit 0, E2E üretim imajına karşı). **Geliştirici son kabulü (kontrol noktası 3) bekliyor.**
 - **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. G3 ("ad en az 3 karakter") geliştirici 2026-11-05'te AI'ya bıraktı; uygulandı (backend 134/134, Vitest 58/58).
 - **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
