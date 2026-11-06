@@ -94,6 +94,7 @@ docker compose --profile tools run --rm import     # gerçek veriyi yükler (dep
 ```
 - Uygulama: http://localhost:8080
 - API: http://localhost:5080/api/districts, OpenAPI: http://localhost:5080/openapi/v1.json, sağlık: `/api/health/ready`
+- API arayüzü (Swagger UI, tarayıcıdan istek gönderilebilir): http://localhost:8080/swagger veya http://localhost:5080/swagger
 
 Veri importu otomatik değildir. İlk açılışta harita boş gelir ve katman sayıları 0 görünür. Import birden çok kez çalıştırılabilir;
 mükerrer kayıt üretmez. Durdurmak için `docker compose down` (veri volume'u korunur).
@@ -146,7 +147,7 @@ Tablolar, indeksler (GiST ve geography ifade indeksi) ve CHECK kısıtları: [do
 
 ## API
 REST + GeoJSON (RFC 7946, `crs` üyesi yok). Hatalar `application/problem+json` biçiminde ve `traceId` içerir.
-Sözleşme: [docs/API-CONTRACT.md](docs/API-CONTRACT.md); çalışan şema: `/openapi/v1.json`.
+Sözleşme: [docs/API-CONTRACT.md](docs/API-CONTRACT.md); çalışan şema: `/openapi/v1.json`; denenebilir arayüz: `/swagger` (ADR-0018).
 
 | Yol | İşlev |
 |---|---|

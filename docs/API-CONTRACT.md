@@ -1,6 +1,6 @@
 # API sözleşmesi
 
-Çalışan OpenAPI: `GET /openapi/v1.json`. Bu belge ve OpenAPI aynı değişiklikte güncellenir; frontend tipleri
+Çalışan OpenAPI: `GET /openapi/v1.json`; tarayıcıdan denenebilir arayüz: `GET /swagger` (Swagger UI, ADR-0018; 8080 ve 5080). Bu belge ve OpenAPI aynı değişiklikte güncellenir; frontend tipleri
 `frontend/src/services/*.ts` içindedir. Endpoint adları proje kararıdır (PDF dayatması değildir).
 
 ## Ortak kurallar (uygulandı)

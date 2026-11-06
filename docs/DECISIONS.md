@@ -121,6 +121,23 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Sonuç:** Dış servise bağımlılık: E2E'de istekler yakalanıp fixture PNG ile yanıtlanır; gerçek servis elle doğrulanır.
   CORINE lejantı uygulamada yok (renk sınıfları EEA'nın CLC nomenklatürü).
 
+## ADR-0018 — API dokümantasyon arayüzü: Swagger UI
+
+- **Durum:** Kabul (2026-11-06, geliştirici isteği: "apiyi görüntülemek istiyorum" → "Evet, ekle").
+- **Bağlam:** API yalnız ham OpenAPI şeması (`/openapi/v1.json`) sunuyordu; tarayıcıdan uç deneme imkânı yoktu. 8080'de (nginx)
+  yalnız `/api/` API'ye aktarıldığı için şema adresi uygulamanın ana sayfasını döndürüyordu.
+- **Seçenekler:** (1) Swashbuckle.AspNetCore.SwaggerUI — arayüz dosyaları paketin içinde, CDN yok; (2) Scalar — arayüz betiğini
+  varsayılan olarak CDN'den yükler.
+- **Karar:** (1), sürüm 10.3.1 (net9.0 hedefi, bağımlılıksız, MIT; NuGet yayını 2026-10-19). Yalnız arayüz paketi eklendi; şema
+  Microsoft.AspNetCore.OpenApi ile üretilmeye devam eder (`SwaggerEndpoint("/openapi/v1.json")`).
+  - Adres `/swagger`; nginx `/swagger` ve `/openapi` yollarını da API'ye aktarır (8080 ve 5080'de çalışır).
+  - OpenAPI belgesindeki `servers` boşaltıldı: varsayılan değer isteğin Host'undan üretiliyor, nginx arkasında port düşüyor
+    (`http://localhost`) ve "Try it out" istekleri yanlış adrese gidiyordu. Boş listede istemci şemanın açıldığı origin'i kullanır.
+- **Sonuç:** Arayüzden yazma uçları (PATCH/POST/DELETE) da çağrılabilir; bu API'nin kendisiyle aynı erişimdir. Portlar yalnız
+  127.0.0.1'e açıktır; uzak yayında arayüz ve anonim yazma ayrı karar gerektirir (security.md).
+- **Doğrulama:** `Swagger_ui_is_served_and_points_to_openapi_document`, `OpenApi_document_is_served` (sabit `servers` yok);
+  compose'da tarayıcıdan 8080/swagger → GET /api/layers "Try it out" 200 (2026-11-06).
+
 ## ADR-0017 — Proje adı: GeoMosk (görünen ad)
 
 - **Durum:** Kabul (2026-11-06, geliştirici isteği: "projemizin ismi GeoMosk olarak değişecek"; kapsam seçimi: "Görünen ad").

@@ -22,7 +22,8 @@ Kurallar: `.claude/rules/testing.md`. Bu belge mevcut testleri ve komutları kay
 | `HealthEndpointTests.Ready_reports_postgis_version_when_database_is_available` | API + gerçek PostGIS | ready 200, PostGIS sürümü 3.5.x |
 | `…Ready_returns_503_without_leaking_connection_details…` | API | DB yokken 503, bağlantı ayrıntısı sızmıyor |
 | `…Live_is_healthy_even_when_database_is_unreachable` | API | live yalnız süreç |
-| `…OpenApi_document_is_served` | API | `/openapi/v1.json` |
+| `…OpenApi_document_is_served` | API | `/openapi/v1.json`; başlık "GeoMosk API", sabit `servers` yok (ADR-0017/0018) |
+| `…Swagger_ui_is_served_and_points_to_openapi_document` | API | `/swagger/index.html` 200, yapılandırma `/openapi/v1.json`'u gösterir (ADR-0018) |
 | `…Unknown_api_route_returns_problem_details` | API | 404 `application/problem+json` |
 | `LayerDependencyTests` (3) | Mimari | Katman referans yönleri |
 | `SystemStatus.test.tsx` (3) | Frontend | Hazır, 503 ve ağ hatası + tekrar dene durumları |
