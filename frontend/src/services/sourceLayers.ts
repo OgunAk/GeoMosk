@@ -58,7 +58,7 @@ export interface LayerInfo {
   featureCount: number
 }
 
-/** API üst sınırı. Katmanın tamamı tek sayfada beklenir; aşılırsa arayüz eksik veriyi bildirir. */
+/** API üst sınırı (istek başına). İlçeler tek sayfada; tesisler görünen kutuya göre. Aşılırsa arayüz eksik veriyi bildirir. */
 export const MAX_PAGE = 2000
 export const SEARCH_LIMIT = 50
 export const NAME_MAX: Record<SourceLayerId, number> = { districts: 200, facilities: 300 }
@@ -68,8 +68,9 @@ export function fetchDistricts(signal?: AbortSignal) {
   return getJson<PagedCollection<MultiPolygon, DistrictProperties>>(`/api/districts?limit=${MAX_PAGE}`, signal)
 }
 
-export function fetchFacilities(signal?: AbortSignal) {
-  return getJson<PagedCollection<Point, FacilityProperties>>(`/api/facilities?limit=${MAX_PAGE}`, signal)
+/** Kutudaki tesisler (EPSG:4326, minLon,minLat,maxLon,maxLat); sunucuda ST_Intersects + GiST. Sınır aşılırsa meta.hasMore. */
+export function fetchFacilities(bbox: readonly [number, number, number, number], signal?: AbortSignal) {
+  return getJson<PagedCollection<Point, FacilityProperties>>(`/api/facilities?bbox=${bbox.join(',')}&limit=${MAX_PAGE}`, signal)
 }
 
 export interface SearchParams {

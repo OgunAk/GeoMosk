@@ -121,10 +121,30 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Sonuç:** Dış servise bağımlılık: E2E'de istekler yakalanıp fixture PNG ile yanıtlanır; gerçek servis elle doğrulanır.
   CORINE lejantı uygulamada yok (renk sınıfları EEA'nın CLC nomenklatürü).
 
+## ADR-0016 — Tesislerin görünen alana göre (bbox) yüklenmesi
+
+- **Durum:** Kabul (2026-11-06, geliştirici isteği: "PDF'te istenene göre bbox ile yükleme"). ADR-0010'u tesisler için değiştirir.
+- **Bağlam:** PDF değerlendirme ölçütü "veri boyutu büyüdüğünde index, bbox ile filtreleme, sayfalama". API bbox'u destekliyordu ama
+  arayüz tüm tesisleri açılışta tek istekte (≤ 2000) alıyordu. 10.000 tesiste bu, id sırasıyla ilk 2000 tesisin gösterilmesi ve
+  8.000'inin hiçbir zoom'da görünmemesi demekti (ölçüm aşağıda).
+- **Karar:** İlçeler (17) tek istekte kalır. Tesisler görünen kutuyla istenir: `GET /api/facilities?bbox=…&limit=2000`
+  (sunucuda `ST_Intersects` + GiST).
+  - İstenen kutu görünümün her yönde yarısı kadar genişletilmiş halidir (`BBOX_PADDING_RATIO = 0.5`, 5 ondalık).
+  - Harita hareketi bitince 250 ms beklenir (`VIEW_DEBOUNCE_MS`); görünüm mevcut kutunun içindeyse ve önceki yanıt sınıra
+    takılmadıysa yeni istek atılmaz. Sınıra takıldıysa (hasMore) kutu içindeki her yakınlaşma yeniden ister.
+  - Önceki istek `AbortController` ile iptal edilir; yalnız güncel kutunun yanıtı yazılır, gelene kadar eski tesisler gösterilir.
+  - İlk kutu kamera oluşturulunca hemen bildirilir (altlık karolarını beklemez).
+  - Sınır aşılırsa panelde "… fazla tesis var; tamamını görmek için yakınlaştırın" uyarısı; sayılar görünen alanı gösterir.
+  - Seçili tesis kutunun dışına çıksa da analiz kaynağı adı detay yanıtından alınır.
+- **Ölçüm (2026-11-06, `scripts/perf/measure-bbox.mjs`):** gerçek veride (911) zoom 15'te 270 → 93 KB; 10.000 tesiste önce her
+  zaman 2000/10.000 (eksik), sonra zoom ≥ 13'te görünen alanın tamamı (zoom 13: 1382 tesis, eksik yok; zoom 15: 360 tesis, 107 KB).
+- **Sınırlar:** Uzak zoom'da (≈ zoom 11 ve altı) 10.000 tesiste görünüm hâlâ 2000 sınırına takılır ve uyarı gösterilir;
+  kümelenme/vektör karo ölçülen ihtiyaç olmadığı için eklenmedi. Arama ve analizler bbox'tan bağımsız olarak tüm veride çalışır.
+
 ## ADR-0010 — Harita veri yükleme stratejisi
 
-- **Durum:** Kabul (Faz 3), Faz 7'de ölçümle yeniden değerlendirilecek.
-- **Karar:** 17 ilçe ve 911 tesis tek istekte yüklenir (gzip ile ≈ 115 + 32 KB). `moveend` + bbox yüklemesi şimdilik kullanılmıyor: arama zaten sunucu tarafında tüm veride çalışıyor ve görünüm değişince istek sayısı artmasın isteniyor. API bbox/sayfalamayı destekler; yanıt `hasMore` ise arayüz eksik veriyi bildirir. Veri büyürse bbox yüklemesine geçilir.
+- **Durum:** Tesisler için **ADR-0016 ile değiştirildi** (2026-11-06). İlçeler için geçerli.
+- **Karar (ilk hali):** 17 ilçe ve 911 tesis tek istekte yüklenir (gzip ile ≈ 115 + 32 KB). `moveend` + bbox yüklemesi şimdilik kullanılmıyor: arama zaten sunucu tarafında tüm veride çalışıyor ve görünüm değişince istek sayısı artmasın isteniyor. API bbox/sayfalamayı destekler; yanıt `hasMore` ise arayüz eksik veriyi bildirir. Veri büyürse bbox yüklemesine geçilir.
 
 ## ADR-0003 — Kök araç paketi ve YAML ayrıştırıcı
 

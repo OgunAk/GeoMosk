@@ -22,6 +22,9 @@ saklayabilir. Kapsam dışı: kimlik doğrulama, yol ağı üzerinden mesafe (t�
   - Harita sol tuşla veya orta tuşla sürüklenebilir.
 - **Öznitelikler:** Tıklanan ilçe veya tesisin bilgileri yan panelde görünür: tür, ilçe, OSM etiketleri ve OSM bağlantısı.
   Tesisler türe göre haritada gizlenip gösterilebilir.
+- **Görünen alana göre yükleme:** Sağlık tesisleri haritada görünen alanın biraz genişletilmiş haliyle (bbox) istenir.
+  Kaydırma veya zoom bitince yeni alan yüklenir; küçük kaydırmalar yeni istek doğurmaz. Eski istek iptal edilir. Bir görünümde
+  2000'den fazla tesis varsa yakınlaştırma uyarısı çıkar ([ADR-0016](docs/DECISIONS.md)).
 - **Arama:**
   - Ada, türe ve ilçeye göre sunucu tarafında, tüm veride arar.
   - Türkçe aksan ve büyük/küçük harf duyarsızdır ("nilufer" → Nilüfer).
@@ -191,8 +194,8 @@ Son sonuçlar ve performans ölçümü (10.000 tesiste tüm senaryolar p95 < 75 
 ## Bilinen kısıtlar
 - Mesafeler kuş uçuşudur; yol ağı kullanılmaz.
 - Klavye ile çizim (köşe ekleme) desteklenmez; çizim fare veya dokunma ister.
-- İlçe sınırları tam çözünürlükte gelir (gzip ≈ 97 KB). Veri büyürse bbox ile yükleme ([ADR-0010](docs/DECISIONS.md)) ve
-  sadeleştirme değerlendirilir.
+- İlçe sınırları (17) tam çözünürlükte ve tek istekte gelir (gzip ≈ 97 KB); tesisler bbox ile yüklenir. 10.000 tesis
+  ölçeğinde uzak zoom'da görünüm 2000 sınırına takılabilir; o durumda yakınlaştırma uyarısı gösterilir.
 - WMS katmanı dış servise bağlıdır. Servis yanıt vermezse haritada uyarı çıkar ve diğer katmanlar çalışmaya devam eder.
   CORINE renk lejantı uygulamada gösterilmez.
 - En yakın N tam tarama yapar (10.000 tesiste p50 19 ms). 100.000+ kayıtta KNN ile kesin yeniden sıralama değerlendirilir.

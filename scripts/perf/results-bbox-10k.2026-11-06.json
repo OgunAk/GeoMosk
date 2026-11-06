@@ -1,0 +1,58 @@
+{
+  "base": "http://localhost:5081",
+  "runs": 30,
+  "totalFacilities": 10000,
+  "measuredAt": "2026-11-06T11:24:21.503Z",
+  "results": [
+    {
+      "name": "ÖNCE: tüm tesisler tek istekte (limit=2000)",
+      "path": "/api/facilities?limit=2000",
+      "returned": 2000,
+      "hasMore": true,
+      "bytes": 616649,
+      "gzipBytes": 64140,
+      "p50": 16.075099999999992,
+      "p95": 19.915700000000015
+    },
+    {
+      "name": "SONRA: bbox, zoom 8 (açılış görünümü)",
+      "path": "/api/facilities?bbox=21.55634,36.72739,36.56366,43.60898&limit=2000",
+      "returned": 2000,
+      "hasMore": true,
+      "bytes": 616649,
+      "gzipBytes": 64140,
+      "p50": 14.733099999999922,
+      "p95": 18.021499999999946
+    },
+    {
+      "name": "SONRA: bbox, zoom 11",
+      "path": "/api/facilities?bbox=28.12204,39.75954,29.99796,40.61978&limit=2000",
+      "returned": 2000,
+      "hasMore": true,
+      "bytes": 616666,
+      "gzipBytes": 64162,
+      "p50": 16.089500000000044,
+      "p95": 18.266399999999976
+    },
+    {
+      "name": "SONRA: bbox, zoom 13",
+      "path": "/api/facilities?bbox=28.82551,40.08245,29.29449,40.29751&limit=2000",
+      "returned": 1382,
+      "hasMore": false,
+      "bytes": 429559,
+      "gzipBytes": 44858,
+      "p50": 14.340999999999894,
+      "p95": 17.912599999999884
+    },
+    {
+      "name": "SONRA: bbox, zoom 15",
+      "path": "/api/facilities?bbox=29.00138,40.16312,29.11862,40.21688&limit=2000",
+      "returned": 360,
+      "hasMore": false,
+      "bytes": 109578,
+      "gzipBytes": 11436,
+      "p50": 5.264900000000125,
+      "p95": 6.976200000000063
+    }
+  ]
+}

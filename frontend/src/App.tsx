@@ -16,7 +16,8 @@ import { useUserFeatures } from './features/drawing/useUserFeatures'
 import { SystemStatus } from './features/health/SystemStatus'
 import { LayerPanel } from './features/layers/LayerPanel'
 import { MapView, type FocusRequest, type Selection } from './features/map/MapView'
-import { bboxOf } from './features/map/geometry'
+import { nextQueryBbox } from './features/map/bboxLoading'
+import { bboxOf, type Bbox } from './features/map/geometry'
 import type { LayerKey } from './features/map/layerIds'
 import { FACILITY_LABELS, type BasemapId } from './features/map/mapStyle'
 import { useSourceLayers } from './features/map/useSourceLayers'
@@ -27,7 +28,16 @@ import type { UserFeature, UserGeometry } from './services/userFeatures'
 const NO_HIGHLIGHT: Record<SourceLayerId, number[]> = { districts: [], facilities: [] }
 
 export default function App() {
-  const { state, retry, refresh } = useSourceLayers()
+  // Tesisler görünen alana göre (bbox) yüklenir; küçük kaydırmalar mevcut kutuda kalır (ADR-0016).
+  const [queryBbox, setQueryBbox] = useState<Bbox | null>(null)
+  const { state, retry, refresh } = useSourceLayers(queryBbox)
+  const truncatedRef = useRef(false)
+  useEffect(() => {
+    truncatedRef.current = state.kind === 'loaded' && state.facilities.meta.hasMore
+  }, [state])
+  const onViewChange = useCallback((view: Bbox) => {
+    setQueryBbox((current) => nextQueryBbox(view, current, truncatedRef.current) ?? current)
+  }, [])
   const user = useUserFeatures()
   const [basemap, setBasemap] = useState<BasemapId>('osm')
   const [wmsVisible, setWmsVisible] = useState(false)
@@ -174,9 +184,11 @@ export default function App() {
       const f = state.districts.features.find((x) => Number(x.id) === id)
       return f ? { ref: { layerId: 'districts', id }, label: f.properties.name, isArea: true, measurable: true } : null
     }
+    // Seçili tesis görünen kutunun dışına çıkmış olabilir (bbox ile yükleme): ad detay yanıtından alınır.
     const f = state.facilities.features.find((x) => Number(x.id) === id)
-    return f ? { ref: { layerId: 'facilities', id }, label: f.properties.name ?? 'Adsız tesis', isArea: false, measurable: false } : null
-  }, [selection, state, user.state])
+    const name = f ? f.properties.name : detail.state.kind === 'loaded' && Number(detail.state.feature.id) === id ? detail.state.feature.properties.name : undefined
+    return name !== undefined ? { ref: { layerId: 'facilities', id }, label: name ?? 'Adsız tesis', isArea: false, measurable: false } : null
+  }, [selection, state, user.state, detail.state])
 
   const onCreated = useCallback(
     (feature: UserFeature) => {
@@ -325,6 +337,7 @@ export default function App() {
           setPickingPoint(false)
         }}
         onSelect={selectObject}
+        onViewChange={onViewChange}
       />
     </AppLayout>
   )
