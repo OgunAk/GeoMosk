@@ -65,6 +65,22 @@ public sealed class HealthEndpointTests(PostGisContainerFixture postgis)
         // Görünen ad GeoMosk (ADR-0017); derleme adı GeoScope.Api başlığa sızmaz.
         using var doc = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("GeoMosk API", doc.RootElement.GetProperty("info").GetProperty("title").GetString());
+        // Sabit sunucu adresi yok; Swagger UI istekleri şemanın açıldığı origin'e gönderir (nginx arkasında port korunur).
+        Assert.False(doc.RootElement.TryGetProperty("servers", out var servers) && servers.GetArrayLength() > 0);
+    }
+
+    [Fact]
+    public async Task Swagger_ui_is_served_and_points_to_openapi_document()
+    {
+        await using var factory = new GeoScopeApiFactory(postgis.ConnectionString);
+        using var client = factory.CreateClient();
+
+        var page = await client.GetAsync("/swagger/index.html");
+        var config = await client.GetStringAsync("/swagger/index.js");
+
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("GeoMosk API", await page.Content.ReadAsStringAsync());
+        Assert.Contains("/openapi/v1.json", config);
     }
 
     [Fact]

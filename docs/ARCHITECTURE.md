@@ -29,7 +29,7 @@ Bağımlılık yönleri `LayerDependencyTests` ile derlenmiş referanslar üzeri
 ### Uygulanmış çapraz kesitler
 - `AddProblemDetails` + `UseExceptionHandler` + `UseStatusCodePages`: bilinmeyen route ve hatalar `application/problem+json`.
 - Health: `/api/health/live` (yalnız süreç), `/api/health/ready` (`postgis_lib_version()` sorgusu; hata ayrıntısı loga, yanıta değil).
-- OpenAPI: `/openapi/v1.json` (Microsoft.AspNetCore.OpenApi 9.0.22).
+- OpenAPI: `/openapi/v1.json` (Microsoft.AspNetCore.OpenApi 9.0.22); arayüz `/swagger` (Swashbuckle.AspNetCore.SwaggerUI 10.3.1, ADR-0018).
 - CORS: `Cors:AllowedOrigins` konfigürasyonu; yöntemler GET/POST/PATCH/DELETE.
 - Sürüm sabitleme: `global.json` (SDK 9.0.320), `Directory.Packages.props` (merkezi paket sürümleri), `TreatWarningsAsErrors`.
 

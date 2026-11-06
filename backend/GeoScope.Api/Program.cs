@@ -24,6 +24,9 @@ builder.Services.AddOpenApi(o =>
     o.AddDocumentTransformer((document, _, _) =>
     {
         document.Info.Title = "GeoMosk API";
+        // Varsayılan "servers" isteğin Host'undan üretilir; nginx arkasında port düşer (http://localhost) ve Swagger UI
+        // istekleri yanlış adrese gönderir. Boş liste: istemci şemanın sunulduğu origin'i kullanır (5080 ya da 8080).
+        document.Servers = [];
         return Task.CompletedTask;
     });
 });
@@ -47,6 +50,14 @@ app.UseStatusCodePages();
 app.UseCors();
 
 app.MapOpenApi();
+// Tarayıcıdan denenebilir API arayüzü (ADR-0018): /swagger. Şema kaynağı yukarıdaki /openapi/v1.json;
+// arayüz dosyaları paketin içinden sunulur (CDN yok).
+app.UseSwaggerUI(o =>
+{
+    o.SwaggerEndpoint("/openapi/v1.json", "GeoMosk API v1");
+    o.RoutePrefix = "swagger";
+    o.DocumentTitle = "GeoMosk API";
+});
 app.MapControllers();
 // live: yalnızca süreç; ready: DB + PostGIS.
 app.MapHealthChecks("/api/health/live", new HealthCheckOptions
