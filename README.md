@@ -125,6 +125,8 @@ Tablolar, indeksler (GiST ve geography ifade indeksi) ve CHECK kısıtları: [do
   hastane, klinik, muayenehane, diş hekimi, eczane ve diğer `healthcare=*` nesneleri (Point; bina olarak çizilmişlerse içteki bir nokta).
 - **Lisans:** © OpenStreetMap katkıcıları, [ODbL 1.0](https://www.openstreetmap.org/copyright). Altlık karoları ayrıca
   [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/) ve OpenFreeMap koşullarına tabidir. Atıf haritada görünür.
+- **Logo:** `frontend/public/geomosk-logo.png` (sekme ikonu ve başlıktaki ikon) MOSK Bilişim'in logosudur; hakları MOSK Bilişim'e aittir
+  ve proje yazılımının parçası olarak serbestçe yeniden kullanılamaz.
 - **Depodaki snapshot:** `data/samples/osm-bursa/2026-11-04T17-05-11-619Z/` (≈1 MB, checksum'lı manifest).
   `data/test-fixtures/` altındaki veri **sentetiktir** ve yalnız testler içindir.
 - **İndirme ve import** (ayrıntı: [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)):
