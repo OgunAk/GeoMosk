@@ -1,4 +1,7 @@
-# GeoScope
+# GeoMosk
+
+> Projenin adı **GeoMosk**. Kod içindeki adlar (`GeoScope.Api` gibi .NET projeleri, `geoscope` veritabanı ve rolleri,
+> `GEOSCOPE_*` ortam değişkenleri) ve depo adresi eski kod adı **GeoScope** ile kalır; ayrıntı: ADR-0017 ([docs/DECISIONS.md](docs/DECISIONS.md)).
 
 Bursa'nın 17 ilçesi ve sağlık tesisleri üzerine bir Web CBS uygulaması. Uygulama haritada katman ve altlık yönetimi, arama, öznitelik
 düzenleme, kullanıcı çizimleri ve beş mekânsal analiz sunar. Analizlerin hepsi PostGIS ile backend'de çalışır.

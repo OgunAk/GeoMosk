@@ -11,7 +11,7 @@ import { QUERIES } from './overpass-queries.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DEFAULT_ENDPOINT = 'https://overpass-api.de/api/interpreter';
-const USER_AGENT = 'GeoScope-import/0.2 (Web GIS student project)';
+const USER_AGENT = 'GeoMosk-import/0.2 (Web GIS student project)';
 const MAX_ATTEMPTS = 5;
 
 function arg(name, fallback) {

@@ -1,6 +1,6 @@
 ---
 name: ef-migrations
-description: GeoScope EF Core + Npgsql/NetTopologySuite migration iş akışı (mevcut şema incelemesi → ileri migration → SQL gözden geçirme → boş ve var olan DB testi → geri alma planı). Tablo, kolon, geometri tipi, constraint veya GiST/geography indeksi eklerken ya da değiştirirken kullan. Reset/drop varsayılan değildir.
+description: GeoMosk EF Core + Npgsql/NetTopologySuite migration iş akışı (mevcut şema incelemesi → ileri migration → SQL gözden geçirme → boş ve var olan DB testi → geri alma planı). Tablo, kolon, geometri tipi, constraint veya GiST/geography indeksi eklerken ya da değiştirirken kullan. Reset/drop varsayılan değildir.
 ---
 
 # ef-migrations

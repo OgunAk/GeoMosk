@@ -1,10 +1,10 @@
 ---
 name: graphify
-description: "GeoScope kod ilişkilerini yalnızca açık istek veya gerekçeli mimari inceleme için sorgular; rutin aramada kullanılmaz."
+description: "GeoMosk kod ilişkilerini yalnızca açık istek veya gerekçeli mimari inceleme için sorgular; rutin aramada kullanılmaz."
 disable-model-invocation: true
 ---
 
-## GeoScope kullanım sınırı
+## GeoMosk kullanım sınırı
 
 İlk tercih yerel code-only incelemedir. Belge/PDF anlamsal çıkarımı, deep mod, sürekli izleme ve bulut bağlantısı bu kurulumla etkinleştirilmemiştir. Kaynak kod henüz yoksa graf oluşturma. Bu projede otomatik her-okumada sorgu ve her-değişiklikte rebuild kuralı yoktur.
 

@@ -1,9 +1,9 @@
 ---
 name: frontend-engineer
-description: GeoScope React/TypeScript arayüzü, MapLibre katman/altlık yönetimi, Terra Draw çizimi, arama/vurgulama ve API entegrasyonu için kullan. Harita lifecycle'ı, stil değişiminde katman yeniden kurulumu veya UI loading/empty/error durumlarıyla çalışırken çağır.
+description: GeoMosk React/TypeScript arayüzü, MapLibre katman/altlık yönetimi, Terra Draw çizimi, arama/vurgulama ve API entegrasyonu için kullan. Harita lifecycle'ı, stil değişiminde katman yeniden kurulumu veya UI loading/empty/error durumlarıyla çalışırken çağır.
 ---
 
-# Frontend Engineer — GeoScope
+# Frontend Engineer — GeoMosk
 
 ## Tetikleyici
 Harita ekranı (M01-M05), sözel düzenleme UI (C01), çizim/CRUD (C02-C04), analiz panelleri ve sonuç görselleştirmesi.

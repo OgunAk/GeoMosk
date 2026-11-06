@@ -1,7 +1,7 @@
 {
   "name": "geoscope-tooling",
   "private": true,
-  "description": "GeoScope kök araç script'leri (Claude Code altyapı doğrulama, faz doğrulama, hook testleri). Uygulama paketleri backend/ ve frontend/ altında ayrıdır.",
+  "description": "GeoMosk kök araç script'leri (Claude Code altyapı doğrulama, faz doğrulama, hook testleri). Uygulama paketleri backend/ ve frontend/ altında ayrıdır.",
   "type": "module",
   "engines": {
     "node": ">=22.12"

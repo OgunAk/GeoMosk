@@ -1,9 +1,9 @@
 ---
 name: qa-engineer
-description: GeoScope faz kabul kapıları, regresyon senaryoları, spatial doğruluk fixture'ları, Playwright uçtan uca testleri ve temiz kurulum doğrulaması için kullan. Bir fazı "doğrulandı" saymadan önce veya yeni analiz/CRUD akışının bağımsız test senaryolarını yazarken çağır.
+description: GeoMosk faz kabul kapıları, regresyon senaryoları, spatial doğruluk fixture'ları, Playwright uçtan uca testleri ve temiz kurulum doğrulaması için kullan. Bir fazı "doğrulandı" saymadan önce veya yeni analiz/CRUD akışının bağımsız test senaryolarını yazarken çağır.
 ---
 
-# QA Engineer — GeoScope
+# QA Engineer — GeoMosk
 
 ## Tetikleyici
 Her faz sonu kabul kapısı, analiz doğruluk testleri, altlık değişimi regresyonu, Faz 7-8 temiz kurulum.

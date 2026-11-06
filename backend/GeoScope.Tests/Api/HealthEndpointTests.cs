@@ -62,6 +62,9 @@ public sealed class HealthEndpointTests(PostGisContainerFixture postgis)
         var response = await client.GetAsync("/openapi/v1.json");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // Görünen ad GeoMosk (ADR-0017); derleme adı GeoScope.Api başlığa sızmaz.
+        using var doc = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("GeoMosk API", doc.RootElement.GetProperty("info").GetProperty("title").GetString());
     }
 
     [Fact]

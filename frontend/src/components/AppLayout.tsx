@@ -9,7 +9,7 @@ export function AppLayout({ sidePanel, children }: AppLayoutProps) {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white px-4 py-3">
-        <h1 className="text-lg font-semibold">GeoScope</h1>
+        <h1 className="text-lg font-semibold">GeoMosk</h1>
         <p className="text-xs text-slate-600">Bursa ilçeleri ve sağlık tesisleri</p>
       </header>
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">

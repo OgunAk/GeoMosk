@@ -163,7 +163,7 @@ async function main() {
   const rel = path.relative(root, abs).split(path.sep).join('/');
   for (const w of result.warnings) process.stderr.write(`uyarı ${rel}: ${w}\n`);
   if (result.errors.length) {
-    process.stderr.write(`GeoScope doğrulama hatası (${rel}):\n${result.errors.map((e) => `  - ${e}`).join('\n')}\n`);
+    process.stderr.write(`GeoMosk doğrulama hatası (${rel}):\n${result.errors.map((e) => `  - ${e}`).join('\n')}\n`);
     process.exit(2);
   }
   process.exit(0);
