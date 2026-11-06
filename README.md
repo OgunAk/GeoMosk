@@ -35,6 +35,9 @@ saklayabilir. Kapsam dışı: kimlik doğrulama, yol ağı üzerinden mesafe (t�
   - Çizgi ve alan "Çizimi bitir" düğmesiyle ya da Enter tuşuyla bitirilir.
   - Geometri sunucuda yeniden doğrulanır: kendini kesen şekil, ters koordinat ve aşırı köşe sayısı 422 ile reddedilir.
 - **Beş analiz** (aşağıda ayrıntılı): alan içindekiler, tampon, en yakın N, metrik ölçüm, ilçe başına sayım (tablo + choropleth).
+- **Harici WMS (opsiyonel madde):** "Arazi örtüsü — CORINE 2018 (WMS)" anahtarı, Avrupa Çevre Ajansı'nın (Copernicus) WMS
+  servisini haritaya yarı saydam raster olarak ekler. Varsayılan kapalıdır ve altlık değişiminde korunur
+  ([ADR-0015](docs/DECISIONS.md)). TUCBS denendi, ancak servisin ağ geçidi istekleri reddetti.
 - **Dar ekran ve klavye:**
   - Dar ekranda (375 px) panel kendi içinde kayar ve harita görünür kalır.
   - Klavyeyle arama ve seçim yapılabilir; odak görünürdür.
@@ -170,10 +173,11 @@ Son sonuçlar ve performans ölçümü (10.000 tesiste tüm senaryolar p95 < 75 
 | | |
 |---|---|
 | ![Arama ve detay](docs/screenshots/faz3-search-details.png) | ![Harita](docs/screenshots/faz2-map.png) |
+| ![Tampon 2000 m](docs/screenshots/faz8-tampon-2000m.png) | ![CORINE 2018 WMS](docs/screenshots/wms-corine-2018.png) |
 
 ## Demo senaryosu
 1. Temiz kurulum ve import; harita Bursa verisiyle açılır.
-2. Katmanları açıp kapatın; "Sade (Positron)" altlığına geçin.
+2. Katmanları açıp kapatın; "Sade (Positron)" altlığına geçin. "Arazi örtüsü — CORINE 2018 (WMS)" katmanını açın.
 3. Bir ilçeye ve bir tesise tıklayın. "nilufer" ve "devlet hastanesi" aramalarını deneyin.
 4. Bir tesise yerel açıklama verin; sayfayı yenileyin, açıklama korunur. Yeniden import da bu açıklamayı ezmez.
 5. Nokta, çizgi ve alan çizip kaydedin. Birini düzenleyin, sonra silin.
@@ -189,6 +193,8 @@ Son sonuçlar ve performans ölçümü (10.000 tesiste tüm senaryolar p95 < 75 
 - Klavye ile çizim (köşe ekleme) desteklenmez; çizim fare veya dokunma ister.
 - İlçe sınırları tam çözünürlükte gelir (gzip ≈ 97 KB). Veri büyürse bbox ile yükleme ([ADR-0010](docs/DECISIONS.md)) ve
   sadeleştirme değerlendirilir.
+- WMS katmanı dış servise bağlıdır. Servis yanıt vermezse haritada uyarı çıkar ve diğer katmanlar çalışmaya devam eder.
+  CORINE renk lejantı uygulamada gösterilmez.
 - En yakın N tam tarama yapar (10.000 tesiste p50 19 ms). 100.000+ kayıtta KNN ile kesin yeniden sıralama değerlendirilir.
 - OSM standart karoları yalnız hafif kullanım içindir; yoğun kullanımda kendi karo sunucunuz gerekir.
 

@@ -30,6 +30,7 @@ export default function App() {
   const { state, retry, refresh } = useSourceLayers()
   const user = useUserFeatures()
   const [basemap, setBasemap] = useState<BasemapId>('osm')
+  const [wmsVisible, setWmsVisible] = useState(false)
   const [visibility, setVisibility] = useState<Record<LayerKey, boolean>>({ districts: true, facilities: true, 'user-features': true })
   const [selection, setSelection] = useState<Selection | null>(null)
   // Analiz isteği sürerken seçim değişirse geç gelen yanıt ilgisizse gösterilmez (olay işleyicisinde okunur).
@@ -295,6 +296,8 @@ export default function App() {
             onBasemapChange={setBasemap}
             facilityTypes={facilityTypes}
             onToggleFacilityType={(type, visible) => setFacilityTypes((t) => ({ ...t, [type]: visible }))}
+            wmsVisible={wmsVisible}
+            onToggleWms={setWmsVisible}
           />
           <SystemStatus />
         </>
@@ -315,6 +318,7 @@ export default function App() {
         editingId={editing?.id ?? null}
         analysis={analysisResult}
         choropleth={choropleth}
+        wmsVisible={wmsVisible}
         pickingPoint={pickingPoint}
         onPickPoint={(point) => {
           setPickedPoint(point)

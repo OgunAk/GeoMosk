@@ -12,6 +12,12 @@ PDF D02 (en az iki farklı geometri tipi) dış kaynaktan karşılanır: poligon
 - **Veri:** © OpenStreetMap katkıcıları, [Open Database License (ODbL) 1.0](https://www.openstreetmap.org/copyright). Atıf haritada (altlık atfı) ve yan panelde ("Veri: © OpenStreetMap katkıcıları, ODbL") gösterilir. Depodaki snapshot (`data/samples/osm-bursa/`) ODbL kapsamında yeniden dağıtılan bir veritabanı türevidir; aynı lisansla paylaşılır.
 - **Yazılım lisansı** ve **altlık karo hizmeti koşulları** ayrıdır. İki altlık (ADR-0007):
   - `tile.openstreetmap.org` raster karoları: [OSM Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/) yalnızca hafif kullanıma izin verir ve görünür atıf ister; yoğun/üretim kullanımı için uygun değildir.
+  - **Harici WMS (PDF §5, opsiyonel):** Avrupa Çevre Ajansı (EEA) Copernicus CORINE Arazi Örtüsü 2018, katman 12 (raster),
+    `https://image.discomap.eea.europa.eu/arcgis/services/Corine/CLC2018_WM/MapServer/WMSServer`. GetCapabilities (2026-11-05):
+    AccessConstraints "No Limitation", Fees "No Condition Apply"; EPSG:3857 destekli. Atıf haritada: "© European Union, Copernicus
+    Land Monitoring Service 2018, European Environment Agency (EEA)". Karolar tarayıcıdan doğrudan istenir, veritabanına alınmaz;
+    katman varsayılan kapalıdır. TUCBS (`tucbs-public-api.csb.gov.tr`) denendi ancak API ağ geçidi istekleri 500 "Policy Falsified"
+    ile reddetti (ADR-0015).
   - [OpenFreeMap](https://openfreemap.org) Positron vektör stili: anahtar gerektirmez; atıf "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" haritada otomatik gösterilir. Ücretsiz hizmetin süreklilik garantisi yoktur; erişilemezse uygulama uyarı gösterir ve diğer altlık kullanılabilir.
 
 ## Edinme

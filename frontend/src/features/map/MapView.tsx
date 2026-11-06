@@ -7,6 +7,7 @@ import {
   type FilterSpecification,
   type GeoJSONSource,
   type MapMouseEvent,
+  type MapSourceDataEvent,
 } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './maplibreSetup'
@@ -31,6 +32,7 @@ import {
 } from './layerIds'
 import { ANALYSIS_COLOR, BASEMAPS, HIGHLIGHT_COLOR, SELECTED_COLOR, USER_COLOR, facilityColorExpression, type BasemapId } from './mapStyle'
 import type { AnalysisResponse } from '../../services/analysis'
+import { WMS_LAYER, wmsTileUrl } from './wms'
 
 export interface Selection {
   layer: LayerKey
@@ -63,6 +65,8 @@ interface MapViewProps {
   /** true iken harita tıklaması seçim yerine nokta verir (en yakın N). */
   pickingPoint: boolean
   onPickPoint: (lngLat: [number, number]) => void
+  /** Harici WMS raster katmanı (CORINE 2018) görünür mü. */
+  wmsVisible: boolean
   /** A05 choropleth: ilçe id → sınıf rengi; null iken katman gizli. */
   choropleth: Record<number, string> | null
   /** Geometrisi düzenlenen kullanıcı çizimi: kayıtlı hali gizlenir, taslakla üst üste görünmez. */
@@ -82,7 +86,7 @@ declare global {
 export function MapView(props: MapViewProps) {
   const { layers, userFeatures, basemap, visibility, selection, highlight, focus, draw, drawCallbacks, finishSignal, facilityTypes, editingId, onSelect } =
     props
-  const { analysis, pickingPoint, onPickPoint, choropleth } = props
+  const { analysis, pickingPoint, onPickPoint, choropleth, wmsVisible } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const appliedBasemap = useRef<BasemapId>(basemap)
@@ -91,6 +95,7 @@ export function MapView(props: MapViewProps) {
   // Her style.load'da artar: altlık değişince kaynak/katmanlar bu sayaçla yeniden kurulur.
   const [styleRevision, setStyleRevision] = useState(0)
   const [basemapError, setBasemapError] = useState(false)
+  const [wmsError, setWmsError] = useState(false)
 
   const suspendDraw = useTerraDraw(mapRef, styleRevision, draw, drawCallbacks, finishSignal)
 
@@ -121,8 +126,13 @@ export function MapView(props: MapViewProps) {
     }
     const onError = (e: ErrorEvent & { sourceId?: string }) => {
       // Yalnızca altlık hataları kullanıcıya gösterilir; veri katmanları API'den gelir.
+      if (e.sourceId === SOURCE_IDS.wms) return setWmsError(true) // harici WMS: ayrı uyarı
       const ours = Object.values(SOURCE_IDS).filter((id) => id !== SOURCE_IDS.basemap) as string[]
       if (e.sourceId && !ours.includes(e.sourceId) && !e.sourceId.startsWith('td')) setBasemapError(true)
+    }
+    // WMS karosu başarıyla gelince önceki hata uyarısı kalkar (servis geçici olarak yanıt vermemiş olabilir).
+    const onSourceData = (e: MapSourceDataEvent) => {
+      if (e.sourceId === SOURCE_IDS.wms && e.tile) setWmsError(false)
     }
     const hitAt = (e: MapMouseEvent) => {
       const available = CLICKABLE_LAYERS.filter((id) => map.getLayer(id))
@@ -155,6 +165,7 @@ export function MapView(props: MapViewProps) {
 
     map.on('style.load', onStyleLoad)
     map.on('error', onError)
+    map.on('sourcedata', onSourceData)
     map.on('click', onClick)
     map.on('mousemove', onMove)
     mapRef.current = map
@@ -162,6 +173,7 @@ export function MapView(props: MapViewProps) {
     return () => {
       map.off('style.load', onStyleLoad)
       map.off('error', onError)
+      map.off('sourcedata', onSourceData)
       map.off('click', onClick)
       map.off('mousemove', onMove)
       map.remove()
@@ -210,6 +222,24 @@ export function MapView(props: MapViewProps) {
     const ids = analysis ? analysis.matches.features.map((f) => Number(f.id)) : []
     if (map.getLayer(LAYER_IDS.analysisMatches)) map.setFilter(LAYER_IDS.analysisMatches, idFilter(ids))
   }, [styleRevision, analysis, layers])
+
+  // Harici WMS: kaynak ve katman her stilde yeniden kurulur; yalnız görünürken karo istenir.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || styleRevision === 0) return
+    if (!map.getSource(SOURCE_IDS.wms)) {
+      map.addSource(SOURCE_IDS.wms, { type: 'raster', tiles: [wmsTileUrl()], tileSize: 256, attribution: WMS_LAYER.attribution })
+    }
+    addOnce(map, {
+      id: LAYER_IDS.wms,
+      type: 'raster',
+      source: SOURCE_IDS.wms,
+      layout: { visibility: 'none' },
+      paint: { 'raster-opacity': WMS_LAYER.opacity },
+    })
+    map.setLayoutProperty(LAYER_IDS.wms, 'visibility', wmsVisible ? 'visible' : 'none')
+    enforceLayerOrder(map)
+  }, [styleRevision, wmsVisible])
 
   // A05 choropleth: renkler ilçe id'sine göre match ifadesiyle; altlık değişiminde de yeniden uygulanır.
   useEffect(() => {
@@ -269,6 +299,11 @@ export function MapView(props: MapViewProps) {
       <div ref={containerRef} className="h-full w-full" data-testid="map" aria-label="Bursa haritası" role="region" />
       {layers.kind === 'loading' && (
         <p className="absolute top-3 left-3 rounded bg-white/90 px-3 py-1 text-sm shadow">Katmanlar yükleniyor…</p>
+      )}
+      {wmsVisible && wmsError && (
+        <p role="alert" className="absolute top-12 left-1/2 -translate-x-1/2 rounded bg-amber-50 px-3 py-1 text-sm text-amber-900 shadow">
+          WMS servisi (CORINE) yanıt vermiyor; diğer katmanlar çalışıyor.
+        </p>
       )}
       {basemapError && (
         <p role="alert" className="absolute top-3 left-1/2 -translate-x-1/2 rounded bg-amber-50 px-3 py-1 text-sm text-amber-900 shadow">

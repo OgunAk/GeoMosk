@@ -114,6 +114,15 @@ describe('LayerPanel', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
+  it('harici WMS katmanı ayrı bir anahtarla açılıp kapanır', async () => {
+    const onToggleWms = vi.fn<(visible: boolean) => void>()
+    renderPanel({ wmsVisible: false, onToggleWms })
+    const wms = screen.getByRole('checkbox', { name: /CORINE 2018 \(WMS\)/ })
+    expect(wms).not.toBeChecked()
+    await userEvent.click(wms)
+    expect(onToggleWms).toHaveBeenCalledWith(true)
+  })
+
   it('hata durumunda tekrar dene çağırır', async () => {
     const props = renderPanel({ state: { kind: 'error' } })
 
