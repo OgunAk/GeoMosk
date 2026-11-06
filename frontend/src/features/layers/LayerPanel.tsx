@@ -83,11 +83,20 @@ export function LayerPanel(props: LayerPanelProps) {
               </label>
             </li>
           </ul>
-          {(state.districts.meta.hasMore || state.facilities.meta.hasMore || userHasMore) && (
+          {state.facilities.meta.hasMore && (
+            <p role="status" className="mt-2 rounded bg-amber-50 px-2 py-1 text-amber-900">
+              Bu görünümde {state.facilities.meta.limit.toLocaleString('tr-TR')}'den fazla tesis var; tamamını görmek için yakınlaştırın.
+            </p>
+          )}
+          {(state.districts.meta.hasMore || userHasMore) && (
             <p role="status" className="mt-2 rounded bg-amber-50 px-2 py-1 text-amber-900">
               Kayıt sınırı aşıldı; haritada verinin yalnızca bir kısmı gösteriliyor.
             </p>
           )}
+          <p className="mt-2 text-xs text-slate-500">
+            Sağlık tesisleri haritada görünen alana göre (bbox) yüklenir; sayılar bu alanı gösterir.
+            {state.facilitiesPending && ' Yükleniyor…'}
+          </p>
           <fieldset className="mt-3" disabled={!visibility.facilities}>
             <legend className="text-slate-700">Tesis türleri (haritada göster)</legend>
             <ul className="mt-1 space-y-1">

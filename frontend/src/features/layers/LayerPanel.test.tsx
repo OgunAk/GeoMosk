@@ -14,6 +14,8 @@ function loaded(hasMore = false): SourceLayersState {
     kind: 'loaded',
     districts: { type: 'FeatureCollection', features: [], meta: meta(17) },
     facilities: { type: 'FeatureCollection', features: [], meta: meta(911, hasMore) },
+    facilitiesBbox: [28, 39.5, 30, 40.7],
+    facilitiesPending: false,
   }
 }
 
@@ -64,6 +66,8 @@ describe('LayerPanel', () => {
       kind: 'loaded',
       districts: { type: 'FeatureCollection', features: [], meta: meta(17) },
       facilities: { type: 'FeatureCollection', features: [facility('pharmacy'), facility('pharmacy'), facility('hospital')], meta: meta(3) },
+      facilitiesBbox: [28, 39.5, 30, 40.7],
+      facilitiesPending: false,
     }
     const props = renderPanel({ state })
 
@@ -101,7 +105,7 @@ describe('LayerPanel', () => {
   it('sayfa sınırı aşıldığında eksik veriyi bildirir', () => {
     renderPanel({ state: loaded(true) })
 
-    expect(screen.getByRole('status')).toHaveTextContent('yalnızca bir kısmı')
+    expect(screen.getByRole('status')).toHaveTextContent('yakınlaştırın')
   })
 
   it('kullanıcı çizimleri sınırı aşınca da eksik veriyi bildirir; aşılmadıysa uyarı yok', () => {

@@ -44,6 +44,7 @@ Kurallar: `.claude/rules/testing.md`. Bu belge mevcut testleri ve komutları kay
 | `tests/e2e/analysis.spec.ts` (+2) — Faz 6 | E2E (gerçek veri) | Nilüfer ölçümü arayüz = API, EPSG:32635, sferoid farkı < %0,1; ilçe sayımı: ilçe toplamı = atanan, atanan + atanamayan = 911 = tesis listesi, choropleth tüm ilçeleri boyar ve altlık değişiminde korunur, tablodan seçim, kapatınca katman temizlenir; taşma testi "Ölçüm" modunu da kapsar |
 | Faz 7 — inceleme bulguları ve sağlamlaştırma | API + PostGIS / Import / Frontend / E2E | SQL injection yükleri aramada düz metin (3 yük, tablo sayısı değişmez, `pg_sleep` çalışmaz); kullanıcı çizimi adı ≥ 3 karakter (+3 durum); tesis detayındaki ilçe A05 tekil atamasıyla aynı; CORS `Access-Control-Expose-Headers: ETag`; boş snapshot toplu "silindi" işaretlemez (import geri alınır, geçmiş `failed`); manifest dosya adı klasör dışına çıkamaz; XSS — HTML içeren ad/açıklama düz metin; kısa adlı eski kayıtta açıklama düzenlenebilir; kullanıcı katmanı 2000 sınırı uyarısı; `accessibility.spec.ts` (3): 375×812'de harita görünür alanda, yatay taşma yok, panel kendi içinde kayar; yalnız klavye ile arama → seçim ve görünür odak; altlık servisi erişilemezken uyarı ve veri katmanları; altlık değişiminden sonra katman sırası (analysis.spec) |
 | `wms.test.ts` (1), `LayerPanel.test.tsx` (+1), `tests/e2e/wms.spec.ts` (2) — PDF §5 opsiyonel | Frontend / E2E (WMS istekleri fixture PNG ile) | GetMap URL'i (WMS 1.1.1, LAYERS=12, EPSG:3857, kodlanmamış `{bbox-epsg-3857}`); anahtar; kapalıyken dış servise istek yok; açılınca BBOX metre (3857) aralığında; katman altlık üstü/veri altı; Copernicus atfı görünür; altlık değişiminde korunur; servis 503 → ayrı uyarı, altlık uyarısı yok, veri katmanları çalışır |
+| `bboxLoading.test.ts` (7), `useSourceLayers.test.ts` (3), `tests/e2e/bbox.spec.ts` (1) — ADR-0016 | Frontend / E2E (gerçek veri) | Kutu genişletme, kırpma, yuvarlama; kutu içinde istek yok, taşınca ve sınıra takılmışken yakınlaşınca yeni kutu; aynı kutu tekrar istenmez; bbox parametreli istek; kutu değişince önceki istek iptal, yeni yanıt gelene kadar eski veri, hata olursa veri korunur. E2E: açılışta tek bbox isteği (911), kutu içi yakınlaşmada istek yok, kutu dışında yeni küçük kutu (0 tesis), merkeze dönünce yeni kutu (0 < n < 911) |
 | `analysisSelection.test.ts` (6) — Faz 5 geri bildirimi | Frontend | Başka ilçe/tesis/çizim seçilince sonuç temizlenir; analiz kaynağı veya sonuç listesindeki tesis seçilince korunur; seçimi kaldırmak sonucu silmez |
 | `tests/e2e/analysis.spec.ts` (5) — Faz 5 | + Nilüfer analizi → listeden tesis seçimi sonucu korur → haritada başka ilçeye tıklayınca sonuç kaybolur |
 | (analiz E2E senaryoları) | E2E (gerçek veri) | Nilüfer içi tesis sayısı = API ilçe filtresi; 2000 m tampon (Polygon, mesafeler ≤2000 ve sıralı); haritadan nokta + en yakın 5 (sıra 1-5, bağlantılar, temizle); analiz için çizilen alan kullanıcı katmanına kaydedilmez |
@@ -82,6 +83,33 @@ tohumlu `ST_GeneratePoints`; `source = 'synthetic'`, ad "SENTETİK tesis N"). Uy
 | A03 en yakın 10 | 168.7 | 18.7 | 20.5 | 20.8 | 28.1 | 3.7 (0.9) |
 | A04 ölçüm (Nilüfer) | 14.5 | 4.7 | 5.5 | 6.1 | 7.9 | 15.7 (5.5) |
 | A05 ilçe başına sayım | 69.1 | 51.5 | 73.3 | 85.0 | 122.7 | 1.5 (0.6) |
+
+### bbox ile tesis yükleme — önce/sonra (2026-11-06, ADR-0016)
+`node scripts/perf/measure-bbox.mjs --runs 30`. Kutular uygulamanın mantığıyla hesaplandı (1366×820 px görünüm, Bursa merkezi, %50 pay).
+"ÖNCE" eski açılış isteğidir (tek seferlik). Ham sonuçlar `scripts/perf/results-bbox-*.2026-11-06.json`.
+
+**10.000 tesis (911 gerçek + 9.089 SENTETİK, ayrı `geoscope_perf`, Release API):**
+
+| Senaryo | Dönen tesis | Eksik (hasMore) | Yanıt KB (gzip KB) | p50 (ms) | p95 (ms) |
+|---|---|---|---|---|---|
+| ÖNCE: tüm tesisler tek istekte (limit=2000) | 2000 | evet | 602.2 (62.6) | 16.1 | 19.9 |
+| SONRA: bbox, zoom 8 (açılış görünümü) | 2000 | evet | 602.2 (62.6) | 14.7 | 18.0 |
+| SONRA: bbox, zoom 11 | 2000 | evet | 602.2 (62.7) | 16.1 | 18.3 |
+| SONRA: bbox, zoom 13 | 1382 | hayır | 419.5 (43.8) | 14.3 | 17.9 |
+| SONRA: bbox, zoom 15 | 360 | hayır | 107.0 (11.2) | 5.3 | 7.0 |
+
+**Gerçek veri (911 tesis):**
+
+| Senaryo | Dönen tesis | Eksik (hasMore) | Yanıt KB (gzip KB) | p50 (ms) | p95 (ms) |
+|---|---|---|---|---|---|
+| ÖNCE: tüm tesisler tek istekte (limit=2000) | 911 | hayır | 270.2 (27.4) | 6.9 | 10.6 |
+| SONRA: bbox, zoom 8 (açılış görünümü) | 911 | hayır | 270.2 (27.4) | 7.7 | 9.3 |
+| SONRA: bbox, zoom 11 | 907 | hayır | 269.0 (27.3) | 8.2 | 11.1 |
+| SONRA: bbox, zoom 13 | 575 | hayır | 171.0 (17.6) | 7.0 | 9.6 |
+| SONRA: bbox, zoom 15 | 315 | hayır | 93.1 (9.5) | 5.8 | 7.9 |
+
+**Sonuç:** Gerçek veride kazanım yakın zoom'da (zoom 15'te veri 270 → 93 KB). 10.000 tesiste eski yöntem her zoom'da 8.000 tesisi
+eksik bırakıyordu; yeni yöntem zoom ≥ 13'te görünen alanı eksiksiz getiriyor, yakın zoom'da yanıt 602 → 107 KB.
 
 ### Gerçek veri (911 tesis, 17 ilçe; `geoscope_app` rolü)
 

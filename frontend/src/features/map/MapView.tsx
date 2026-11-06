@@ -33,6 +33,7 @@ import {
 import { ANALYSIS_COLOR, BASEMAPS, HIGHLIGHT_COLOR, SELECTED_COLOR, USER_COLOR, facilityColorExpression, type BasemapId } from './mapStyle'
 import type { AnalysisResponse } from '../../services/analysis'
 import { WMS_LAYER, wmsTileUrl } from './wms'
+import { VIEW_DEBOUNCE_MS } from './bboxLoading'
 
 export interface Selection {
   layer: LayerKey
@@ -72,6 +73,8 @@ interface MapViewProps {
   /** Geometrisi düzenlenen kullanıcı çizimi: kayıtlı hali gizlenir, taslakla üst üste görünmez. */
   editingId: string | null
   onSelect: (selection: Selection | null) => void
+  /** Harita hareketi bitince görünen kutu (debounce'lu); tesisler buna göre yüklenir. */
+  onViewChange: (view: Bbox) => void
 }
 
 const HIT_TOLERANCE_PX = 5
@@ -100,9 +103,11 @@ export function MapView(props: MapViewProps) {
   const suspendDraw = useTerraDraw(mapRef, styleRevision, draw, drawCallbacks, finishSignal)
 
   const pickRef = useRef<((lngLat: [number, number]) => void) | null>(null)
+  const onViewChangeRef = useRef(props.onViewChange)
 
   useEffect(() => {
     onSelectRef.current = onSelect
+    onViewChangeRef.current = props.onViewChange
     drawingRef.current = draw.kind !== 'off'
     pickRef.current = pickingPoint ? onPickPoint : null
   })
@@ -163,6 +168,19 @@ export function MapView(props: MapViewProps) {
       map.getCanvas().style.cursor = pickRef.current ? 'crosshair' : hitAt(e) ? 'pointer' : ''
     }
 
+    // Görünen kutu: kamera oluşturulunca hemen (altlık karolarını beklemeden), sonra her hareketin bitiminden VIEW_DEBOUNCE_MS sonra.
+    const viewTimer: { id?: ReturnType<typeof setTimeout> } = {}
+    const emitView = () => {
+      const b = map.getBounds()
+      onViewChangeRef.current([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])
+    }
+    const onMoveEnd = () => {
+      clearTimeout(viewTimer.id)
+      viewTimer.id = setTimeout(emitView, VIEW_DEBOUNCE_MS)
+    }
+    viewTimer.id = setTimeout(emitView, 0)
+    map.on('moveend', onMoveEnd)
+
     map.on('style.load', onStyleLoad)
     map.on('error', onError)
     map.on('sourcedata', onSourceData)
@@ -171,6 +189,8 @@ export function MapView(props: MapViewProps) {
     mapRef.current = map
     window.__geoscopeMap = map
     return () => {
+      clearTimeout(viewTimer.id)
+      map.off('moveend', onMoveEnd)
       map.off('style.load', onStyleLoad)
       map.off('error', onError)
       map.off('sourcedata', onSourceData)
