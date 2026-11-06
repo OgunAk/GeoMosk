@@ -139,6 +139,43 @@ test('haritada tesise tıklayınca öznitelikler yan panelde görünür', async 
   await expect(details.getByText(/temsilî bir noktadır/)).toBeVisible() // OSM way'den üretilmiş nokta
 })
 
+// Geliştirici demosu (2026-11-06): tesise tek tıklama yaklaştırır; ilçeye tıklama haritayı oynatmaz.
+test('tesise tek tıklayınca harita tesise yaklaşır; ilçeye tıklama kamerayı değiştirmez', async ({ page }) => {
+  await openApp(page)
+  const coords = await page.evaluate(async () => {
+    const r = (await fetch('/api/facilities?q=%C3%A7ekirge%20devlet&limit=1').then((x) => x.json())) as {
+      features: { geometry: { coordinates: [number, number] } }[]
+    }
+    return r.features[0].geometry.coordinates
+  })
+  const box = (await page.getByTestId('map').boundingBox())!
+  const camera = () =>
+    page.evaluate(() => {
+      const m = window.__geoscopeMap!
+      return { zoom: m.getZoom(), lng: m.getCenter().lng, lat: m.getCenter().lat }
+    })
+
+  // Tesisi merkezden uzakta ve zoom 13'te göster; tek tıkla.
+  await page.evaluate(([lon, lat]) => window.__geoscopeMap!.jumpTo({ center: [lon + 0.01, lat + 0.005], zoom: 13 }), coords)
+  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
+  const point = await page.evaluate(([lon, lat]) => window.__geoscopeMap!.project([lon, lat]), coords)
+  await page.mouse.click(box.x + point.x, box.y + point.y)
+
+  await expect.poll(async () => (await camera()).zoom).toBeGreaterThanOrEqual(15.99)
+  const after = await camera()
+  expect(Math.abs(after.lng - coords[0])).toBeLessThan(1e-4)
+  expect(Math.abs(after.lat - coords[1])).toBeLessThan(1e-4)
+
+  // İlçe içinde boş bir yere tıklama: ilçe seçilir, kamera yerinde kalır.
+  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [28.95, 40.15], zoom: 11 }))
+  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
+  const before = await camera()
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await expect(page.getByRole('heading', { name: 'Nilüfer' })).toBeVisible()
+  await page.waitForTimeout(800) // olası bir easeTo süresinden (600 ms) uzun
+  expect(await camera()).toEqual(before)
+})
+
 test('yerel açıklama kaydedilir, yenilemede korunur ve geri alınır', async ({ page }) => {
   const note = `E2E notu ${Date.now()}`
   await openApp(page)
