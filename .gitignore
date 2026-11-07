@@ -17,3 +17,6 @@ data/raw/**
 !data/raw/*.manifest.json
 TestResults/
 coverage/
+
+# Proje başındaki kapsam tanımı (yapay zekâ için); yerelde tutulur, depoda yer almaz (2026-11-08).
+GEOMOSK_MASTER_PROMPT.md

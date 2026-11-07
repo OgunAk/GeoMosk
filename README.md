@@ -152,10 +152,12 @@ seçimler ve ürün kararları geliştiricinindir; kodun büyük kısmını yapa
   | Yol | İçerik |
   |---|---|
   | `CLAUDE.md`, `.claude/` | Yapay zekâ asistanının proje talimatları, kuralları, ajan ve skill tanımları |
-  | `GEOMOSK_MASTER_PROMPT.md` | Projenin başında yazılan kapsam ve kalite tanımı |
   | `docs/REQUIREMENTS.md`, `PROGRESS.md`, `ROADMAP.md` | Gereksinim izlenebilirliği ve faz kayıtları |
   | `docs/FILE-MANIFEST.md`, `AI-TOOLS.md`, `DELIVERY-CHECKLIST.md` | Dosya envanteri, araç kurulumu, teslim kontrol listesi |
   | `scripts/validate-project.mjs`, `scripts/hooks/` | Faz kapısı ve dosya denetimi script'leri |
+
+  Belgelerdeki "master prompt §N" atıfları, projenin başında yapay zekâ için yazılan kapsam ve kalite tanımına aittir;
+  bu dosya depoda yer almaz.
 
 ## Ödev teslim maddeleri
 | Madde | Bölüm |

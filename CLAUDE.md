@@ -4,7 +4,7 @@
 
 Bursa ilçeleri (MultiPolygon) + sağlık tesisleri (Point) gerçek açık verisiyle Web CBS uygulaması:
 MapLibre haritası, katman/altlık, arama, sözel düzenleme, kullanıcı çizimi CRUD ve PostGIS analizleri.
-Ödev kaynağı `ODEV_WEB_CBS.pdf`; ana kapsam `GEOMOSK_MASTER_PROMPT.md` (her görevde yeniden okunmaz).
+Ödev kaynağı `ODEV_WEB_CBS.pdf`; ana kapsam `GEOMOSK_MASTER_PROMPT.md` (yerel, Git dışı; her görevde yeniden okunmaz).
 
 ## Yeni görevde önce oku
 1. `docs/PROGRESS.md` — son faz, açık engeller, sonraki adım.
