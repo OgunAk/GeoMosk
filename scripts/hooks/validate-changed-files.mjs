@@ -14,8 +14,8 @@ import { fileURLToPath } from 'node:url';
 import { classifyClaudeFile, checkClaudeMarkdown, parseYaml, yamlAvailable, yamlUnavailableReason } from '../lib/frontmatter.mjs';
 
 const MAX_BYTES = 2 * 1024 * 1024;
-const NODE_CHECK_TIMEOUT_MS = Number(process.env.GEOSCOPE_HOOK_CHECK_TIMEOUT_MS) || 10_000;
-const SKIP_DIRS = new Set(['node_modules', 'bin', 'obj', 'dist', '.git', 'graphify-out', '.playwright', '.playwright-cli']);
+const NODE_CHECK_TIMEOUT_MS = Number(process.env.GEOMOSK_HOOK_CHECK_TIMEOUT_MS) || 10_000;
+const SKIP_DIRS = new Set(['node_modules', 'bin', 'obj', 'dist', '.git', '.playwright', '.playwright-cli']);
 const TEXT_EXT = new Set(['.md', '.json', '.mjs', '.js', '.cjs', '.ts', '.tsx', '.cs', '.csproj', '.sql', '.yml', '.yaml', '.css', '.html', '.env', '.example', '.txt']);
 const PRIVATE_KEY_RE = /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/;
 

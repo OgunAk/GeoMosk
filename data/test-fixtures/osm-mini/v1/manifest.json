@@ -7,14 +7,14 @@
       "file": "districts.json",
       "query": "synthetic",
       "osmBase": "2026-01-01T00:00:00Z",
-      "sha256": "f18d8c04a8709d32ee6752c1f9fa5070211c04a99bbc464f29b5d5f60f937c51",
+      "sha256": "2ed645c288e62c63dec9cc872003fdb2bf0abbea31f704e52c2d6d405bfc5337",
       "elements": 2
     },
     "facilities": {
       "file": "facilities.json",
       "query": "synthetic",
       "osmBase": "2026-01-01T00:00:00Z",
-      "sha256": "97fb7c2662e9a187b00b22c9f2a23fd296b6a9a6458380e836c36448b77053e1",
+      "sha256": "3d22e45dd5986594efd2a36f349725e844f8e853db8ad5253ec3c7e732f50883",
       "elements": 6
     }
   }

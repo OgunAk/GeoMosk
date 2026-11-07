@@ -1,11 +1,10 @@
 # GeoMosk
 
-> Görünen ad **GeoMosk** (ADR-0017). Kod adı **GeoScope** olarak kalır: .NET projeleri/namespace'ler, `GeoScopeDbContext`,
-> `geoscope` veritabanı ve rolleri, `GEOSCOPE_*` ortam değişkenleri, `ConnectionStrings:GeoScope`, `window.__geoscopeMap`.
+> Proje adı ve tüm kod adları **GeoMosk** (ADR-0019; eski kod adı GeoScope, 2026-11-08'de tamamen değiştirildi).
 
 Bursa ilçeleri (MultiPolygon) + sağlık tesisleri (Point) gerçek açık verisiyle Web CBS uygulaması:
 MapLibre haritası, katman/altlık, arama, sözel düzenleme, kullanıcı çizimi CRUD ve PostGIS analizleri.
-Ödev kaynağı `ODEV_WEB_CBS.pdf`; ana kapsam `GEOSCOPE_MASTER_PROMPT.md` (her görevde yeniden okunmaz).
+Ödev kaynağı `ODEV_WEB_CBS.pdf`; ana kapsam `GEOMOSK_MASTER_PROMPT.md` (her görevde yeniden okunmaz).
 
 ## Yeni görevde önce oku
 1. `docs/PROGRESS.md` — son faz, açık engeller, sonraki adım.
@@ -25,11 +24,11 @@ MapLibre haritası, katman/altlık, arama, sözel düzenleme, kullanıcı çizim
 | `.claude/agents/` 7 ajan, `.claude/skills/` 6 proje + 2 araç skill'i, `.claude/rules/` 6 kural | Faz 0 ✓ |
 | `scripts/verify-agent-setup.mjs`, `scripts/validate-project.mjs`, `scripts/hooks/` | Faz 0 ✓ |
 | `docs/` REQUIREMENTS, PROGRESS, DECISIONS, DEVELOPER-REVIEW, FILE-MANIFEST, AI-TOOLS | Faz 0 ✓ |
-| `backend/GeoScope.{Domain,Application,Infrastructure,Api,Tests}/`, `Directory.Packages.props` | Faz 1 ✓ |
+| `backend/GeoMosk.{Domain,Application,Infrastructure,Api,Tests}/`, `Directory.Packages.props` | Faz 1 ✓ |
 | `frontend/src/{components,hooks,services,test}/`, `features/{health,map,layers,search,details,drawing,analysis}/`, `frontend/tests/e2e/` | Faz 1-5 ✓ |
-| `backend/GeoScope.{Application,Infrastructure}/Analysis/`, `scripts/sql/analysis-plans.*` | Faz 5 ✓ (A04/A05 Faz 6) |
+| `backend/GeoMosk.{Application,Infrastructure}/Analysis/`, `scripts/sql/analysis-plans.*` | Faz 5 ✓ (A04/A05 Faz 6) |
 | `scripts/import/` (fetch/load OSM), `data/samples/osm-bursa/` (gerçek), `data/test-fixtures/` (SENTETİK) | Faz 2 ✓ |
-| `backend/GeoScope.Infrastructure/Persistence/Migrations/`, `docker/db/` (rol script'leri) | Faz 2 ✓ |
+| `backend/GeoMosk.Infrastructure/Persistence/Migrations/`, `docker/db/` (rol script'leri) | Faz 2 ✓ |
 | `docker-compose.yml` (db, migrate, api, web, import[tools]), `.env.example`, `.github/workflows/ci.yml` | Faz 1-2 ✓ |
 
 Belgeler: ARCHITECTURE, ROADMAP, TEST-PLAN, DATABASE, API-CONTRACT, DATA-SOURCES, README.
@@ -49,9 +48,9 @@ npm --prefix frontend run e2e                 # Playwright; çalışan compose +
 docker compose up --build -d                  # db → migrate → api → web :8080 (yalnız 127.0.0.1)
 docker compose --profile tools run --rm import   # gerçek OSM snapshot'ını yükler (idempotent)
 npm run import:fetch                          # Overpass'tan yeni snapshot (ağ; adil kullanım)
-dotnet tool run dotnet-ef migrations add <Ad> --project backend/GeoScope.Infrastructure --startup-project backend/GeoScope.Infrastructure --output-dir Persistence/Migrations
+dotnet tool run dotnet-ef migrations add <Ad> --project backend/GeoMosk.Infrastructure --startup-project backend/GeoMosk.Infrastructure --output-dir Persistence/Migrations
 ```
-Elle geliştirme: `docker compose up -d db migrate`, `dotnet run --project backend/GeoScope.Api` (5080, `geoscope_app` rolü),
+Elle geliştirme: `docker compose up -d db migrate`, `dotnet run --project backend/GeoMosk.Api` (5080, `geomosk_app` rolü),
 `npm --prefix frontend run dev` (5173, /api → 5080). DB rolleri: `docs/DATABASE.md`.
 
 ## Bağımlılık yönleri
@@ -94,11 +93,6 @@ Aynı dosyaya eşzamanlı iki ajan yazmaz; şema/sözleşme değişikliğini ana
 - C#/TypeScript LSP: sembol ve referans aramasında kullan. Build/test yerine geçmez.
 - Playwright CLI: gerçek UI akışını doğrula; stabil senaryoyu kalıcı teste dönüştür.
   Windows PowerShell'de gerektiğinde playwright-cli.cmd kullan.
-- Graphify: /graphify ile elle çağrılır. Şu anda graf yoktur.
-  Kod oluştuktan sonra yalnızca gerekçeli ilişki/etki incelemesinde kullan.
-  Önce code-only ve dar kapsam; sorgularda --budget 1500 kullan.
-  EXTRACTED/INFERRED ayrımını koru; sonucu gerçek kaynakta doğrula.
-  Her dosya okumasında sorgu, sürekli watch, otomatik rebuild veya bulut yok.
 - node_modules, bin, obj, dist, büyük veri/dump/log dosyalarını bütünüyle okuma; ham veride `head -n 25`/`jq`.
 - Her görevde bütün ajanları çağırma. Tekrarlı belge araştırması ve uzun loglardan kaçın.
 

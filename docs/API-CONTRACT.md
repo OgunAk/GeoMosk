@@ -5,17 +5,22 @@
 
 ## Ortak kurallar (uygulandı)
 - Koordinatlar EPSG:4326, `[boylam, enlem]`; RFC 7946; `crs` üyesi yok.
-- Koleksiyon yanıtı `application/geo+json` FeatureCollection + `meta` foreign member: `{ returned, limit, offset, hasMore }`.
+- Koleksiyon yanıtı `application/geo+json` FeatureCollection + `meta` foreign member: `{ returned, limit, offset, hasMore, nextAfter? }`.
   `hasMore = true` ise yanıt verinin tamamı değildir; istemci bunu göstermek zorundadır.
-- Sıralama `id` artan; sayfalama `limit` (varsayılan 250, 1..2000) + `offset` (≥0).
+- Sıralama `id` artan; sayfalama `limit` (varsayılan 250, 1..2000) ile:
+  - **Keyset (önerilen, ilçe/tesis):** `after=<id>` yalnız bu id'den büyük kayıtları döndürür. `hasMore` ise `meta.nextAfter` son dönen id'dir;
+    bir sonraki istek `after=<nextAfter>` ile yapılır. Birincil anahtar indeksinden devam eder; sayfa derinliği maliyeti artırmaz.
+  - **Offset:** `offset` (≥0) ilk N kaydı atlar; derin sayfalarda atlanan satırlar yine taranır. `after` ile birlikte verilirse 400 (`errors.after`).
+  - `after` pozitif id olmalı (aksi 400). Kullanıcı çizimlerinde (`/api/features`) yalnız offset vardır.
 - `bbox=minLon,minLat,maxLon,maxLat`: nokta ayraçlı ondalık; boylam [-180,180], enlem [-90,90]; `minLon < maxLon`
   (tarih çizgisini aşan kutu desteklenmez → 400), `minLat < maxLat`. Filtre: gerçek geometriyle `ST_Intersects` (yalnızca zarf karşılaştırması değil).
 - Hatalar `application/problem+json`; doğrulama hataları 400 + `errors.{alan}` + `traceId`. SQL, stack trace ve bağlantı bilgisi içermez.
 - Kaynakta silinmiş (`source_deleted_at` dolu) kayıtlar dönmez.
 - İstek gövdesi en çok 2 MiB (Kestrel + nginx); aşılırsa 413 (API: `application/problem+json`; nginx önünde nginx'in kendi 413 sayfası).
 - Arama `q`: en çok 100 karakter; görünen ad (yerel ad varsa o) üzerinde "içerir" araması. Büyük/küçük harf ve Türkçe aksan
-  duyarsız: SQL `geoscope_search_normalize(x) = lower(unaccent(x))` → "nilufer" ⇒ "Nilüfer", "İLÇE" ⇒ "ilce".
-  `%`, `_` ve `\` kaçışlanır (joker değildir).
+  duyarsız: SQL `geomosk_search_normalize(x) = lower(unaccent(x))` → "nilufer" ⇒ "Nilüfer", "İLÇE" ⇒ "ilce".
+  `%`, `_` ve `\` kaçışlanır (joker değildir). İndeks: aynı ifade üzerinde GIN trigram (`pg_trgm`); kaynak adı ve yerel ad
+  (override) dalları ayrı aranıp birleştirilir, böylece her dal kendi indeksini kullanır (ADR-0020).
 
 ## Uygulanan endpoint'ler
 
@@ -29,12 +34,12 @@
 ### `GET /api/layers`
 200 JSON dizi: `[{ id: "districts"|"facilities", title, geometryType, source: "osm", attribution, editableFields: ["name","description"], featureCount }]`.
 
-### `GET /api/districts?bbox&q&limit&offset`
+### `GET /api/districts?bbox&q&limit&offset&after`
 | | |
 |---|---|
 | Geometri | MultiPolygon |
 | properties | `layer: "districts"`, `name` (override varsa o, yoksa kaynak adı), `sourceName`, `description` (override), `osmType`, `osmId` |
-| Durumlar | 200, 400 (bbox/limit/offset) |
+| Durumlar | 200, 400 (bbox/limit/offset/after) |
 | Performans | GiST `ix_districts_geom`; tam çözünürlükte 17 ilçe ≈ 318 KB (nginx gzip ile ≈ 115 KB). Görüntü sadeleştirmesi Faz 7'de ölçülerek değerlendirilecek |
 
 Örnek: `GET /api/districts?bbox=29.0,40.1,29.2,40.3&limit=2`
@@ -47,14 +52,14 @@
 ```
 (Şekli gösterir; id ve koordinat değerleri örnektir.)
 
-### `GET /api/facilities?bbox&q&type&districtId&limit&offset`
+### `GET /api/facilities?bbox&q&type&districtId&limit&offset&after`
 | | |
 |---|---|
 | Geometri | Point |
 | properties | `layer: "facilities"`, `name` (null olabilir), `sourceName`, `description`, `facilityType` (hospital/clinic/doctors/dentist/pharmacy/other_healthcare), `osmType`, `osmId`, `representativePoint` (way/relation'dan üretilen nokta ise true) |
 | Filtreler | `type` ∈ hospital/clinic/doctors/dentist/pharmacy/other_healthcare (aksi 400); `districtId` > 0: o ilçenin **sınır dahil** kapsadığı tesisler (`ST_Covers`) |
 | Durumlar | 200, 400 |
-| Performans | GiST `ix_health_facilities_geom`; 911 tesis ≈ 277 KB (gzip ≈ 32 KB). Arama 911 satırda sıralı tarama; trigram indeksi ölçülen ihtiyaç olmadan eklenmedi |
+| Performans | GiST `ix_health_facilities_geom`; 911 tesis ≈ 277 KB (gzip ≈ 32 KB). Ad araması GIN trigram `ix_health_facilities_name_trgm` + `ix_facility_overrides_name_trgm` (ADR-0020) |
 
 ### `GET /api/districts/{id}`, `GET /api/facilities/{id}`
 200 tek Feature (`application/geo+json`) + `ETag: "<sürüm>"` (yerel düzenleme yoksa `"0"`). Liste özelliklerine ek olarak

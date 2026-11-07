@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // OSM snapshot'ını PostGIS'e yükler: checksum → staging → geometri kurulumu/doğrulama → upsert → kalite raporu.
 //   node scripts/import/load-osm.mjs [--snapshot <dizin>] [--connection <postgres://…>]
-// Bağlantı: --connection veya GEOSCOPE_IMPORT_DATABASE_URL. Şema migration ile önceden kurulmuş olmalı.
+// Bağlantı: --connection veya GEOMOSK_IMPORT_DATABASE_URL. Şema migration ile önceden kurulmuş olmalı.
 //
 // Garanti: iki veri seti tek transaction'da yazılır; hata olursa hiçbir kaynak tablosu değişmez,
 // import_history'de "failed" kaydı kalır. Override tabloları ve user_features'a dokunulmaz.
@@ -210,8 +210,8 @@ function safeError(err) {
 
 async function main() {
   const snapshotDir = path.resolve(root, arg('--snapshot') ?? latestSnapshot());
-  const connectionString = arg('--connection') ?? process.env.GEOSCOPE_IMPORT_DATABASE_URL;
-  if (!connectionString) throw new Error('Bağlantı gerekli: --connection veya GEOSCOPE_IMPORT_DATABASE_URL');
+  const connectionString = arg('--connection') ?? process.env.GEOMOSK_IMPORT_DATABASE_URL;
+  if (!connectionString) throw new Error('Bağlantı gerekli: --connection veya GEOMOSK_IMPORT_DATABASE_URL');
 
   const { manifest, datasets } = readSnapshot(snapshotDir);
   const client = new pg.Client({ connectionString });

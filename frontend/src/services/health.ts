@@ -1,6 +1,6 @@
 import { ApiError, getJson } from './apiClient'
 
-// Sözleşme: backend/GeoScope.Api/Health/HealthResponseWriter.cs
+// Sözleşme: backend/GeoMosk.Api/Health/HealthResponseWriter.cs
 export type HealthStatus = 'Healthy' | 'Degraded' | 'Unhealthy'
 
 export interface HealthCheckEntry {

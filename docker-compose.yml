@@ -1,27 +1,27 @@
 # Yerel demo ortamı. Portlar yalnızca 127.0.0.1'e bağlanır; anonim yazma API'si dış ağa açılmaz.
 # Değişkenler .env dosyasından (bkz. .env.example); yoksa yerel geliştirme varsayılanları kullanılır.
 #
-# Roller: POSTGRES_USER = şema sahibi (migration + import), geoscope_app = API çalışma rolü (superuser değil).
+# Roller: POSTGRES_USER = şema sahibi (migration + import), geomosk_app = API çalışma rolü (superuser değil).
 # Veri importu otomatik değildir:  docker compose --profile tools run --rm import
-name: geoscope
+name: geomosk
 
-x-owner-connection: &owner-connection "Host=db;Port=5432;Database=${POSTGRES_DB:-geoscope};Username=${POSTGRES_USER:-geoscope};Password=${POSTGRES_PASSWORD:-geoscope_dev};Timeout=5"
+x-owner-connection: &owner-connection "Host=db;Port=5432;Database=${POSTGRES_DB:-geomosk};Username=${POSTGRES_USER:-geomosk};Password=${POSTGRES_PASSWORD:-geomosk_dev};Timeout=5"
 
 services:
   db:
     image: postgis/postgis:17-3.5
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-geoscope}
-      POSTGRES_USER: ${POSTGRES_USER:-geoscope}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geoscope_dev}
-      GEOSCOPE_APP_USER: geoscope_app
-      GEOSCOPE_APP_PASSWORD: ${GEOSCOPE_APP_PASSWORD:-geoscope_app_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-geomosk}
+      POSTGRES_USER: ${POSTGRES_USER:-geomosk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geomosk_dev}
+      GEOMOSK_APP_USER: geomosk_app
+      GEOMOSK_APP_PASSWORD: ${GEOMOSK_APP_PASSWORD:-geomosk_app_dev}
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
-      - geoscope-db:/var/lib/postgresql/data
+      - geomosk-db:/var/lib/postgresql/data
       - ./docker/db/initdb:/docker-entrypoint-initdb.d:ro
-      - ./docker/db/sql:/geoscope-sql:ro
+      - ./docker/db/sql:/geomosk-sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -44,7 +44,7 @@ services:
       target: runtime
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__GeoScope: "Host=db;Port=5432;Database=${POSTGRES_DB:-geoscope};Username=geoscope_app;Password=${GEOSCOPE_APP_PASSWORD:-geoscope_app_dev};Timeout=5"
+      ConnectionStrings__GeoMosk: "Host=db;Port=5432;Database=${POSTGRES_DB:-geomosk};Username=geomosk_app;Password=${GEOMOSK_APP_PASSWORD:-geomosk_app_dev};Timeout=5"
       Cors__AllowedOrigins__0: "http://localhost:${WEB_PORT:-8080}"
     depends_on:
       migrate:
@@ -65,7 +65,7 @@ services:
       context: .
       dockerfile: scripts/import/Dockerfile
     environment:
-      GEOSCOPE_IMPORT_DATABASE_URL: "postgres://${POSTGRES_USER:-geoscope}:${POSTGRES_PASSWORD:-geoscope_dev}@db:5432/${POSTGRES_DB:-geoscope}"
+      GEOMOSK_IMPORT_DATABASE_URL: "postgres://${POSTGRES_USER:-geomosk}:${POSTGRES_PASSWORD:-geomosk_dev}@db:5432/${POSTGRES_DB:-geomosk}"
     volumes:
       - ./data:/app/data:ro
     depends_on:
@@ -73,4 +73,4 @@ services:
         condition: service_completed_successfully
 
 volumes:
-  geoscope-db:
+  geomosk-db:

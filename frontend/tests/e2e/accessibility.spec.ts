@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test'
 async function openApp(page: Page) {
   await page.goto('/')
   await expect(page.getByRole('checkbox', { name: /Sağlık tesisleri/ })).toBeVisible()
-  await page.waitForFunction(() => Boolean(window.__geoscopeMap?.getLayer('lyr-districts-fill')))
+  await page.waitForFunction(() => Boolean(window.__geomoskMap?.getLayer('lyr-districts-fill')))
 }
 
 test.describe('dar ekran (375×812)', () => {
@@ -59,5 +59,5 @@ test('altlık karo servisi erişilemezse anlaşılır uyarı; veri katmanları �
   await page.route('https://tile.openstreetmap.org/**', (route) => route.abort('connectionrefused'))
   await openApp(page)
   await expect(page.getByRole('alert').filter({ hasText: 'Altlık karoları yüklenemedi' })).toBeVisible()
-  await expect.poll(() => page.evaluate(() => window.__geoscopeMap!.querySourceFeatures('src-districts').length)).toBeGreaterThan(0)
+  await expect.poll(() => page.evaluate(() => window.__geomoskMap!.querySourceFeatures('src-districts').length)).toBeGreaterThan(0)
 })

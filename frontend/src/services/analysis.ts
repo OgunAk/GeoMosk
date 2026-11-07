@@ -2,7 +2,7 @@ import type { Feature, FeatureCollection, Geometry, Point, Polygon } from 'geojs
 import { requestJson } from './apiClient'
 import type { FacilityProperties, FacilityType, PageMeta } from './sourceLayers'
 
-// Sözleşme: docs/API-CONTRACT.md "Analizler", backend/GeoScope.Api/Controllers/AnalysisController.cs
+// Sözleşme: docs/API-CONTRACT.md "Analizler", backend/GeoMosk.Api/Controllers/AnalysisController.cs
 export type AnalysisKind = 'within' | 'buffer' | 'nearest' | 'measure'
 
 export interface MatchProperties extends FacilityProperties {

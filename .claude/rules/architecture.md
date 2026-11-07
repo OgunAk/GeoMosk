@@ -1,6 +1,6 @@
 # Mimari kuralları (tüm oturumlar)
 
-- Katmanlı modüler monolit. Projeler: `backend/GeoScope.Domain`, `GeoScope.Application`, `GeoScope.Infrastructure`, `GeoScope.Api`, `GeoScope.Tests`; `frontend/` ayrı Vite uygulaması.
+- Katmanlı modüler monolit. Projeler: `backend/GeoMosk.Domain`, `GeoMosk.Application`, `GeoMosk.Infrastructure`, `GeoMosk.Api`, `GeoMosk.Tests`; `frontend/` ayrı Vite uygulaması.
 - Bağımlılık yönü: `Domain` hiçbir katmana bağlı değil; `Application → Domain`; `Infrastructure → Application, Domain`; `Api → Application` ve yalnızca DI composition root için `Infrastructure`. Ters referans eklenmez.
 - Domain HTTP, EF migration veya serileştirme ayrıntısı taşımaz. NetTopologySuite geometri tiplerinin hangi katmanda kullanıldığı `docs/DECISIONS.md` ADR'sinde belirlenir; gereksiz geometri sarmalayıcısı yazılmaz.
 - Controller ince HTTP adaptörüdür; SQL ve iş kuralı Application/Infrastructure'dadır. Entity doğrudan dışarı dönmez; DTO/GeoJSON sözleşmesi kullanılır.

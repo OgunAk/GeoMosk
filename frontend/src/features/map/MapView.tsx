@@ -84,7 +84,7 @@ const FACILITY_CLICK_ZOOM = 16
 declare global {
   interface Window {
     /** Uçtan uca testler ve tanılama için salt-okunur erişim (veri içermez, yalnızca harita örneği). */
-    __geoscopeMap?: MapLibreMap
+    __geomoskMap?: MapLibreMap
   }
 }
 
@@ -194,7 +194,7 @@ export function MapView(props: MapViewProps) {
     map.on('click', onClick)
     map.on('mousemove', onMove)
     mapRef.current = map
-    window.__geoscopeMap = map
+    window.__geomoskMap = map
     return () => {
       clearTimeout(viewTimer.id)
       map.off('moveend', onMoveEnd)
@@ -205,7 +205,7 @@ export function MapView(props: MapViewProps) {
       map.off('mousemove', onMove)
       map.remove()
       mapRef.current = null
-      if (window.__geoscopeMap === map) delete window.__geoscopeMap
+      if (window.__geomoskMap === map) delete window.__geomoskMap
     }
   }, [])
 

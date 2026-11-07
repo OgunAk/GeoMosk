@@ -4,17 +4,14 @@ Bursa'nın 17 ilçesi ve 911 sağlık tesisi üzerine bir Web CBS uygulaması. V
 Haritada katman ve altlık yönetimi, arama, öznitelik düzenleme, kullanıcı çizimleri ve beş mekânsal analiz sunar.
 Analizlerin hepsi backend'de PostGIS ile çalışır.
 
-![İlçe başına tesis sayısı (choropleth)](docs/screenshots/faz6-choropleth.jpg)
-
-> Kod içindeki adlar eski kod adı **GeoScope** ile kalır: `GeoScope.*` .NET projeleri, `geoscope` veritabanı, `GEOSCOPE_*`
-> ortam değişkenleri ve depo adresi ([ADR-0017](docs/DECISIONS.md)).
+![GeoMosk: ilçe başına sağlık tesisi sayısı (choropleth, gerçek veri)](docs/screenshots/geomosk-choropleth.jpg)
 
 ## Hızlı başlangıç
 Gerekli olan yalnız **Docker Desktop**'tır; .NET veya Node.js kurmanız gerekmez.
 
 ```bash
-git clone https://github.com/OgunAk/GeoScope.git
-cd GeoScope
+git clone https://github.com/OgunAk/GeoMosk.git
+cd GeoMosk
 docker compose up --build -d                       # db → migrate → api → web
 docker compose --profile tools run --rm import     # gerçek OSM verisini yükler
 ```
@@ -34,12 +31,12 @@ değiştirin.
 ## Giriş bilgileri
 - **Uygulama:** kullanıcı adı ya da parola yoktur. Uygulama kimlik doğrulamasızdır (ödevde istenmiyor) ve yalnız
   `127.0.0.1`'e bağlanır.
-- **Veritabanı** (yerel geliştirme varsayılanları, `localhost:5432`, veritabanı `geoscope`):
+- **Veritabanı** (yerel geliştirme varsayılanları, `localhost:5432`, veritabanı `geomosk`):
 
   | Rol | Kullanıcı / parola | Kullanım |
   |---|---|---|
-  | Şema sahibi | `geoscope` / `geoscope_dev` | Migration ve import |
-  | Uygulama | `geoscope_app` / `geoscope_app_dev` | API (kısıtlı yetki, superuser değil) |
+  | Şema sahibi | `geomosk` / `geomosk_dev` | Migration ve import |
+  | Uygulama | `geomosk_app` / `geomosk_app_dev` | API (kısıtlı yetki, superuser değil) |
 
 ## Özellikler
 - **Harita:** katmanlar açılıp kapatılır; iki altlık vardır (OSM Standart, OpenFreeMap Positron). Altlık değişince katmanlar,
@@ -60,6 +57,17 @@ değiştirin.
   | İlçe başına sayım | Her tesis tek ilçeye atanır; tablo + choropleth | Ortak sınırdaki tesis iki kez sayılmaz |
 
   Veri EPSG:4326'da saklanır; dereceyle metre hesabı yapılmaz. Doğruluk testleri gerçek PostGIS üzerinde koşar.
+
+## Performans (büyük veri)
+| Önlem | Ayrıntı |
+|---|---|
+| Mekânsal indeks | Her geometri kolonunda GiST; metre sorguları için `geom::geography` ifade indeksi |
+| bbox yükleme | Harita yalnız görünen alanın tesislerini ister (`ST_Intersects` + GiST); hareket bitince 250 ms bekler, eski isteği iptal eder |
+| Sayfalama | En çok 2000 kayıt; eksik sonuç `hasMore` ile bildirilir. Keyset (`after` → `meta.nextAfter`) derin sayfada da sabit maliyet |
+| Ad araması | Normalleştirilmiş ad üzerinde GIN trigram indeksi (`pg_trgm`) |
+
+10.000 tesiste ölçüm: tüm senaryolar p95 < 75 ms; ad araması 14,7 → 0,28 ms, 9.000. kayıttan sonraki sayfa 1,7 → 0,07 ms.
+Ayrıntı: [TEST-PLAN](docs/TEST-PLAN.md), [ADR-0016, ADR-0020](docs/DECISIONS.md).
 
 ## Teknolojiler
 | Bileşen | Sürüm |
@@ -102,8 +110,8 @@ SQL dump kullanılmaz. Ham veri ve onu yükleyen script repodadır (≈1 MB, ind
 ```bash
 docker compose up -d db migrate
 npm ci
-export GEOSCOPE_IMPORT_DATABASE_URL=postgres://geoscope:geoscope_dev@localhost:5432/geoscope
-# PowerShell: $env:GEOSCOPE_IMPORT_DATABASE_URL = "postgres://geoscope:geoscope_dev@localhost:5432/geoscope"
+export GEOMOSK_IMPORT_DATABASE_URL=postgres://geomosk:geomosk_dev@localhost:5432/geomosk
+# PowerShell: $env:GEOMOSK_IMPORT_DATABASE_URL = "postgres://geomosk:geomosk_dev@localhost:5432/geomosk"
 npm run import:load
 ```
 
@@ -114,7 +122,7 @@ kopya kayıt oluşmaz, yerel düzenlemeler korunur. Sonuç http://localhost:5080
 ## Elle geliştirme ve testler
 ```bash
 docker compose up -d db migrate
-dotnet run --project backend/GeoScope.Api          # http://localhost:5080
+dotnet run --project backend/GeoMosk.Api          # http://localhost:5080
 npm --prefix frontend ci
 npm --prefix frontend run dev                      # http://localhost:5173
 
@@ -132,12 +140,6 @@ Test sonuçları ve performans ölçümü: [TEST-PLAN](docs/TEST-PLAN.md).
    bir ilçe için "Ölçüm"; "İlçe başına tesis sayısı" → Hesapla.
 6. Hata durumu: kendini kesen bir alan kaydetmeyi deneyin (422 mesajı).
 
-## Bilinen kısıtlar
-- Mesafeler kuş uçuşudur; yol ağı kullanılmaz.
-- Çizim fare ya da dokunma ister; klavyeyle köşe eklenemez.
-- WMS katmanı dış servise bağlıdır; servis yanıt vermezse uyarı çıkar, diğer katmanlar çalışır.
-- .NET 9 desteği 10 Kasım 2026'da sona eriyor; .NET 9 ödevin tercihiydi.
-
 ## Geliştirme süreci ve yapay zekâ kullanımı
 Proje, geliştirici (OgunAk) yönetiminde **Claude Code** (Anthropic) yapay zekâ asistanıyla geliştirildi. Kapsam, mimari
 seçimler ve ürün kararları geliştiricinindir; kodun ve belgelerin büyük kısmını yapay zekâ yazdı. Commit'lerdeki
@@ -151,7 +153,7 @@ seçimler ve ürün kararları geliştiricinindir; kodun ve belgelerin büyük k
   | Yol | İçerik |
   |---|---|
   | `CLAUDE.md`, `.claude/` | Yapay zekâ asistanının proje talimatları, kuralları, ajan ve skill tanımları |
-  | `GEOSCOPE_MASTER_PROMPT.md` | Projenin başında yazılan kapsam ve kalite tanımı |
+  | `GEOMOSK_MASTER_PROMPT.md` | Projenin başında yazılan kapsam ve kalite tanımı |
   | `docs/REQUIREMENTS.md`, `PROGRESS.md`, `ROADMAP.md` | Gereksinim izlenebilirliği ve faz kayıtları |
   | `docs/FILE-MANIFEST.md`, `AI-TOOLS.md`, `DELIVERY-CHECKLIST.md` | Dosya envanteri, araç kurulumu, teslim kontrol listesi |
   | `scripts/validate-project.mjs`, `scripts/hooks/` | Faz kapısı ve dosya denetimi script'leri |
@@ -159,7 +161,7 @@ seçimler ve ürün kararları geliştiricinindir; kodun ve belgelerin büyük k
 ## Ödev teslim maddeleri
 | Madde | Bölüm |
 |---|---|
-| Proje GitHub'a yüklenir | https://github.com/OgunAk/GeoScope |
+| Proje GitHub'a yüklenir | https://github.com/OgunAk/GeoMosk |
 | Kurulum adımları | [Hızlı başlangıç](#hızlı-başlangıç) |
 | Kullanılan teknolojiler | [Teknolojiler](#teknolojiler) |
 | Veri kaynağı ve lisansı | [Veri kaynağı ve lisans](#veri-kaynağı-ve-lisans) |

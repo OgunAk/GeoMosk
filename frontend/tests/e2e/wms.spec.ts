@@ -8,11 +8,11 @@ const PNG_1X1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUl
 async function openApp(page: Page) {
   await page.goto('/')
   await expect(page.getByRole('checkbox', { name: /Sağlık tesisleri/ })).toBeVisible()
-  await page.waitForFunction(() => Boolean(window.__geoscopeMap?.getLayer('lyr-wms-corine')))
+  await page.waitForFunction(() => Boolean(window.__geomoskMap?.getLayer('lyr-wms-corine')))
 }
 
 const visibility = (page: Page) =>
-  page.evaluate(() => window.__geoscopeMap!.getLayoutProperty('lyr-wms-corine', 'visibility') as string)
+  page.evaluate(() => window.__geomoskMap!.getLayoutProperty('lyr-wms-corine', 'visibility') as string)
 
 test('WMS katmanı kapalı başlar, açılınca EPSG:3857 GetMap ister ve altlık değişiminde korunur', async ({ page }) => {
   const requests: URL[] = []
@@ -38,13 +38,13 @@ test('WMS katmanı kapalı başlar, açılınca EPSG:3857 GetMap ister ve altlı
   expect(bbox[0]).toBeGreaterThan(2_500_000)
   expect(bbox[3]).toBeGreaterThan(4_000_000)
   // Katman altlığın üstünde, veri katmanlarının altında.
-  const order = await page.evaluate(() => window.__geoscopeMap!.getStyle().layers.map((l) => l.id))
+  const order = await page.evaluate(() => window.__geomoskMap!.getStyle().layers.map((l) => l.id))
   expect(order.indexOf('lyr-wms-corine')).toBeLessThan(order.indexOf('lyr-districts-fill'))
   // Atıf haritada görünür.
   await expect(page.getByText(/Copernicus Land Monitoring Service/)).toBeVisible()
 
   await page.getByRole('radio', { name: /Positron/ }).check()
-  await expect.poll(() => page.evaluate(() => Boolean(window.__geoscopeMap!.getLayer('lyr-wms-corine'))), { timeout: 20_000 }).toBe(true)
+  await expect.poll(() => page.evaluate(() => Boolean(window.__geomoskMap!.getLayer('lyr-wms-corine'))), { timeout: 20_000 }).toBe(true)
   await expect.poll(() => visibility(page)).toBe('visible')
 
   await toggle.uncheck()
@@ -57,5 +57,5 @@ test('WMS servisi yanıt vermezse anlaşılır uyarı; diğer katmanlar çalış
   await page.getByRole('checkbox', { name: /CORINE 2018 \(WMS\)/ }).check()
   await expect(page.getByRole('alert').filter({ hasText: 'WMS servisi (CORINE) yanıt vermiyor' })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'Altlık karoları yüklenemedi' })).toHaveCount(0)
-  await expect.poll(() => page.evaluate(() => window.__geoscopeMap!.querySourceFeatures('src-districts').length)).toBeGreaterThan(0)
+  await expect.poll(() => page.evaluate(() => window.__geomoskMap!.querySourceFeatures('src-districts').length)).toBeGreaterThan(0)
 })

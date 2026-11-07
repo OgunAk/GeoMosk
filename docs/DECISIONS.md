@@ -28,7 +28,7 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 ## ADR-0006 — Veritabanı rolleri ve migration işi
 
 - **Durum:** Kabul (Faz 2).
-- **Karar:** API kısıtlı `geoscope_app` rolüyle çalışır (superuser değil; kaynak tablolarında yalnızca okuma). Migration, Compose'daki tek seferlik `migrate` servisiyle (EF migration bundle) şema sahibi rolüyle uygulanır; API açılışında migration çalışmaz. Böylece çok örnekli çalışmada migration yarışı olmaz. Import da şema sahibi rolünü kullanır.
+- **Karar:** API kısıtlı `geomosk_app` rolüyle çalışır (superuser değil; kaynak tablolarında yalnızca okuma). Migration, Compose'daki tek seferlik `migrate` servisiyle (EF migration bundle) şema sahibi rolüyle uygulanır; API açılışında migration çalışmaz. Böylece çok örnekli çalışmada migration yarışı olmaz. Import da şema sahibi rolünü kullanır.
 - **Sonuç:** Yeni volume'da rol init script'iyle oluşur. Var olan volume için tek komutluk elle adım belgelendi (`docs/DATABASE.md`).
 
 ## ADR-0007 — Altlıklar
@@ -41,8 +41,8 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 
 - **Durum:** Kabul (Faz 3).
 - **Bağlam:** Kullanıcılar "nilufer", "INEGOL", "cekirge" yazabilir. PostgreSQL `ILIKE`'ın Türkçe İ/ı eşlemesi veritabanı yereline bağlıdır.
-- **Karar:** `unaccent` uzantısı + `geoscope_search_normalize(text) = lower(unaccent('public.unaccent', x))` (IMMUTABLE, migration `SearchNormalization`). Önce aksan kaldırılır (İ→I, ı→i, ü→u, ş→s, ğ→g, ç→c, ö→o), sonra küçük harfe çevrilir. Sorgu ve veri aynı fonksiyondan geçer. LIKE özel karakterleri kaçışlanır.
-- **Sonuç:** Arama aksan duyarsızdır ("Ilgaz" ile "ılgaz" aynı sayılır). Bu Türkçe imla açısından kabul edilen bir genişlemedir. 911 satırda sıralı tarama yeterli; trigram/ifade indeksi ölçülen ihtiyaçla Faz 7'de değerlendirilecek.
+- **Karar:** `unaccent` uzantısı + `geomosk_search_normalize(text) = lower(unaccent('public.unaccent', x))` (IMMUTABLE, migration `SearchNormalization`). Önce aksan kaldırılır (İ→I, ı→i, ü→u, ş→s, ğ→g, ç→c, ö→o), sonra küçük harfe çevrilir. Sorgu ve veri aynı fonksiyondan geçer. LIKE özel karakterleri kaçışlanır.
+- **Sonuç:** Arama aksan duyarsızdır ("Ilgaz" ile "ılgaz" aynı sayılır). Bu Türkçe imla açısından kabul edilen bir genişlemedir. 911 satırda sıralı tarama yeterli; trigram indeksi 2026-11-08'de eklendi (ADR-0020).
 
 ## ADR-0009 — Kaynak kayıt düzenlemede eşzamanlılık
 
@@ -121,6 +121,41 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Sonuç:** Dış servise bağımlılık: E2E'de istekler yakalanıp fixture PNG ile yanıtlanır; gerçek servis elle doğrulanır.
   CORINE lejantı uygulamada yok (renk sınıfları EEA'nın CLC nomenklatürü).
 
+## ADR-0020 — Büyük veri için ad araması indeksi ve keyset sayfalama
+
+- **Durum:** Kabul (2026-11-08, geliştirici isteği: değerlendirme ölçütü "veri boyutu büyüdüğünde performans"; "Yes, add both").
+- **Bağlam:** Ad araması `geomosk_search_normalize(ad) LIKE '%q%'` her istekte tabloyu baştan sona tarıyordu (ADR-0008'de
+  "ölçülen ihtiyaçla değerlendirilecek" diye bırakılmıştı). Sayfalama yalnız `OFFSET` idi; derin sayfada atlanan satırlar yine taranır.
+- **Karar:**
+  - `pg_trgm` uzantısı ve aranan ifadeyle birebir aynı ifade üzerinde dört GIN trigram indeksi: `districts`, `district_overrides`,
+    `health_facilities`, `facility_overrides` (`20261107224118_SearchTrigramIndexes`).
+  - Görünen ad `yerel ad ?? kaynak adı` iki tabloya yayıldığı için tek `COALESCE` ifadesi indekslenemez. Sorgu iki dala ayrılır:
+    yerel adı olmayan kayıtlarda kaynak adı, yerel adı olanlarda override adı aranır; id'ler `UNION ALL` ile birleştirilip
+    `id IN (…)` ile süzülür. Sonuç kümesi öncekiyle aynıdır (mevcut arama testleri değişmeden geçer).
+  - Keyset sayfalama: `after=<id>` → `WHERE id > after ORDER BY id LIMIT n+1`; yanıt `meta.nextAfter` (yalnız `hasMore` iken).
+    `offset` geriye uyumluluk için kalır; ikisi birlikte 400. Kullanıcı çizimleri `createdAt` sırasıyla listelendiği için yalnız offset.
+- **Sonuç:** Arama ve derin sayfa maliyeti kayıt sayısıyla doğrusal büyümez. Kanıt: `MigrationTests` (indeksler var, arama ifadesi
+  trigram indeksine eşleşiyor), `SourceLayerApiTests` (keyset tüm kayıtları bir kez ve sırayla dolaşır; arama ile birleşir; hatalı
+  parametre 400), EXPLAIN kaydı `scripts/sql/search-keyset-plans.2026-11-08.txt`. 1–2 harflik aramada trigram seçici değildir;
+  planlayıcı sıralı taramayı seçebilir.
+
+## ADR-0019 — Tam yeniden adlandırma: GeoScope → GeoMosk
+
+- **Durum:** Kabul (2026-11-08, geliştirici isteği: "geoscope olan bütün isimlerin geomosk olarak güncellenmesini istiyorum").
+  ADR-0017'nin yerine geçer.
+- **Karar:** Eski kod adı GeoScope her yerde GeoMosk olur: `backend/GeoMosk.*` projeleri ve namespace'ler, `GeoMosk.sln`,
+  `GeoMoskDbContext`, `ConnectionStrings:GeoMosk`, `geomosk` veritabanı, `geomosk_app` rolü, `GEOMOSK_*` ortam değişkenleri,
+  `geomosk_search_normalize` SQL fonksiyonu, `window.__geomoskMap`, Compose proje adı `geomosk`, master prompt dosyası,
+  sentetik fixture metinleri (checksum'ları yeniden hesaplandı). GitHub deposu geliştirici tarafından `OgunAk/GeoMosk` yapılır.
+- **Migration'lar:** mevcut migration dosyalarındaki adlar (rol, fonksiyon) yerinde değiştirildi; yeni migration eklenmedi.
+  Gerekçe: bu migration'lar yalnız yerel geliştirme volume'larına ve geçici test veritabanlarına uygulandı, üretim ortamı yok.
+  İleri migration ile yeniden adlandırma, dosyalarda eski adı bırakır ve rol adı küme düzeyinde (init script) olduğu için
+  eski volume'u zaten tam taşıyamazdı.
+- **Sonuç:** Eski kurulum yeni koda yükseltilmez; temiz kurulum gerekir (`docker compose up --build -d` + import). Compose
+  proje adı değiştiği için yeni bir volume (`geomosk_geomosk-db`) oluşur. Eski `geoscope_geoscope-db` volume'u silinmez;
+  içindeki yerel çizim ve düzenlemeler yeni veritabanına taşınmaz. Bu tarihten önceki kayıtlarda (PROGRESS, DEVELOPER-REVIEW,
+  test sonuçları) geçen adlar o zaman GeoScope idi; belgeler bu kararla toplu güncellendi. Git commit geçmişi eski adları korur.
+
 ## ADR-0018 — API dokümantasyon arayüzü: Swagger UI
 
 - **Durum:** Kabul (2026-11-06, geliştirici isteği: "apiyi görüntülemek istiyorum" → "Evet, ekle").
@@ -140,17 +175,8 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 
 ## ADR-0017 — Proje adı: GeoMosk (görünen ad)
 
-- **Durum:** Kabul (2026-11-06, geliştirici isteği: "projemizin ismi GeoMosk olarak değişecek"; kapsam seçimi: "Görünen ad").
-- **Bağlam:** Proje GeoScope adıyla geliştirildi; ad kod, veritabanı, ortam değişkenleri ve depo adresinde geçiyor.
-- **Seçenekler:** (1) yalnız görünen ad; (2) görünen ad + kod adları (.NET projeleri, namespace, frontend tanımlayıcıları);
-  (3) tam yeniden adlandırma (veritabanı, roller, `GEOSCOPE_*` de dahil; mevcut volume ve kullanıcı çizimleri yeni DB'ye taşınmaz).
-- **Karar:** (1). Kullanıcının ve değerlendiricinin gördüğü yerler GeoMosk olur: arayüz başlığı ve sayfa başlığı, README,
-  belge başlıkları, OpenAPI başlığı (`GeoMosk API`), npm paket adı (`geomosk-frontend`), Overpass User-Agent, Claude ajan/skill açıklamaları.
-- **Değişmeyenler (kod adı GeoScope):** `backend/GeoScope.*` projeleri ve namespace'ler, `GeoScope.sln`, `GeoScopeDbContext`,
-  `ConnectionStrings:GeoScope`, `geoscope` veritabanı, `geoscope_app`/`geoscope_import` rolleri, `GEOSCOPE_*` değişkenleri,
-  `window.__geoscopeMap` (E2E kancası), migration'lar, sentetik fixture'lardaki `generator` alanı, master prompt dosyası.
-  GitHub depo adı ve yerel klasör adı geliştiricinin kararıdır; değiştirilirse README ve DELIVERY-CHECKLIST'teki adres güncellenir.
-- **Sonuç:** Mevcut veri, çizimler, `.env` ve CI değişmeden çalışır. Kod adı ile görünen ad farkı README ve CLAUDE.md başında belirtilir.
+- **Durum:** Yerini ADR-0019 aldı (2026-11-08). İlk karar 2026-11-06: yalnız görünen ad GeoMosk olacak, kod adı **GeoScope**
+  (.NET projeleri, veritabanı, roller, ortam değişkenleri) kalacaktı.
 
 ## ADR-0016 — Tesislerin görünen alana göre (bbox) yüklenmesi
 

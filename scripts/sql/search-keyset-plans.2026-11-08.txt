@@ -1,0 +1,78 @@
+Pager usage is off.
+      db      | facilities 
+--------------+------------
+ geomosk_perf |      10000
+(1 row)
+
+=== 1. Ad araması "devlet" (limit 50): trigram indeksiyle
+                                                                   QUERY PLAN                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.176..0.179 rows=18 loops=1)
+   ->  Sort (actual time=0.176..0.178 rows=18 loops=1)
+         Sort Key: h.id
+         Sort Method: quicksort  Memory: 25kB
+         ->  Nested Loop (actual time=0.140..0.158 rows=18 loops=1)
+               ->  Unique (actual time=0.129..0.133 rows=18 loops=1)
+                     ->  Sort (actual time=0.128..0.130 rows=18 loops=1)
+                           Sort Key: h0.id
+                           Sort Method: quicksort  Memory: 25kB
+                           ->  Append (actual time=0.084..0.124 rows=18 loops=1)
+                                 ->  Hash Left Join (actual time=0.084..0.122 rows=18 loops=1)
+                                       Hash Cond: (h0.id = f.facility_id)
+                                       Filter: ((f.facility_id IS NULL) OR (f.name IS NULL))
+                                       ->  Bitmap Heap Scan on health_facilities h0 (actual time=0.071..0.107 rows=18 loops=1)
+                                             Recheck Cond: (geomosk_search_normalize((name)::text) ~~ '%devlet%'::text)
+                                             Heap Blocks: exact=7
+                                             ->  Bitmap Index Scan on ix_health_facilities_name_trgm (actual time=0.028..0.028 rows=18 loops=1)
+                                                   Index Cond: (geomosk_search_normalize((name)::text) ~~ '%devlet%'::text)
+                                       ->  Hash (actual time=0.003..0.003 rows=0 loops=1)
+                                             Buckets: 1024  Batches: 1  Memory Usage: 8kB
+                                             ->  Seq Scan on facility_overrides f (actual time=0.003..0.003 rows=0 loops=1)
+                                 ->  Seq Scan on facility_overrides f0 (actual time=0.001..0.001 rows=0 loops=1)
+                                       Filter: ((name IS NOT NULL) AND (geomosk_search_normalize((name)::text) ~~ '%devlet%'::text))
+               ->  Index Scan using pk_health_facilities on health_facilities h (actual time=0.001..0.001 rows=1 loops=18)
+                     Index Cond: (id = h0.id)
+                     Filter: (source_deleted_at IS NULL)
+ Planning Time: 1.666 ms
+ Execution Time: 0.279 ms
+(28 rows)
+
+=== 2. Aynı arama, indeks kullanımı kapalı (karşılaştırma: önceki davranış = sıralı tarama)
+BEGIN
+SET
+SET
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Limit (actual time=14.649..14.653 rows=18 loops=1)
+   ->  Sort (actual time=14.647..14.649 rows=18 loops=1)
+         Sort Key: id
+         Sort Method: quicksort  Memory: 25kB
+         ->  Seq Scan on health_facilities h (actual time=1.634..14.636 rows=18 loops=1)
+               Filter: ((source_deleted_at IS NULL) AND (geomosk_search_normalize((name)::text) ~~ '%devlet%'::text))
+               Rows Removed by Filter: 9982
+ Planning Time: 0.626 ms
+ Execution Time: 14.676 ms
+(9 rows)
+
+ROLLBACK
+=== 3. Derin sayfa, OFFSET 9000 (limit 100)
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Limit (actual time=1.667..1.687 rows=101 loops=1)
+   ->  Index Scan using pk_health_facilities on health_facilities h (actual time=0.023..1.485 rows=9101 loops=1)
+         Filter: (source_deleted_at IS NULL)
+ Planning Time: 0.106 ms
+ Execution Time: 1.711 ms
+(5 rows)
+
+=== 4. Aynı sayfa, keyset after=9000 (limit 100)
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Limit (actual time=0.031..0.052 rows=101 loops=1)
+   ->  Index Scan using pk_health_facilities on health_facilities h (actual time=0.030..0.046 rows=101 loops=1)
+         Index Cond: (id > 9000)
+         Filter: (source_deleted_at IS NULL)
+ Planning Time: 0.279 ms
+ Execution Time: 0.068 ms
+(6 rows)
+

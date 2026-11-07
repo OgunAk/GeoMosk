@@ -22,14 +22,14 @@ Kurallar: `.claude/rules/testing.md`. Bu belge mevcut testleri ve komutları kay
 | `HealthEndpointTests.Ready_reports_postgis_version_when_database_is_available` | API + gerçek PostGIS | ready 200, PostGIS sürümü 3.5.x |
 | `…Ready_returns_503_without_leaking_connection_details…` | API | DB yokken 503, bağlantı ayrıntısı sızmıyor |
 | `…Live_is_healthy_even_when_database_is_unreachable` | API | live yalnız süreç |
-| `…OpenApi_document_is_served` | API | `/openapi/v1.json`; başlık "GeoMosk API", sabit `servers` yok (ADR-0017/0018) |
+| `…OpenApi_document_is_served` | API | `/openapi/v1.json`; başlık "GeoMosk API", sabit `servers` yok (ADR-0018) |
 | `…Swagger_ui_is_served_and_points_to_openapi_document` | API | `/swagger/index.html` 200, yapılandırma `/openapi/v1.json`'u gösterir (ADR-0018) |
 | `…Unknown_api_route_returns_problem_details` | API | 404 `application/problem+json` |
 | `LayerDependencyTests` (3) | Mimari | Katman referans yönleri |
 | `SystemStatus.test.tsx` (3) | Frontend | Hazır, 503 ve ağ hatası + tekrar dene durumları |
-| `MigrationTests` (13) — Faz 2 | Entegrasyon | Tekrar migration no-op; kolon typmod'ları (4326); GiST + geography indeksi; CHECK'lerin kendini kesen/Multi*/boş geometriyi ve yanlış SRID'yi reddi; Point/LineString/Polygon kabulü |
+| `MigrationTests` (19) — Faz 2, ADR-0020 | Entegrasyon | Tekrar migration no-op; kolon typmod'ları (4326); GiST + geography indeksi; dört GIN trigram indeksi ve arama ifadesinin trigram indeksine eşleşmesi; CHECK'lerin kendini kesen/Multi*/boş geometriyi ve yanlış SRID'yi reddi; Point/LineString/Polygon kabulü |
 | `ImportPipelineTests` (4) — Faz 2 | Entegrasyon (Node import + PostGIS) | Halka birleşimi + delik; delikteki nokta kapsanmaz; temsilî nokta alan içinde; tür eşleme; kalite raporu sayıları; idempotent tekrar import (updated_at değişmez); override korunur + silinen kayıt işaretlenir; bozuk checksum reddi ve veri değişmemesi |
-| `SourceLayerApiTests` (14) — Faz 2 | API + PostGIS | RFC 7946 şekli, `crs` yok, [boylam, enlem]; silinmiş kayıt dönmez; bbox gerçek kesişim (delikteki kutu ilçeyi döndürmez); sayfalama hasMore + stabil sıra; bbox/limit/offset doğrulama 400 + traceId; OpenAPI geometri şeması |
+| `SourceLayerApiTests` (20) — Faz 2, ADR-0020 | API + PostGIS | RFC 7946 şekli, `crs` yok, [boylam, enlem]; silinmiş kayıt dönmez; bbox gerçek kesişim (delikteki kutu ilçeyi döndürmez); sayfalama hasMore + stabil sıra; keyset (`after`/`nextAfter`) tüm kayıtları bir kez ve id sırasıyla dolaşır, arama ile birleşir; bbox/limit/offset/after doğrulama 400 + traceId; OpenAPI geometri şeması |
 | `LayerPanel.test.tsx` (5) — Faz 2-3 | Frontend | Sayılar + atıf; katman anahtarı; altlık seçimi; sayfa sınırı uyarısı; hata + tekrar dene |
 | `SourceFeatureDetailAndEditTests` (28) — Faz 3 | API + PostGIS | Katman kataloğu; tekil Feature + ETag + kaynak etiketleri; 404 (yok/silinmiş); Türkçe aksan/büyük harf duyarsız arama, `%`/`_` kaçışı; sınır dahil ilçe filtresi; tür/ilçe doğrulaması; PATCH null semantiği + kaynak adı korunur + aramada yerel ad; 412 eski sürüm; 428 If-Match yok; allowlist (geom/osmId), boş/uzun/yanlış tip; 404; 415; HTML metni düz metin |
 | `SearchPanel.test.tsx` (5) — Faz 3 | Frontend | Debounce (tek istek), sonuç + vurgu bildirimi, adsız tesis etiketi, seçim, tür/ilçe filtre sorgusu, sınır aşımı, ölçüt temizlenince vurgu kaldırma, sunucu doğrulama mesajı |
@@ -69,7 +69,7 @@ container'ında (aynı makine); API `dotnet run -c Release`, `ASPNETCORE_ENVIRON
 **Bütçe (master prompt §13 önerisi):** liste/arama p95 < 500 ms, temel analiz p95 < 1 s.
 
 ### 10.000 tesis (911 gerçek + 9.089 SENTETİK) + 17 gerçek ilçe
-Ayrı veritabanı `geoscope_perf`: migration + gerçek snapshot import + `scripts/perf/seed-synthetic.sql` (ilçe alanıyla orantılı,
+Ayrı veritabanı `geomosk_perf`: migration + gerçek snapshot import + `scripts/perf/seed-synthetic.sql` (ilçe alanıyla orantılı,
 tohumlu `ST_GeneratePoints`; `source = 'synthetic'`, ad "SENTETİK tesis N"). Uygulama veritabanına dokunulmadı.
 
 | Senaryo | Soğuk (ms) | p50 (ms) | p95 (ms) | p50 eşz. ×4 (ms) | p95 eşz. ×4 (ms) | Yanıt KB (gzip KB) |
@@ -89,7 +89,7 @@ tohumlu `ST_GeneratePoints`; `source = 'synthetic'`, ad "SENTETİK tesis N"). Uy
 `node scripts/perf/measure-bbox.mjs --runs 30`. Kutular uygulamanın mantığıyla hesaplandı (1366×820 px görünüm, Bursa merkezi, %50 pay).
 "ÖNCE" eski açılış isteğidir (tek seferlik). Ham sonuçlar `scripts/perf/results-bbox-*.2026-11-06.json`.
 
-**10.000 tesis (911 gerçek + 9.089 SENTETİK, ayrı `geoscope_perf`, Release API):**
+**10.000 tesis (911 gerçek + 9.089 SENTETİK, ayrı `geomosk_perf`, Release API):**
 
 | Senaryo | Dönen tesis | Eksik (hasMore) | Yanıt KB (gzip KB) | p50 (ms) | p95 (ms) |
 |---|---|---|---|---|---|
@@ -112,7 +112,7 @@ tohumlu `ST_GeneratePoints`; `source = 'synthetic'`, ad "SENTETİK tesis N"). Uy
 **Sonuç:** Gerçek veride kazanım yakın zoom'da (zoom 15'te veri 270 → 93 KB). 10.000 tesiste eski yöntem her zoom'da 8.000 tesisi
 eksik bırakıyordu; yeni yöntem zoom ≥ 13'te görünen alanı eksiksiz getiriyor, yakın zoom'da yanıt 602 → 107 KB.
 
-### Gerçek veri (911 tesis, 17 ilçe; `geoscope_app` rolü)
+### Gerçek veri (911 tesis, 17 ilçe; `geomosk_app` rolü)
 
 | Senaryo | Soğuk (ms) | p50 (ms) | p95 (ms) | p50 eşz. ×4 (ms) | p95 eşz. ×4 (ms) | Yanıt KB (gzip KB) |
 |---|---|---|---|---|---|---|
@@ -140,7 +140,7 @@ doğrusal büyüme varsayımıyla ~100.000 kayıtta ~200 ms — o ölçekte ADR-
 | 2026-11-04 | curl, compose API: 3 MiB PATCH gövdesi | 413 (önce 500 bulundu ve düzeltildi); nginx üzerinden de 413. TestServer bu sınırı uygulamadığı için otomatik test yok |
 | 2026-11-04 | Playwright CLI ekran görüntüsü (Positron + arama + detay) | `docs/screenshots/faz3-search-details.png`, konsol hatası 0 |
 
-| 2026-11-05 | Temiz kurulum (Faz 8): yeni `git clone` 029445b, Compose projesi `geoscope-clean`, yeni volume, portlar 55432/55080/58080, `.env` yok | `up --build` exit 0; ready 200; import 17/911, ikinci import değişiklik yok; E2E 22/22 üretim imajı (nginx); db+api restart sonrası çizim kalıcı. **Bulgu:** API restart sonrası nginx 502 (eski IP) → resolver düzeltmesi, tekrar E2E 22/22 |
+| 2026-11-05 | Temiz kurulum (Faz 8): yeni `git clone` 029445b, Compose projesi `geomosk-clean`, yeni volume, portlar 55432/55080/58080, `.env` yok | `up --build` exit 0; ready 200; import 17/911, ikinci import değişiklik yok; E2E 22/22 üretim imajı (nginx); db+api restart sonrası çizim kalıcı. **Bulgu:** API restart sonrası nginx 502 (eski IP) → resolver düzeltmesi, tekrar E2E 22/22 |
 | 2026-11-05 | Ekran görüntüleri (Playwright, üretim imajı) | `docs/screenshots/faz8-*.png`: tampon 2000 m (26 tesis), en yakın 5, Nilüfer ölçümü 524,42 km² (sferoid farkı −%0,021), dar ekran |
 
 | 2026-11-05 | Harici WMS (CORINE 2018, EEA) gerçek servisle, Vite + yerel API | Katman açılınca 15 GetMap isteği, hepsi HTTP 200, `SRS=EPSG:3857`, kaynak yüklendi, uyarı yok; `docs/screenshots/wms-corine-2018.png`. TUCBS milli parklar WMS: GetCapabilities/GetMap 500 "Policy Falsified" (kullanılmadı) |
@@ -149,6 +149,19 @@ Test verisi ayrımı: gerçek veri `data/samples/osm-bursa/`, sentetik fixture `
 
 E2E ortamı notu (Faz 4): Docker Desktop container ağı çalışmadığından Faz 4 E2E'leri `E2E_BASE_URL=http://127.0.0.1:5173` ile
 yerel `dotnet run` + Vite (aynı Compose PostGIS) üzerinde koşturuldu; üretim imajı (nginx) ile koşu CI'a kaldı.
+
+### Ad araması ve keyset sayfalama (2026-11-08, ADR-0020)
+`geomosk_perf` (911 gerçek + 9.089 SENTETİK tesis), API'nin EF Core ile ürettiği SQL, `EXPLAIN ANALYZE`
+(`scripts/sql/search-keyset-plans.sql` → `search-keyset-plans.2026-11-08.txt`):
+
+| Sorgu | Plan | Okunan satır | Süre |
+|---|---|---|---|
+| `q=devlet` (18 sonuç), indeks kapalı = önceki davranış | Seq Scan | 10.000 | 14,7 ms |
+| `q=devlet`, GIN trigram | Bitmap Index Scan `ix_health_facilities_name_trgm` | 18 | 0,28 ms |
+| 100 kayıt, `offset=9000` | Index Scan pk, 9.101 satır okunup 9.000'i atılır | 9.101 | 1,7 ms |
+| 100 kayıt, `after=9000` (keyset) | Index Scan pk, `id > 9000` | 101 | 0,07 ms |
+
+Tek makine, sıcak önbellek; süreler göreli karşılaştırma içindir. 1–2 harflik aramada trigram seçici değildir.
 
 ## Bilinen eksikler
 - CI: Faz 6 commit'i (6a85751) push ve pull_request çalışmaları yeşil (2026-11-05).

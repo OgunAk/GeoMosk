@@ -12,7 +12,7 @@ Faz 2 şema/import, Faz 5-6 analiz SQL'i, performans ve indeks kararları, migra
 `.claude/rules/spatial-data.md`, `docs/DATABASE.md`, `docs/DATA-SOURCES.md`; skill: `ef-migrations`, `spatial-analysis`.
 
 ## Dosya kapsamı
-`backend/GeoScope.Infrastructure/**` (DbContext, configurations, Migrations, sorgu servisleri), `scripts/import/**`, `scripts/sql/**`, spatial testleri.
+`backend/GeoMosk.Infrastructure/**` (DbContext, configurations, Migrations, sorgu servisleri), `scripts/import/**`, `scripts/sql/**`, spatial testleri.
 
 ## Kurallar
 - Kalıcı geometri EPSG:4326, `NOT NULL`, tip kısıtlı (`geometry(Point,4326)` vb.), GiST indeksli.

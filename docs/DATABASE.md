@@ -1,14 +1,14 @@
 # Veritabanı
 
 PostgreSQL 17 + PostGIS 3.5 (`postgis/postgis:17-3.5`). Şema yalnızca EF Core migration'larıyla yönetilir
-(`backend/GeoScope.Infrastructure/Persistence/Migrations`); `EnsureCreated` kullanılmaz. Adlandırma snake_case
+(`backend/GeoMosk.Infrastructure/Persistence/Migrations`); `EnsureCreated` kullanılmaz. Adlandırma snake_case
 (EFCore.NamingConventions 9.0.0). Zaman damgaları `timestamptz`, UTC.
 
 ## Roller
 | Rol | Kullanan | Yetki |
 |---|---|---|
-| `POSTGRES_USER` (varsayılan `geoscope`) | `migrate` işi, import | Şema sahibi. postgis image'ında superuser'dır; yalnızca kurulum/migration/import için kullanılır |
-| `geoscope_app` | API (`api` servisi) | `NOSUPERUSER NOCREATEDB NOCREATEROLE`. Tüm tablolarda SELECT; INSERT/UPDATE/DELETE yalnızca `district_overrides`, `facility_overrides`, `user_features` |
+| `POSTGRES_USER` (varsayılan `geomosk`) | `migrate` işi, import | Şema sahibi. postgis image'ında superuser'dır; yalnızca kurulum/migration/import için kullanılır |
+| `geomosk_app` | API (`api` servisi) | `NOSUPERUSER NOCREATEDB NOCREATEROLE`. Tüm tablolarda SELECT; INSERT/UPDATE/DELETE yalnızca `district_overrides`, `facility_overrides`, `user_features` |
 
 - Rol oluşturma: `docker/db/sql/app-role.sql`. Yeni volume'da `docker/db/initdb/10-app-role.sh` otomatik çalışır; var olan volume için:
   `docker compose exec db sh /docker-entrypoint-initdb.d/10-app-role.sh`. Script tekrar çalıştırılabilir.
@@ -32,7 +32,8 @@ PostgreSQL 17 + PostGIS 3.5 (`postgis/postgis:17-3.5`). Şema yalnızca EF Core 
 | created_at / updated_at | timestamptz | hayır | default now() |
 | source_deleted_at | timestamptz | evet | kaynakta artık yoksa |
 
-Unique: `(source, source_object_type, source_id)`. İndeks: `ix_districts_geom` GiST.
+Unique: `(source, source_object_type, source_id)`. İndeksler: `ix_districts_geom` GiST, `ix_districts_name_trgm` GIN trigram
+(`geomosk_search_normalize(name)`; ad araması, ADR-0020). `district_overrides.name` için `ix_district_overrides_name_trgm`.
 
 ### `health_facilities` — sağlık tesisleri (kaynak verisi)
 `districts` ile aynı kaynak/zaman kolonları ve ayrıca:
@@ -43,7 +44,8 @@ Unique: `(source, source_object_type, source_id)`. İndeks: `ix_districts_geom` 
 | geom | geometry(Point,4326) | hayır | way/relation için ST_PointOnSurface; CHECK `NOT ST_IsEmpty` |
 | source_geometry | geometry(Geometry,4326) | evet | way/relation'ın özgün şekli; CHECK SRID 4326 |
 
-İndeksler: `ix_health_facilities_geom` GiST, `ix_health_facilities_geog` GiST **`((geom::geography))`** (buffer/nearest sorgularında `geom::geography` ifadesiyle eşleşir), `ix_health_facilities_facility_type` B-tree, unique kaynak anahtarı.
+İndeksler: `ix_health_facilities_geom` GiST, `ix_health_facilities_geog` GiST **`((geom::geography))`** (buffer/nearest sorgularında `geom::geography` ifadesiyle eşleşir), `ix_health_facilities_facility_type` B-tree, `ix_health_facilities_name_trgm` GIN trigram (ad araması; `facility_overrides` için
+`ix_facility_overrides_name_trgm`), unique kaynak anahtarı.
 
 ### `district_overrides`, `facility_overrides` — yerel sözel düzenleme
 | Kolon | Tip | Not |
@@ -78,13 +80,14 @@ quality_report (jsonb). İndeks `(dataset, started_at)`. Başarısız denemeler 
 | Migration | İçerik | Down etkisi |
 |---|---|---|
 | `20261104171011_InitialSchema` | Tüm tablolar, CHECK'ler, GiST + geography indeksi | Tabloları siler (veri kaybı) |
-| `20261104172500_AppRoleWriteGrants` | `geoscope_app` varsa yazma izinleri | İzinleri geri alır |
-| `20261104183939_SearchNormalization` | `CREATE EXTENSION unaccent`; `public.geoscope_search_normalize(text)` (IMMUTABLE, `lower(unaccent(...))`) | Fonksiyonu siler (uzantı kalır) |
+| `20261104172500_AppRoleWriteGrants` | `geomosk_app` varsa yazma izinleri | İzinleri geri alır |
+| `20261104183939_SearchNormalization` | `CREATE EXTENSION unaccent`; `public.geomosk_search_normalize(text)` (IMMUTABLE, `lower(unaccent(...))`) | Fonksiyonu siler (uzantı kalır) |
+| `20261107224118_SearchTrigramIndexes` | `CREATE EXTENSION pg_trgm`; dört GIN trigram indeksi (`districts`, `district_overrides`, `health_facilities`, `facility_overrides`) | İndeksleri siler (veri kaybı yok) |
 
 Uygulama: `docker compose up` sırasında `migrate` servisi (EF migration bundle, şema sahibi rolü). Elle:
-`dotnet tool run dotnet-ef database update --project backend/GeoScope.Infrastructure --startup-project backend/GeoScope.Infrastructure`
-(`GEOSCOPE_MIGRATION_CONNECTION` ortam değişkeniyle).
+`dotnet tool run dotnet-ef database update --project backend/GeoMosk.Infrastructure --startup-project backend/GeoMosk.Infrastructure`
+(`GEOMOSK_MIGRATION_CONNECTION` ortam değişkeniyle).
 
 ## Doğrulama
-`MigrationTests`: tekrar uygulama (no-op), kolon typmod'ları, GiST/geography indeksleri, CHECK'lerin geçersiz/kendini kesen/Multi*/boş geometriyi ve yanlış SRID'yi reddetmesi, Point/LineString/Polygon'un kabulü.
+`MigrationTests`: tekrar uygulama (no-op), kolon typmod'ları, GiST/geography/trigram indeksleri, arama ifadesinin trigram indeksine eşleşmesi, CHECK'lerin geçersiz/kendini kesen/Multi*/boş geometriyi ve yanlış SRID'yi reddetmesi, Point/LineString/Polygon'un kabulü.
 Sorgu planı (EXPLAIN) ölçümleri ilgili analiz fazlarında `scripts/sql/` altına kaydedilecek.
