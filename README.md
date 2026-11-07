@@ -141,9 +141,8 @@ Test sonuçları ve performans ölçümü: [TEST-PLAN](docs/TEST-PLAN.md).
 6. Hata durumu: kendini kesen bir alan kaydetmeyi deneyin (422 mesajı).
 
 ## Geliştirme süreci ve yapay zekâ kullanımı
-Proje, geliştirici (OgunAk) yönetiminde **Claude Code** (Anthropic) yapay zekâ asistanıyla geliştirildi. Kapsam, mimari
-seçimler ve ürün kararları geliştiricinindir; kodun ve belgelerin büyük kısmını yapay zekâ yazdı. Commit'lerdeki
-`Co-Authored-By: Claude` satırları bunu gösterir.
+Proje, geliştirici (Ogün Ak) yönetiminde **Claude Code** (Anthropic) yapay zekâ asistanıyla geliştirildi. Kapsam, mimari
+seçimler ve ürün kararları geliştiricinindir; kodun büyük kısmını yapay zekâ yazdı.
 
 - **Geliştiricinin kendi incelemesi:** manuel demo sonuçları ve teknik sorulara verdiği yanıtlar, yapay zekâ açıklamalarından
   ayrı sütunda: [DEVELOPER-REVIEW](docs/DEVELOPER-REVIEW.md).
