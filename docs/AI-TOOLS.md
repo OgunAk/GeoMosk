@@ -24,7 +24,7 @@ Uygulama kodu henüz yok: LSP'nin gerçek GeoMosk dosyalarında Claude içinden 
 2. `cd C:\Users\OG\Desktop\GeoMosk` ardından `claude` çalıştır.
 3. `/plugin` ile Context7, csharp-lsp ve typescript-lsp durumunu kontrol et.
 4. `/mcp` içinde Context7'yi seç; giriş/kimlik doğrulama akışını tarayıcıda kendin tamamla. Sonra bağlantıyı yeniden kontrol et.
-5. `GEOMOSK_MASTER_PROMPT.md` ve önceki konuşmanın ödev PDF'si (`ODEV_WEB_CBS.pdf`) proje klasörüne kopyalandı. Master promptu ve PDF'yi okuyup Faz 0'ı uygulamasını iste.
+5. `GEOMOSK_MASTER_PROMPT.md` (2026-11-08'den beri depoda değil, yalnız yerelde) ve önceki konuşmanın ödev PDF'si (`ODEV_WEB_CBS.pdf`) proje klasörüne kopyalandı. Master promptu ve PDF'yi okuyup Faz 0'ı uygulamasını iste.
 
 ## Düşük maliyetli kullanım
 
