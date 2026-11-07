@@ -51,18 +51,20 @@ denemesi yerine geçmez. "Geliştirici sonucu" ve "Geliştirici notu" sütunlar�
 
 | # | Demo adımı (README) | Otomatik kanıt (AI) | Geliştirici sonucu | Geliştirici notu |
 |---|---|---|---|---|
-| 1 | Temiz kurulum + import, harita gerçek veriyle açılır | Faz 8 temiz kurulum: yeni clone, ayrı Compose projesi, import 17/911, ikinci import değişiklik yok (PROGRESS Faz 8); E2E `harita gerçek veriyle iki katmanı gösterir` | geliştirici incelemesi bekliyor | — |
-| 2 | Katman aç/kapa, altlık değişimi | E2E `katman aç/kapa ve altlık değişiminde katmanlar ve durum korunur`, `tesis türü filtresi … altlık değişiminde korunur` | geliştirici incelemesi bekliyor | — |
-| 3 | İlçe/tesise tıklama, arama, vurgu, zoom | E2E `haritada tesise tıklayınca öznitelikler yan panelde görünür`, `Türkçe aksansız arama sonucu vurgular, seçer ve objeye zoom yapar` | geliştirici incelemesi bekliyor | — |
-| 4 | Yerel açıklama yenilemede korunur, import ezmez | E2E `yerel açıklama kaydedilir, yenilemede korunur ve geri alınır`; API testi `Source_update_keeps_local_overrides_and_marks_removed_records` | geliştirici incelemesi bekliyor | — |
-| 5 | Nokta/çizgi/alan çiz, kaydet, düzenle, sil | E2E `nokta çizilir, kaydedilir, yenilemede korunur ve onayla silinir`, `çizgi ve alan çizilir; alanın adı ve geometrisi düzenlenir` | geliştirici incelemesi bekliyor | — |
-| 6 | Alan içindekiler (Nilüfer) | E2E `ilçe içindeki tesisler, aynı politikadaki API filtresiyle aynı sayıyı verir` (Nilüfer 120) | geliştirici incelemesi bekliyor | — |
-| 7 | Tampon 2000 m | E2E `tesis çevresinde 2000 m tampon …`; ekran görüntüsü `faz8-tampon-2000m.png` (26 tesis) | geliştirici incelemesi bekliyor | — |
-| 8 | En yakın 5 | E2E `haritada tıklanan noktaya en yakın 5 tesis artan mesafeyle listelenir`; `faz8-en-yakin-5.png` | geliştirici incelemesi bekliyor | — |
-| 9 | Ölçüm + ilçe sayımı/choropleth | E2E `A04: ilçe alanı UTM 35N ile ölçülür …`, `A05: ilçe başına tesis sayısı tabloda ve haritada …`; `faz8-olcum-nilufer.png` (524,42 km²) | geliştirici incelemesi bekliyor | — |
-| 10 | Hata senaryosu | E2E `sunucu hatasında taslak ve form korunur …`, `altlık karo servisi erişilemezse anlaşılır uyarı …`; API testleri: kendini kesen alan 422, nokta ölçümü 422 | geliştirici incelemesi bekliyor | — |
+| 1 | Temiz kurulum + import, harita gerçek veriyle açılır | Faz 8 temiz kurulum: yeni clone, ayrı Compose projesi, import 17/911, ikinci import değişiklik yok (PROGRESS Faz 8); E2E `harita gerçek veriyle iki katmanı gösterir` | **Yapıldı** | — |
+| 2 | Katman aç/kapa, altlık değişimi | E2E `katman aç/kapa ve altlık değişiminde katmanlar ve durum korunur`, `tesis türü filtresi … altlık değişiminde korunur` | **Yapıldı** | — |
+| 3 | İlçe/tesise tıklama, arama, vurgu, zoom | E2E `haritada tesise tıklayınca öznitelikler yan panelde görünür`, `Türkçe aksansız arama sonucu vurgular, seçer ve objeye zoom yapar` | **Kısmen** | Geliştirici: "zoom çift tıkladıkça yapılıyor, tek zoomda yakınlaşması gerek". Geliştirici seçimi: "Yalnız tesislerde yaklaşsın" → AI uyguladı: haritada tesise tek tıklama zoom 16'ya yaklaştırır (daha yakındaysa uzaklaşmaz), ilçe tıklaması kamerayı oynatmaz; E2E `tesise tek tıklayınca harita tesise yaklaşır …` (2026-11-06). Geliştiricinin yeniden denemesi bekliyor |
+| 4 | Yerel açıklama yenilemede korunur, import ezmez | E2E `yerel açıklama kaydedilir, yenilemede korunur ve geri alınır`; API testi `Source_update_keeps_local_overrides_and_marks_removed_records` | **Yapıldı** | — |
+| 5 | Nokta/çizgi/alan çiz, kaydet, düzenle, sil | E2E `nokta çizilir, kaydedilir, yenilemede korunur ve onayla silinir`, `çizgi ve alan çizilir; alanın adı ve geometrisi düzenlenir` | **Yapıldı** | — |
+| 6 | Alan içindekiler (Nilüfer) | E2E `ilçe içindeki tesisler, aynı politikadaki API filtresiyle aynı sayıyı verir` (Nilüfer 120) | **Yapıldı** | — |
+| 7 | Tampon 2000 m | E2E `tesis çevresinde 2000 m tampon …`; ekran görüntüsü `faz8-tampon-2000m.png` (26 tesis) | **Yapıldı** | — |
+| 8 | En yakın 5 | E2E `haritada tıklanan noktaya en yakın 5 tesis artan mesafeyle listelenir`; `faz8-en-yakin-5.png` | **Yapıldı** | — |
+| 9 | Ölçüm + ilçe sayımı/choropleth | E2E `A04: ilçe alanı UTM 35N ile ölçülür …`, `A05: ilçe başına tesis sayısı tabloda ve haritada …`; `faz8-olcum-nilufer.png` (524,42 km²) | **Yapıldı** | — |
+| 10 | Hata senaryosu | E2E `sunucu hatasında taslak ve form korunur …`, `altlık karo servisi erişilemezse anlaşılır uyarı …`; API testleri: kendini kesen alan 422, nokta ölçümü 422 | **Yapıldı** | — |
 
-Manuel demo: geliştirici 2026-11-05'te "henüz denemedim" dedi; sonuç sütunları bekliyor.
+Manuel demo: geliştirici 2026-11-06'da README'deki 10 adımı denedi (yeni clone, `GeoMosk-demo` klasörü). `docker-compose.yml` proje adını
+`name: geoscope` ile sabitlediği için demo mevcut `geoscope_geoscope-db` volume'unu kullandı; yani geliştirici boş volume'dan kurulum
+yapmadı (boş volume kurulumu Faz 8'de AI tarafından ayrı proje adıyla doğrulandı). Import idempotent olduğu için veri değişmedi. sonuçlar geliştiricinin sohbetteki yanıtından aynen aktarıldı (ekran görüntüleri: tampon, en yakın N, Nilüfer ölçümü 524,42 km²). 3. adımdaki zoom notu ayrıca ele alınıyor.
 
 **Teslim kapsamı kararları:**
 

@@ -78,6 +78,8 @@ interface MapViewProps {
 }
 
 const HIT_TOLERANCE_PX = 5
+/** Haritada tesise tek tıklayınca yaklaşılan zoom (arama sonucuna zoom'un maxZoom'uyla aynı). Daha yakındaysa uzaklaşılmaz. */
+const FACILITY_CLICK_ZOOM = 16
 
 declare global {
   interface Window {
@@ -162,6 +164,11 @@ export function MapView(props: MapViewProps) {
       const id = layer === 'user-features' ? (hit.properties.featureId as string) : hit.id
       if (id === undefined) return
       onSelectRef.current({ layer, id: layer === 'user-features' ? String(id) : Number(id) })
+      // Geliştirici demosu (2026-11-06): tesise tek tıklama yaklaştırır. İlçe tıklaması haritayı oynatmaz (analiz için seçim).
+      if (layer === 'facilities' && hit.geometry.type === 'Point') {
+        const [lng, lat] = hit.geometry.coordinates
+        map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), FACILITY_CLICK_ZOOM), duration: 600 })
+      }
     }
     const onMove = (e: MapMouseEvent) => {
       if (drawingRef.current) return
