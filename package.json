@@ -1,5 +1,5 @@
 {
-  "name": "geoscope-tooling",
+  "name": "geomosk-tooling",
   "private": true,
   "description": "GeoMosk kök araç script'leri (Claude Code altyapı doğrulama, faz doğrulama, hook testleri). Uygulama paketleri backend/ ve frontend/ altında ayrıdır.",
   "type": "module",

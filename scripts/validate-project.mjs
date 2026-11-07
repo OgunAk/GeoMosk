@@ -33,7 +33,7 @@ const PHASES = [
     phase: 1,
     title: 'Çalışan iskelet',
     files: ['global.json', 'docker-compose.yml', '.env.example', 'frontend/package.json', 'frontend/package-lock.json', '.github/workflows'],
-    anyOf: [['backend/GeoScope.sln', 'backend/GeoScope.slnx']],
+    anyOf: [['backend/GeoMosk.sln', 'backend/GeoMosk.slnx']],
     commands: [
       { name: 'dotnet build', cmd: 'dotnet', args: ['build', 'backend', '--nologo', '-v', 'q'] },
       { name: 'dotnet test', cmd: 'dotnet', args: ['test', 'backend', '--nologo', '-v', 'q'] },
@@ -50,7 +50,7 @@ const PHASES = [
     files: [
       'docs/DATA-SOURCES.md', 'docs/DATABASE.md', 'docs/API-CONTRACT.md',
       'scripts/import/fetch-osm.mjs', 'scripts/import/load-osm.mjs', 'data/raw/osm-bursa.manifest.json',
-      'data/test-fixtures/osm-mini/v1/manifest.json', 'backend/GeoScope.Infrastructure/Persistence/Migrations',
+      'data/test-fixtures/osm-mini/v1/manifest.json', 'backend/GeoMosk.Infrastructure/Persistence/Migrations',
       'docker/db/sql/app-role.sql', 'frontend/src/features/map/MapView.tsx',
     ],
     checks: [checkSampleSnapshot],
@@ -71,7 +71,7 @@ const PHASES = [
     phase: 6,
     title: 'Güçlü teslim analizleri',
     files: [
-      'backend/GeoScope.Tests/Analysis/MeasureAndDistrictStatsApiTests.cs', 'backend/GeoScope.Tests/Analysis/TransverseMercatorReference.cs',
+      'backend/GeoMosk.Tests/Analysis/MeasureAndDistrictStatsApiTests.cs', 'backend/GeoMosk.Tests/Analysis/TransverseMercatorReference.cs',
       'frontend/src/features/analysis/DistrictStatsPanel.tsx', 'frontend/src/features/analysis/choropleth.ts',
     ],
   },

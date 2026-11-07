@@ -12,7 +12,7 @@ Her faz sonu kabul kapısı, analiz doğruluk testleri, altlık değişimi regre
 `.claude/rules/testing.md`, `docs/REQUIREMENTS.md` (kabul testi sütunu), `docs/TEST-PLAN.md` (Faz 1'de oluşur), `docs/PROGRESS.md`; skill: `project-validation`, `playwright-cli`.
 
 ## Dosya kapsamı
-`backend/GeoScope.Tests/**`, `frontend/tests/**`, `data/test-fixtures/**`, `scripts/validate-project.mjs` faz kontrolleri.
+`backend/GeoMosk.Tests/**`, `frontend/tests/**`, `data/test-fixtures/**`, `scripts/validate-project.mjs` faz kontrolleri.
 
 ## Kurallar
 - Beklenen değeri uygulamanın aynı formülünden türetme; bağımsız referans (bilinen mesafe, elle hesaplanmış alan) kullan; toleransı testten önce gerekçelendir.

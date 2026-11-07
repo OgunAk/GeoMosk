@@ -17,7 +17,6 @@
     { "path": ".claude/skills/geojson-validation/SKILL.md", "kind": "skill" },
     { "path": ".claude/skills/project-validation/SKILL.md", "kind": "skill" },
     { "path": ".claude/skills/playwright-cli/SKILL.md", "kind": "skill", "preexisting": true },
-    { "path": ".claude/skills/graphify/SKILL.md", "kind": "skill", "preexisting": true, "requireFrontmatter": { "disable-model-invocation": true } },
     { "path": ".claude/rules/architecture.md", "kind": "rule" },
     { "path": ".claude/rules/coding-standards.md", "kind": "rule" },
     { "path": ".claude/rules/spatial-data.md", "kind": "rule" },

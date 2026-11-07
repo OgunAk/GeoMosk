@@ -13,13 +13,13 @@ const facilityRequests = (page: Page) => {
 
 const loadedFacilities = (page: Page) =>
   page.evaluate(() => {
-    const data = window.__geoscopeMap!.getSource('src-facilities')?.serialize().data as { features?: unknown[] } | undefined
+    const data = window.__geomoskMap!.getSource('src-facilities')?.serialize().data as { features?: unknown[] } | undefined
     return data?.features?.length ?? -1
   })
 
 async function settle(page: Page) {
   await page.waitForTimeout(600) // VIEW_DEBOUNCE_MS (250) + istek
-  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
+  await page.waitForFunction(() => window.__geomoskMap!.loaded())
 }
 
 test('tesisler görünen kutuyla istenir; kutu içi kaydırma yeni istek atmaz, dışına çıkınca yeni kutu istenir', async ({ page }) => {
@@ -39,13 +39,13 @@ test('tesisler görünen kutuyla istenir; kutu içi kaydırma yeni istek atmaz, 
   await expect(page.getByText(/görünen alana göre \(bbox\) yüklenir/)).toBeVisible()
 
   // Kutunun içinde yakınlaşma: sınır aşılmadığı için yeni istek yok.
-  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [29.06, 40.19], zoom: 12 }))
+  await page.evaluate(() => window.__geomoskMap!.jumpTo({ center: [29.06, 40.19], zoom: 12 }))
   await settle(page)
   expect(requests).toHaveLength(1)
 
   // Açılış kutusu (zoom 8 görünümü + %50 pay) ≈ 10° genişliğinde; içinde kalan her hareket mevcut veriyle karşılanır.
   // Kutunun dışına çıkınca (doğuda, Bursa dışı, zoom 13) yeni ve çok daha küçük kutu istenir; orada tesis yok.
-  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [36.5, 39.0], zoom: 13 }))
+  await page.evaluate(() => window.__geomoskMap!.jumpTo({ center: [36.5, 39.0], zoom: 13 }))
   await settle(page)
   await expect.poll(() => requests.length).toBe(2)
   const second = requests[1].searchParams.get('bbox')!.split(',').map(Number)
@@ -53,7 +53,7 @@ test('tesisler görünen kutuyla istenir; kutu içi kaydırma yeni istek atmaz, 
   await expect.poll(() => loadedFacilities(page)).toBe(0)
 
   // Bursa merkezine zoom 13'te dönünce yalnız o çevrenin tesisleri gelir (911'den az, sıfırdan çok).
-  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [29.06, 40.19], zoom: 13 }))
+  await page.evaluate(() => window.__geomoskMap!.jumpTo({ center: [29.06, 40.19], zoom: 13 }))
   await settle(page)
   await expect.poll(() => requests.length).toBe(3)
   await expect.poll(() => loadedFacilities(page)).toBeGreaterThan(0)

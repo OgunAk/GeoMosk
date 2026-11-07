@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeoMosk.Domain\GeoMosk.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

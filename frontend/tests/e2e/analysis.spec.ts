@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test'
 async function openApp(page: Page) {
   await page.goto('/')
   await expect(page.getByRole('checkbox', { name: /Sağlık tesisleri/ })).toBeVisible()
-  await page.waitForFunction(() => Boolean(window.__geoscopeMap?.getLayer('lyr-analysis-fill')))
+  await page.waitForFunction(() => Boolean(window.__geomoskMap?.getLayer('lyr-analysis-fill')))
 }
 
 async function searchAndPick(page: Page, layer: 'districts' | 'facilities', q: string, name: string | RegExp) {
@@ -59,7 +59,7 @@ test('ilçe içindeki tesisler, aynı politikadaki API filtresiyle aynı sayıy�
   expect(uiCount).toBeGreaterThan(0)
   expect(uiCount).toBe(apiCount)
   // Girdi alanı haritada çizilir.
-  expect(await page.evaluate(() => window.__geoscopeMap!.querySourceFeatures('src-analysis').length)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => window.__geomoskMap!.querySourceFeatures('src-analysis').length)).toBeGreaterThan(0)
 })
 
 test('başka bir ilçe seçilince eski analiz sonucu kaybolur; sonuç listesinden seçim sonucu korur', async ({ page }) => {
@@ -74,8 +74,8 @@ test('başka bir ilçe seçilince eski analiz sonucu kaybolur; sonuç listesinde
   await expect(results).toBeVisible()
 
   // Haritada başka bir ilçeye (Mudanya, boş bir noktası) tıkla: eski sonuç kaybolmalı.
-  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [28.86, 40.30], zoom: 11 }))
-  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
+  await page.evaluate(() => window.__geomoskMap!.jumpTo({ center: [28.86, 40.30], zoom: 11 }))
+  await page.waitForFunction(() => window.__geomoskMap!.loaded())
   const box = (await page.getByTestId('map').boundingBox())!
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
 
@@ -108,7 +108,7 @@ test('tesis çevresinde 2000 m tampon: tampon çizilir, tüm mesafeler sınır i
 
 test('haritada tıklanan noktaya en yakın 5 tesis artan mesafeyle listelenir', async ({ page }) => {
   await openApp(page)
-  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [29.06, 40.19], zoom: 13 }))
+  await page.evaluate(() => window.__geomoskMap!.jumpTo({ center: [29.06, 40.19], zoom: 13 }))
   await analysis(page).getByRole('radio', { name: 'En yakın N' }).check()
   await analysis(page).getByRole('button', { name: 'Haritada nokta seç' }).click()
   const box = (await page.getByTestId('map').boundingBox())!
@@ -121,7 +121,7 @@ test('haritada tıklanan noktaya en yakın 5 tesis artan mesafeyle listelenir', 
   const items = await resultNames(page).allTextContents()
   expect(items.map((t) => t.trim().split('.')[0])).toEqual(['1', '2', '3', '4', '5'])
   // Kuş uçuşu bağlantılar: 1 nokta + 5 çizgi.
-  const features = await page.evaluate(() => window.__geoscopeMap!.getSource('src-analysis')!.serialize())
+  const features = await page.evaluate(() => window.__geomoskMap!.getSource('src-analysis')!.serialize())
   expect(JSON.stringify(features)).toContain('connector')
 
   await analysis(page).getByRole('button', { name: 'Temizle' }).click()
@@ -131,7 +131,7 @@ test('haritada tıklanan noktaya en yakın 5 tesis artan mesafeyle listelenir', 
 test('analiz için çizilen alan kullanıcı katmanına kaydedilmez', async ({ page }) => {
   await openApp(page)
   const before = await page.evaluate(async () => ((await fetch('/api/features').then((r) => r.json())) as { features: unknown[] }).features.length)
-  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [29.06, 40.19], zoom: 13 }))
+  await page.evaluate(() => window.__geomoskMap!.jumpTo({ center: [29.06, 40.19], zoom: 13 }))
 
   await analysis(page).getByRole('radio', { name: /Çizilen alan/ }).check()
   await analysis(page).getByRole('button', { name: 'Haritada alan çiz' }).click()
@@ -203,7 +203,7 @@ test('A05: ilçe başına tesis sayısı tabloda ve haritada; toplamlar çifte s
   // Choropleth katmanı her ilçeyi boyar ve altlık değişiminden sonra da kalır.
   const painted = () =>
     page.evaluate(() => {
-      const map = window.__geoscopeMap!
+      const map = window.__geomoskMap!
       // Altlık değişirken stil yeniden kurulur; katman henüz yoksa -1 (poll tekrar dener).
       if (!map.isStyleLoaded() || !map.getLayer('lyr-districts-choropleth')) return -1
       const filter = map.getFilter('lyr-districts-choropleth') as unknown as [string, unknown, [string, number[]]]
@@ -213,7 +213,7 @@ test('A05: ilçe başına tesis sayısı tabloda ve haritada; toplamlar çifte s
   await page.getByRole('radio', { name: /Positron/ }).check()
   await expect.poll(painted).toBe(stats.districts.length)
   // Altlık değişiminden sonra çizim sırası korunur: kaynak < analiz < kullanıcı < Terra Draw taslağı (kod incelemesi bulgusu 1).
-  const order = await page.evaluate(() => window.__geoscopeMap!.getStyle().layers.map((l) => l.id))
+  const order = await page.evaluate(() => window.__geomoskMap!.getStyle().layers.map((l) => l.id))
   const at = (id: string) => order.indexOf(id)
   expect(at('lyr-districts-choropleth')).toBeGreaterThan(-1)
   expect(at('lyr-districts-choropleth')).toBeLessThan(at('lyr-analysis-fill'))

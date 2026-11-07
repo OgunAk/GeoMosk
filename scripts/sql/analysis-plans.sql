@@ -1,5 +1,5 @@
 -- A01-A03 analiz sorgularının temsilî planları (uygulamadaki SQL ile aynı ifadeler; parametreler sabitlendi).
--- Çalıştırma: docker compose exec -T db psql -U geoscope -d geoscope -f /dev/stdin < scripts/sql/analysis-plans.sql
+-- Çalıştırma: docker compose exec -T db psql -U geomosk -d geomosk -f /dev/stdin < scripts/sql/analysis-plans.sql
 -- Not: 911 satırlık tabloda planlayıcı sıralı taramayı seçebilir; bu hata değildir. İndeksin bu ifadelerle
 -- KULLANILABİLİR olduğunu göstermek için ikinci bölümde enable_seqscan kapatılır (yalnız bu oturumda).
 \pset pager off

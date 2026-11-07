@@ -18,11 +18,11 @@ Tarayıcı ──► web (nginx 1.30.6, statik React build)
 
 | Proje | Sorumluluk | Referanslar | Faz 1 içeriği |
 |---|---|---|---|
-| `GeoScope.Domain` | Entity ve domain kuralları | — | Boş (entity'ler Faz 2) |
-| `GeoScope.Application` | DTO, port arayüzleri, validasyon | Domain | `Health/IDatabaseStatusProbe` |
-| `GeoScope.Infrastructure` | EF Core DbContext, PostGIS sorguları, migration, import | Application, Domain | `GeoScopeDbContext` (Npgsql + NTS), `PostGisStatusProbe`, `AddInfrastructure` |
-| `GeoScope.Api` | HTTP, DI composition root, ProblemDetails, OpenAPI, CORS, health | Application, Infrastructure (yalnız DI) | `Program.cs`, `Health/*` |
-| `GeoScope.Tests` | Unit, mimari, entegrasyon (Testcontainers PostGIS) | hepsi | health API testleri, katman bağımlılık testleri |
+| `GeoMosk.Domain` | Entity ve domain kuralları | — | Boş (entity'ler Faz 2) |
+| `GeoMosk.Application` | DTO, port arayüzleri, validasyon | Domain | `Health/IDatabaseStatusProbe` |
+| `GeoMosk.Infrastructure` | EF Core DbContext, PostGIS sorguları, migration, import | Application, Domain | `GeoMoskDbContext` (Npgsql + NTS), `PostGisStatusProbe`, `AddInfrastructure` |
+| `GeoMosk.Api` | HTTP, DI composition root, ProblemDetails, OpenAPI, CORS, health | Application, Infrastructure (yalnız DI) | `Program.cs`, `Health/*` |
+| `GeoMosk.Tests` | Unit, mimari, entegrasyon (Testcontainers PostGIS) | hepsi | health API testleri, katman bağımlılık testleri |
 
 Bağımlılık yönleri `LayerDependencyTests` ile derlenmiş referanslar üzerinden test edilir.
 
@@ -53,10 +53,10 @@ Bkz. `.claude/rules/spatial-data.md` (4326 saklama, metrik hesap geography/metri
 ## Ortam değişkenleri
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | `geoscope` / `geoscope` / `geoscope_dev` | Şema sahibi (migration, import) |
-| `GEOSCOPE_APP_PASSWORD` | `geoscope_app_dev` | API'nin kısıtlı rolü `geoscope_app` |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | `geomosk` / `geomosk` / `geomosk_dev` | Şema sahibi (migration, import) |
+| `GEOMOSK_APP_PASSWORD` | `geomosk_app_dev` | API'nin kısıtlı rolü `geomosk_app` |
 | `DB_PORT` / `API_PORT` / `WEB_PORT` | `5432` / `5080` / `8080` | Host portları (127.0.0.1) |
-| `GEOSCOPE_IMPORT_DATABASE_URL` | `postgres://geoscope:geoscope_dev@localhost:5432/geoscope` | Host'tan import |
+| `GEOMOSK_IMPORT_DATABASE_URL` | `postgres://geomosk:geomosk_dev@localhost:5432/geomosk` | Host'tan import |
 | `VITE_API_BASE_URL` | boş (aynı origin `/api`) | Farklı origin'deki API için; CORS izinli origin `Cors__AllowedOrigins__0` |
 
 Değerler yalnız yerel geliştirme içindir; `.env` Git dışındadır. Elle migration komutu: [DATABASE](DATABASE.md).
@@ -69,5 +69,5 @@ Değerler yalnız yerel geliştirme içindir; `.env` Git dışındadır. Elle mi
 - **Port çakışması:** `.env` içinde `DB_PORT`, `API_PORT`, `WEB_PORT` değerlerini değiştirin.
 - **Altlık karoları yüklenmiyor:** haritada uyarı görünür, veri katmanları çalışır; diğer altlığı seçin.
 - **`dotnet build` dosya kilitli (MSB3027):** çalışan `dotnet run` sürecini durdurup tekrar derleyin.
-- **Aynı makinede ikinci klon:** `docker-compose.yml`'deki `name: geoscope` nedeniyle klonlar aynı veri volume'unu paylaşır;
+- **Aynı makinede ikinci klon:** `docker-compose.yml`'deki `name: geomosk` nedeniyle klonlar aynı veri volume'unu paylaşır;
   bir klonda `down -v` hepsinin verisini siler.

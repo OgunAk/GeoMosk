@@ -1,12 +1,14 @@
 import type { Feature, FeatureCollection, MultiPolygon, Point } from 'geojson'
 import { getJson, requestJson } from './apiClient'
 
-// Sözleşme: docs/API-CONTRACT.md, backend/GeoScope.Application/Features/GeoJson.cs
+// Sözleşme: docs/API-CONTRACT.md, backend/GeoMosk.Application/Features/GeoJson.cs
 export interface PageMeta {
   returned: number
   limit: number
   offset: number
   hasMore: boolean
+  /** Keyset sayfalama imleci: bir sonraki istekte `after` olarak verilir; yalnız kaynak listelerinde ve hasMore iken. */
+  nextAfter?: number
 }
 
 export type SourceLayerId = 'districts' | 'facilities'
@@ -41,22 +43,12 @@ export interface DetailExtras {
   districtName?: string | null
 }
 
-export type SourceFeature = Feature<MultiPolygon, DistrictProperties> | Feature<Point, FacilityProperties>
 export type SourceFeatureDetail =
   | Feature<MultiPolygon, DistrictProperties & DetailExtras>
   | Feature<Point, FacilityProperties & DetailExtras>
 
 export type PagedCollection<G extends MultiPolygon | Point, P> = FeatureCollection<G, P> & { meta: PageMeta }
 
-export interface LayerInfo {
-  id: SourceLayerId
-  title: string
-  geometryType: string
-  source: string
-  attribution: string
-  editableFields: string[]
-  featureCount: number
-}
 
 /** API üst sınırı (istek başına). İlçeler tek sayfada; tesisler görünen kutuya göre. Aşılırsa arayüz eksik veriyi bildirir. */
 export const MAX_PAGE = 2000

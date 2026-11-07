@@ -1,7 +1,9 @@
 # GeoMosk — İlerleme kaydı
 
 ## Kısa durum (5 Kasım 2026; güncelleme 6 Kasım 2026)
-- **Ad değişikliği (2026-11-06, geliştirici isteği):** proje adı GeoScope → **GeoMosk** (görünen ad; kod/DB adları aynı, ADR-0017).
+- **Ad değişikliği (2026-11-06, geliştirici isteği):** proje adı GeoScope → **GeoMosk** (görünen ad, ADR-0017).
+- **Büyük veri önlemleri (2026-11-08, geliştirici isteği):** ad araması için GIN trigram indeksleri ve keyset sayfalama (`after`/`nextAfter`), ADR-0020. Backend 154/154; 10.000 tesiste arama 14,7 → 0,28 ms, derin sayfa 1,7 → 0,07 ms (TEST-PLAN).
+- **Tam yeniden adlandırma (2026-11-08, geliştirici isteği):** kod, veritabanı, rol, ortam değişkeni ve Compose adları da GeoMosk (ADR-0019); temiz kurulum gerekir.
 - **Ek geliştirmeler (2026-11-06):** harici WMS katmanı (ADR-0015, PR #8) ve tesislerin bbox ile yüklenmesi (ADR-0016, PR #10) master'a birleşti; CI 4/4.
 - **Son doğrulanan faz:** Faz 8 — Teslim, teknik kapı (`validate-project --full` exit 0, E2E üretim imajına karşı). **Geliştirici son kabulü (kontrol noktası 3) bekliyor.**
 - **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. G3 ("ad en az 3 karakter") geliştirici 2026-11-05'te AI'ya bıraktı; uygulandı (backend 134/134, Vitest 58/58).
@@ -28,10 +30,10 @@ Oluşturulan/değişen dosyalar:
   frontend/nginx.conf (Docker DNS resolver — temiz kurulum bulgusu)
   docs/screenshots/faz8-{tampon-2000m,en-yakin-5,olcum-nilufer,dar-ekran}.png (üretim imajından, Playwright)
 Çalıştırılan komutlar ve sonuç/exit code:
-  git clone (029445b) → docker compose -p geoscope-clean up --build -d (DB/API/WEB portları 55432/55080/58080, .env yok) → exit 0;
+  git clone (029445b) → docker compose -p geomosk-clean up --build -d (DB/API/WEB portları 55432/55080/58080, .env yok) → exit 0;
     Docker Desktop ağı bu kez çalıştı, imajlar sıfırdan derlendi
   /api/health/ready → 200 (PostGIS 3.5.2); import 1 → 17/911 eklendi; import 2 → 0 ekleme/0 güncelleme (17/911 değişmedi)
-  geoscope_app rolü superuser değil
+  geomosk_app rolü superuser değil
   E2E_BASE_URL=http://127.0.0.1:58080 npm --prefix frontend run e2e → 22/22 (üretim imajı, nginx — önceki fazlarda yapılamayan doğrulama)
   db + api restart → BULGU: web /api 502 (nginx eski API IP'sini önbellekte tutuyordu) → resolver 127.0.0.11 + değişkenli proxy_pass;
     web yeniden derlendi → restart sonrası 200, kullanıcı çizimi kalıcı; E2E tekrar 22/22
@@ -40,7 +42,7 @@ Oluşturulan/değişen dosyalar:
 Veri/CRS/analiz kanıtları: değişmedi; ekran görüntüsünde Nilüfer 524,42 km² (EPSG:32635), sferoid farkı −%0,021.
 İnceleme bulguları ve çözümleri: nginx DNS önbelleği (yukarıda).
 Çalıştırılamayan kontroller ve nedeni: geliştirici manuel demosu ve teknik sahiplik yanıtları (geliştiricide); uzak depo herkese açık değil.
-Temizlik: geoscope-clean container'ları durduruldu; volume `geoscope-clean_geoscope-db` ve `geoscope_perf` DB'si geliştirici onayı için bırakıldı.
+Temizlik: geomosk-clean container'ları durduruldu; volume `geomosk-clean_geomosk-db` ve `geomosk_perf` DB'si geliştirici onayı için bırakıldı.
 Kalan risk/engel: değerlendirici erişimi (private repo); .NET 9 destek sonu 10 Kasım 2026.
 Sonraki somut adım: kontrol noktası 3 (geliştirici).
 ```
@@ -55,14 +57,14 @@ Karşılanan gereksinimler: Q01, Q03, P06 doğrulandı (Q02 Faz 6'da). Geliştir
 Oluşturulan/değişen dosyalar:
   G3: Application/UserFeatures/UserFeatureRequests (MinNameLength, grafem sayısı), services/userFeatures (USER_NAME_MIN, nameLength),
     CreateFeatureForm (ipucu + aria-invalid), UserFeaturePanel; testler UserFeatureApiTests (+3), CreateFeatureForm.test (+1)
-  Performans: scripts/perf/measure-api.mjs, seed-synthetic.sql (yalnız geoscope_perf; başka DB'de hata verir), results-*.json
+  Performans: scripts/perf/measure-api.mjs, seed-synthetic.sql (yalnız geomosk_perf; başka DB'de hata verir), results-*.json
   İnceleme düzeltmeleri: scripts/import/load-osm.mjs (toplu silme koruması, manifest dosya adı), Api/Program.cs (CORS ETag/Location),
     SourceFeatureQueries (tek ilçe atama kuralı), AnalysisService (A05 toplamı aynı SQL'de), UserFeatureStore + IUserFeatureStore +
     UserFeaturesController (CHECK ihlali → 422), MapView + layerIds (LAYER_ORDER), UserFeaturePanel (kısa adlı eski kayıt),
     LayerPanel + App (kullanıcı katmanı sınır uyarısı, geç gelen analiz yanıtı)
   Erişilebilirlik/UI: AppLayout (dar ekranda panel ≤40vh, harita kalan alan), index.css (:focus-visible), vite.config (paket bölme)
   Testler: MeasureAndDistrictStatsApiTests (+2), ImportPipelineTests (+2), SourceFeatureDetailAndEditTests (+3 SQL injection),
-    ImportRunner UTF-8 çıktı, GeoScopeApiFactory ek ayar; Vitest +5 (XSS, kısa ad, sınır uyarısı); e2e accessibility.spec (3) +
+    ImportRunner UTF-8 çıktı, GeoMoskApiFactory ek ayar; Vitest +5 (XSS, kısa ad, sınır uyarısı); e2e accessibility.spec (3) +
     analysis.spec katman sırası
   docs: TEST-PLAN (performans ölçümü), DECISIONS ADR-0014, API-CONTRACT, REQUIREMENTS, README, DEVELOPER-REVIEW
 Çalıştırılan komutlar ve sonuç/exit code:
@@ -197,7 +199,7 @@ Karşılanan gereksinimler: M02, M03, M04, M05, C01 doğrulandı; Q01 devam ediy
 Oluşturulan/değişen dosyalar:
   backend: FeatureQuery (q/type/districtId), OverridePatch(+Parser), IOverrideCommands, LayerInfo/VersionedFeature;
     SourceFeatureQueries (katalog, tekil, arama, ilçe filtresi), OverrideCommands (xmin sürüm, ABA önlemi),
-    SearchFunctions + migration SearchNormalization (unaccent + geoscope_search_normalize), Http/ETags,
+    SearchFunctions + migration SearchNormalization (unaccent + geomosk_search_normalize), Http/ETags,
     SourceLayersController (GET layers/{id}, PATCH), Program (2 MiB gövde sınırı, BadHttpRequestException durum kodu)
   backend testleri: SourceFeatureDetailAndEditTests (28 durum); test DB'lerinde Pooling=false
   frontend: MapView (iki altlık, style.load ile idempotent yeniden kurulum, vurgu/seçim katmanları, tıklama),
@@ -245,7 +247,7 @@ Oluşturulan/değişen dosyalar:
     districts 17 relation, facilities 911 (816 node/94 way/1 relation)
   dotnet tool run dotnet-ef migrations add InitialSchema → başarılı
   docker compose up -d --build db migrate → migrate Exited (0), 2 migration uygulandı
-  10-app-role.sh (var olan volume) → geoscope_app rolsuper=f; yazma yalnız 3 tabloda (information_schema kanıtı)
+  10-app-role.sh (var olan volume) → geomosk_app rolsuper=f; yazma yalnız 3 tabloda (information_schema kanıtı)
   load-osm.mjs 1. deneme → exit 1, import_history sayaç kolonlarında NOT NULL (transaction öncesi; veri yok) → düzeltildi
   load-osm.mjs 2. deneme → exit 1 "cannot insert multiple commands into a prepared statement"; import_history'de 2 'failed',
     kaynak tabloları 0 satır (rollback kanıtı) → staging sorgusu ikiye bölündü
@@ -260,7 +262,7 @@ Oluşturulan/değişen dosyalar:
   Playwright CLI: ilk denemede harita boş — (1) MapLibre worker 404 → setWorkerUrl + Vite ?url, (2) nginx .mjs'i
     application/octet-stream sunuyordu → .mjs için text/javascript, (3) maplibre-gl.css katmansız
     position:relative Tailwind "absolute"ı eziyordu → kap açık boyutla. Son durum: tuval 960×651, konsol hatası 0, ekran görüntüsü alındı.
-  Temiz kurulum: docker compose -p geoscope-cleancheck (yeni volume, farklı portlar) up → init script rolü oluşturdu,
+  Temiz kurulum: docker compose -p geomosk-cleancheck (yeni volume, farklı portlar) up → init script rolü oluşturdu,
     migration 3 tabloya yazma izni verdi, import container'ı 17/911 ekledi, web üzerinden API 200; yalnız bu proje down -v ile kaldırıldı.
   node scripts/validate-project.mjs --phase 2 → GEÇTİ, exit 0
 Veri/CRS/analiz kanıtları: tüm geometriler SRID 4326; ilçe extent boylam 28.09–29.91 / enlem 39.59–40.61; bbox sorgusunda
@@ -279,7 +281,7 @@ Sonraki somut adım: Faz 3.
 Faz: 1 — Çalışan iskelet
 Durum: doğrulandı (CI uzakta çalıştırılmadı)
 Karşılanan gereksinimler: T01, T02, T05, P03, P07 doğrulandı; T03, P05, P06 devam ediyor.
-Oluşturulan/değişen dosyalar: global.json; backend/ (GeoScope.sln, Directory.Build.props,
+Oluşturulan/değişen dosyalar: global.json; backend/ (GeoMosk.sln, Directory.Build.props,
   Directory.Packages.props, 5 proje, Dockerfile, .dockerignore); frontend/ (Vite react-ts şablonu
   create-vite@9.3.1, Tailwind 4.3.3, Vitest 4.1.12, SystemStatus, AppLayout, apiClient, Dockerfile,
   nginx.conf); docker-compose.yml; .env.example; .github/workflows/ci.yml; .gitattributes;

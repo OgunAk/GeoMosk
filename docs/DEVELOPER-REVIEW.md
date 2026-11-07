@@ -64,7 +64,7 @@ Adımlar README'nin 2026-11-08 sadeleştirmesinden önceki 10 adımlık demo sen
 | 10 | Hata senaryosu | E2E `sunucu hatasında taslak ve form korunur …`, `altlık karo servisi erişilemezse anlaşılır uyarı …`; API testleri: kendini kesen alan 422, nokta ölçümü 422 | **Yapıldı** | — |
 
 Manuel demo: geliştirici 2026-11-06'da README'deki 10 adımı denedi (yeni clone, `GeoMosk-demo` klasörü). `docker-compose.yml` proje adını
-`name: geoscope` ile sabitlediği için demo mevcut `geoscope_geoscope-db` volume'unu kullandı; yani geliştirici boş volume'dan kurulum
+`name: geomosk` ile sabitlediği için demo mevcut `geomosk_geomosk-db` volume'unu kullandı; yani geliştirici boş volume'dan kurulum
 yapmadı (boş volume kurulumu Faz 8'de AI tarafından ayrı proje adıyla doğrulandı). Import idempotent olduğu için veri değişmedi. Sonuçlar geliştiricinin sohbetteki yanıtından aynen aktarıldı (ekran görüntüleri: tampon, en yakın N, Nilüfer ölçümü 524,42 km²). 3. adım düzeltmeden sonra 2026-11-07'de yeniden denendi: "yapıldı".
 
 **Teslim kapsamı kararları:**
@@ -75,7 +75,7 @@ yapmadı (boş volume kurulumu Faz 8'de AI tarafından ayrı proje adıyla doğr
 | Depo erişimi | Şu an private; herkese açık yapmak ya da değerlendiriciyi ortak çalışan eklemek | **Herkese açık yapacak** (geliştiricinin sohbetteki yanıtı, 2026-11-05). Ayarı geliştirici değiştirecek; uzak URL açıkça erişilebilir olunca L01 doğrulanır |
 | Yazılım lisansı | Yok; ör. MIT ya da lisanssız bırakmak | ~~Lisans eklenmeyecek~~ (2026-11-05). **Güncel: MIT** (2026-11-08). Geliştiricinin sohbetteki yanıtı: "public yapacağım" (MIT önerisine yanıt). `LICENSE`'ta logo, OSM verisi ve üçüncü taraf paketler hariç |
 | Bizzat yapılacak küçük değişiklik (§20.1) | G3'ü AI uyguladı; isteğe bağlı yeni değişiklik (ör. arama sonuç sınırı, "yalnız hastaneler" kısayolu) | geliştirici incelemesi bekliyor |
-| Proje adı değişikliği | Geliştirici 2026-11-06'da istedi: "projemizin ismi GeoMosk olarak değişecek"; kapsam olarak "Görünen ad" seçildi | **Uygulandı (AI uyguladı, geliştirici isteği)** — ADR-0017. Kod/DB adları GeoScope kaldı. Bu değişikliği AI yaptığı için §20.1'deki "bizzat yapılan değişiklik" sayılmaz |
+| Proje adı değişikliği | Geliştirici 2026-11-06'da istedi: "projemizin ismi GeoMosk olarak değişecek"; kapsam olarak "Görünen ad" seçildi | **Uygulandı (AI uyguladı, geliştirici isteği)** — ADR-0017. 2026-11-08: geliştirici "geoscope olan bütün isimlerin geomosk olarak güncellenmesini istiyorum" dedi; kod/DB adları da değişti (ADR-0019, AI uyguladı). Bu değişiklikleri AI yaptığı için §20.1'deki "bizzat yapılan değişiklik" sayılmaz |
 
 ## Teknik sahiplik soruları (master prompt §20.4)
 Geliştirici 2026-11-05'te soruların AI tarafından yanıtlanmasını istedi. Aşağıdaki "AI açıklaması" sütunu **AI'nin** koda dayalı

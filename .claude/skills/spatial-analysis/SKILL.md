@@ -23,7 +23,7 @@ Analiz ID'si (A01-A05), API sözleşmesindeki request şekli (`sourceFeature {la
 
 ## Komutlar
 - `node scripts/validate-project.mjs --phase 5`
-- `dotnet test backend/GeoScope.Tests --filter Category=Spatial` (planlanan, Faz 5)
+- `dotnet test backend/GeoMosk.Tests --filter Category=Spatial` (planlanan, Faz 5)
 
 ## Hata yolları
 Projeksiyon kullanım alanı dışı → 422 ve açıklama. Point için ölçüm → "desteklenmeyen ölçüm" (0 dönme). Kaynak geometri yanlış tip → 422.

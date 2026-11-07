@@ -16,7 +16,7 @@ test.beforeEach(async ({ request }) => {
 /** Kullanıcı çizimi haritanın kaynağına yüklenene kadar bekle (tıklama ancak o zaman isabet eder). */
 async function waitForUserFeature(page: Page, name: string) {
   await page.waitForFunction(
-    (n) => window.__geoscopeMap!.querySourceFeatures('src-user-features').some((f) => f.properties?.name === n),
+    (n) => window.__geomoskMap!.querySourceFeatures('src-user-features').some((f) => f.properties?.name === n),
     name,
   )
 }
@@ -24,15 +24,15 @@ async function waitForUserFeature(page: Page, name: string) {
 async function openAtArea(page: Page) {
   await page.goto('/')
   await expect(page.getByRole('checkbox', { name: /Kullanıcı çizimleri/ })).toBeVisible()
-  await page.waitForFunction(() => Boolean(window.__geoscopeMap?.getLayer('lyr-user-point')))
+  await page.waitForFunction(() => Boolean(window.__geomoskMap?.getLayer('lyr-user-point')))
   // Zoom 14: test köşelerinin (merkezden en çok ±0.01°) hepsi harita alanında kalır.
-  await page.evaluate((center) => window.__geoscopeMap!.jumpTo({ center, zoom: 14 }), AREA_CENTER)
-  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
+  await page.evaluate((center) => window.__geomoskMap!.jumpTo({ center, zoom: 14 }), AREA_CENTER)
+  await page.waitForFunction(() => window.__geomoskMap!.loaded())
 }
 
 /** Harita üzerindeki [boylam, enlem] konumunun sayfa koordinatı. */
 async function screenPoint(page: Page, lonLat: [number, number]) {
-  const p = await page.evaluate((ll) => window.__geoscopeMap!.project(ll), lonLat)
+  const p = await page.evaluate((ll) => window.__geomoskMap!.project(ll), lonLat)
   const box = (await page.getByTestId('map').boundingBox())!
   return { x: box.x + p.x, y: box.y + p.y }
 }
@@ -167,8 +167,8 @@ test('altlık değişince taslak korunur ve doğru konumla kaydedilir', async ({
 
   await page.getByRole('radio', { name: /Positron/ }).check()
   // Geçiş sırasında getStyle() kısa süre boş döner.
-  await page.waitForFunction(() => 'openmaptiles' in (window.__geoscopeMap!.getStyle()?.sources ?? {}))
-  await page.waitForFunction(() => (window.__geoscopeMap!.getStyle()?.layers ?? []).some((l) => l.id.startsWith('td')))
+  await page.waitForFunction(() => 'openmaptiles' in (window.__geomoskMap!.getStyle()?.sources ?? {}))
+  await page.waitForFunction(() => (window.__geomoskMap!.getStyle()?.layers ?? []).some((l) => l.id.startsWith('td')))
 
   await saveDraft(page, name)
   const saved = await apiFeatureByName(page, name)

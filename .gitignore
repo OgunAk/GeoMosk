@@ -4,13 +4,12 @@
 .claude/settings.local.json
 .playwright-cli/
 .playwright/
-graphify-out/
 node_modules/
 **/bin/
 **/obj/
 dist/
 
-# GeoScope Faz 0
+# GeoMosk Faz 0
 **/appsettings.Local.json
 *.dump
 data/raw/**

@@ -1,8 +1,8 @@
 ---
 paths:
-  - "backend/GeoScope.Infrastructure/**"
-  - "backend/GeoScope.Application/**"
-  - "backend/GeoScope.Tests/**"
+  - "backend/GeoMosk.Infrastructure/**"
+  - "backend/GeoMosk.Application/**"
+  - "backend/GeoMosk.Tests/**"
   - "scripts/import/**"
   - "scripts/sql/**"
   - "data/**"

@@ -1,13 +1,13 @@
 -- SENTETİK PERFORMANS VERİSİ — gerçek kaynak verisi değildir.
--- Yalnız ayrı performans veritabanına (geoscope_perf) uygulanır; uygulama DB'sine (geoscope) çalıştırılmaz.
+-- Yalnız ayrı performans veritabanına (geomosk_perf) uygulanır; uygulama DB'sine (geomosk) çalıştırılmaz.
 -- Gerçek OSM import'unun üstüne, tesis sayısını 10.000'e tamamlayacak kadar nokta ekler.
 -- Noktalar gerçek ilçe sınırlarının içinde, ilçe alanıyla orantılı ve tohumlu (ST_GeneratePoints seed) → tekrar üretilebilir.
--- Çalıştırma: docker compose exec -T db psql -U geoscope -d geoscope_perf -v ON_ERROR_STOP=1 -f /dev/stdin < scripts/perf/seed-synthetic.sql
+-- Çalıştırma: docker compose exec -T db psql -U geomosk -d geomosk_perf -v ON_ERROR_STOP=1 -f /dev/stdin < scripts/perf/seed-synthetic.sql
 \set target 10000
 DO $$
 BEGIN
-  IF current_database() <> 'geoscope_perf' THEN
-    RAISE EXCEPTION 'Bu script yalnız geoscope_perf veritabanında çalışır (şu an: %)', current_database();
+  IF current_database() <> 'geomosk_perf' THEN
+    RAISE EXCEPTION 'Bu script yalnız geomosk_perf veritabanında çalışır (şu an: %)', current_database();
   END IF;
 END $$;
 

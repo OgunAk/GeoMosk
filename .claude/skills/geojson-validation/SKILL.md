@@ -19,7 +19,7 @@ GeoJSON Geometry/Feature/FeatureCollection (istek gövdesi, import dosyası örn
 ## Komutlar
 - `node scripts/hooks/validate-changed-files.mjs --file <yol>` (yalnız JSON sözdizimi/UTF-8; GeoJSON semantiği değil)
 - Ham dosyada yalnız örnek inceleme: `jq '.features[0]' <dosya>` veya `head -n 25` — büyük dosya bütünüyle okunmaz.
-- `dotnet test backend/GeoScope.Tests --filter Category=GeoJson` (planlanan, Faz 4)
+- `dotnet test backend/GeoMosk.Tests --filter Category=GeoJson` (planlanan, Faz 4)
 
 ## Hata yolları
 Bozuk JSON → 400; geçerli JSON ama geçersiz geometri → 422 ve alan hatası; aşırı boyut → 413.

@@ -13,7 +13,7 @@ description: GeoMosk ASP.NET Core REST uç noktaları, DTO/validasyon, ProblemDe
 `CLAUDE.md`, `.claude/rules/coding-standards.md`, `.claude/rules/security.md`, `.claude/rules/spatial-data.md`, `docs/API-CONTRACT.md`, ilgili REQUIREMENTS satırları; skill: `dotnet-api`.
 
 ## Dosya kapsamı
-`backend/GeoScope.Application/**`, `backend/GeoScope.Api/**`, ilgili `backend/GeoScope.Tests/**`. Migration ve ham spatial SQL `postgis-specialist` ile birlikte.
+`backend/GeoMosk.Application/**`, `backend/GeoMosk.Api/**`, ilgili `backend/GeoMosk.Tests/**`. Migration ve ham spatial SQL `postgis-specialist` ile birlikte.
 
 ## Kurallar
 - Controller ince HTTP adaptörü; iş mantığı Application servisinde. Entity dışarı dökülmez, DTO/GeoJSON döner.

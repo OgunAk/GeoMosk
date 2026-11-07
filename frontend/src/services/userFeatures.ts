@@ -2,7 +2,7 @@ import type { Feature, FeatureCollection, LineString, Point, Polygon } from 'geo
 import { requestJson } from './apiClient'
 import type { PageMeta } from './sourceLayers'
 
-// Sözleşme: docs/API-CONTRACT.md "Kullanıcı çizimleri", backend/GeoScope.Api/Controllers/UserFeaturesController.cs
+// Sözleşme: docs/API-CONTRACT.md "Kullanıcı çizimleri", backend/GeoMosk.Api/Controllers/UserFeaturesController.cs
 export type UserGeometry = Point | LineString | Polygon
 
 export interface UserFeatureProperties {

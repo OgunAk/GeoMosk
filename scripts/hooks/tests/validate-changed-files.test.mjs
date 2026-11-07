@@ -85,7 +85,7 @@ test('bozuk hook stdin girdisi işi engellemez', () => {
 });
 
 test('proje kökü dışındaki yol atlanır', () => {
-  const outside = path.join(os.tmpdir(), 'geoscope-outside.json');
+  const outside = path.join(os.tmpdir(), 'geomosk-outside.json');
   fs.writeFileSync(outside, '{bad');
   try {
     const r = runHook(edit(outside));
@@ -150,14 +150,14 @@ test('geçersiz UTF-8 reddedilir', () => {
 });
 
 test('node --check zaman aşımı uyarıya düşer, engellemez', () => {
-  const r = runHook(edit(write('scripts/ok.mjs', 'export const a = 1;')), { env: { GEOSCOPE_HOOK_CHECK_TIMEOUT_MS: '1' } });
+  const r = runHook(edit(write('scripts/ok.mjs', 'export const a = 1;')), { env: { GEOMOSK_HOOK_CHECK_TIMEOUT_MS: '1' } });
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stderr, /zaman aşımı/);
 });
 
 test('yaml paketi eksikse frontmatter kontrolü uyarıyla atlanır', () => {
   // Script'leri node_modules erişimi olmayan bir kopyaya taşı.
-  const isolated = fs.mkdtempSync(path.join(os.tmpdir(), 'geoscope-noyaml-'));
+  const isolated = fs.mkdtempSync(path.join(os.tmpdir(), 'geomosk-noyaml-'));
   try {
     fs.cpSync(path.join(scriptsDir, 'hooks', 'validate-changed-files.mjs'), path.join(isolated, 'hooks', 'validate-changed-files.mjs'));
     fs.cpSync(path.join(scriptsDir, 'lib'), path.join(isolated, 'lib'), { recursive: true });

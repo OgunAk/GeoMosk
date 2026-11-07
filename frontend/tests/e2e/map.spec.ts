@@ -1,13 +1,13 @@
 import { expect, test, type Page } from '@playwright/test'
 
-// Harita örneğine yalnızca durum okumak için erişilir (window.__geoscopeMap); etkileşim kullanıcı gibi yapılır.
+// Harita örneğine yalnızca durum okumak için erişilir (window.__geomoskMap); etkileşim kullanıcı gibi yapılır.
 type Probe = { layers: string[]; visibility: Record<string, string | undefined>; hasBasemapVector: boolean; zoom: number }
 
 const EMPTY: Probe = { layers: [], visibility: {}, hasBasemapVector: false, zoom: 0 }
 
 async function probe(page: Page): Promise<Probe> {
   return page.evaluate((empty) => {
-    const map = window.__geoscopeMap
+    const map = window.__geomoskMap
     // Stil değişimi sırasında getStyle() kısa süre boş döner: "henüz hazır değil" olarak raporlanır.
     const style = map?.getStyle()
     if (!map || !style?.layers) return empty
@@ -64,7 +64,7 @@ test('katman aç/kapa ve altlık değişiminde katmanlar ve durum korunur', asyn
 
 test('orta tuşla sürükleyince harita kayar, seçim yapılmaz', async ({ page }) => {
   await openApp(page)
-  const center = () => page.evaluate(() => window.__geoscopeMap!.getCenter().toArray())
+  const center = () => page.evaluate(() => window.__geomoskMap!.getCenter().toArray())
   const before = await center()
   const box = (await page.getByTestId('map').boundingBox())!
   const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
@@ -82,7 +82,7 @@ test('orta tuşla sürükleyince harita kayar, seçim yapılmaz', async ({ page 
 
 test('tesis türü filtresi haritaya uygulanır ve altlık değişiminde korunur', async ({ page }) => {
   await openApp(page)
-  const filter = () => page.evaluate(() => JSON.stringify(window.__geoscopeMap?.getFilter('lyr-facilities-circle') ?? null))
+  const filter = () => page.evaluate(() => JSON.stringify(window.__geomoskMap?.getFilter('lyr-facilities-circle') ?? null))
 
   await page.getByRole('checkbox', { name: /Eczane/ }).uncheck()
   await expect.poll(filter).not.toContain('pharmacy')
@@ -110,8 +110,8 @@ test('Türkçe aksansız arama sonucu vurgular, seçer ve objeye zoom yapar', as
   await expect(page.getByRole('heading', { name: 'Nilüfer' })).toBeVisible()
   await expect.poll(async () => (await probe(page)).zoom, { timeout: 10_000 }).toBeGreaterThan(zoomBefore)
   const filters = await page.evaluate(() => ({
-    highlight: JSON.stringify(window.__geoscopeMap!.getFilter('lyr-districts-highlight')),
-    selected: JSON.stringify(window.__geoscopeMap!.getFilter('lyr-districts-selected')),
+    highlight: JSON.stringify(window.__geomoskMap!.getFilter('lyr-districts-highlight')),
+    selected: JSON.stringify(window.__geomoskMap!.getFilter('lyr-districts-selected')),
   }))
   expect(filters.highlight).not.toContain('[]')
   expect(filters.selected).not.toContain('[]')
@@ -126,9 +126,9 @@ test('haritada tesise tıklayınca öznitelikler yan panelde görünür', async 
     }
     return r.features[0]
   })
-  await page.evaluate(([lon, lat]) => window.__geoscopeMap!.jumpTo({ center: [lon, lat], zoom: 15 }), feature.geometry.coordinates)
-  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
-  const point = await page.evaluate(([lon, lat]) => window.__geoscopeMap!.project([lon, lat]), feature.geometry.coordinates)
+  await page.evaluate(([lon, lat]) => window.__geomoskMap!.jumpTo({ center: [lon, lat], zoom: 15 }), feature.geometry.coordinates)
+  await page.waitForFunction(() => window.__geomoskMap!.loaded())
+  const point = await page.evaluate(([lon, lat]) => window.__geomoskMap!.project([lon, lat]), feature.geometry.coordinates)
   const box = (await page.getByTestId('map').boundingBox())!
 
   await page.mouse.click(box.x + point.x, box.y + point.y)
@@ -151,14 +151,14 @@ test('tesise tek tıklayınca harita tesise yaklaşır; ilçeye tıklama kameray
   const box = (await page.getByTestId('map').boundingBox())!
   const camera = () =>
     page.evaluate(() => {
-      const m = window.__geoscopeMap!
+      const m = window.__geomoskMap!
       return { zoom: m.getZoom(), lng: m.getCenter().lng, lat: m.getCenter().lat }
     })
 
   // Tesisi merkezden uzakta ve zoom 13'te göster; tek tıkla.
-  await page.evaluate(([lon, lat]) => window.__geoscopeMap!.jumpTo({ center: [lon + 0.01, lat + 0.005], zoom: 13 }), coords)
-  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
-  const point = await page.evaluate(([lon, lat]) => window.__geoscopeMap!.project([lon, lat]), coords)
+  await page.evaluate(([lon, lat]) => window.__geomoskMap!.jumpTo({ center: [lon + 0.01, lat + 0.005], zoom: 13 }), coords)
+  await page.waitForFunction(() => window.__geomoskMap!.loaded())
+  const point = await page.evaluate(([lon, lat]) => window.__geomoskMap!.project([lon, lat]), coords)
   await page.mouse.click(box.x + point.x, box.y + point.y)
 
   await expect.poll(async () => (await camera()).zoom).toBeGreaterThanOrEqual(15.99)
@@ -167,8 +167,8 @@ test('tesise tek tıklayınca harita tesise yaklaşır; ilçeye tıklama kameray
   expect(Math.abs(after.lat - coords[1])).toBeLessThan(1e-4)
 
   // İlçe içinde boş bir yere tıklama: ilçe seçilir, kamera yerinde kalır.
-  await page.evaluate(() => window.__geoscopeMap!.jumpTo({ center: [28.95, 40.15], zoom: 11 }))
-  await page.waitForFunction(() => window.__geoscopeMap!.loaded())
+  await page.evaluate(() => window.__geomoskMap!.jumpTo({ center: [28.95, 40.15], zoom: 11 }))
+  await page.waitForFunction(() => window.__geomoskMap!.loaded())
   const before = await camera()
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
   await expect(page.getByRole('heading', { name: 'Nilüfer' })).toBeVisible()

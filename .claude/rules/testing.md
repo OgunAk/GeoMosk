@@ -1,6 +1,6 @@
 ---
 paths:
-  - "backend/GeoScope.Tests/**"
+  - "backend/GeoMosk.Tests/**"
   - "frontend/tests/**"
   - "frontend/src/**/*.test.ts"
   - "frontend/src/**/*.test.tsx"

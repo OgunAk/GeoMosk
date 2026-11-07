@@ -6,12 +6,12 @@ description: GeoMosk EF Core + Npgsql/NetTopologySuite migration iş akışı (m
 # ef-migrations
 
 ## Girdi
-Şema değişiklik ihtiyacı (REQUIREMENTS ID), `docs/DATABASE.md`, mevcut `backend/GeoScope.Infrastructure/Migrations/`.
+Şema değişiklik ihtiyacı (REQUIREMENTS ID), `docs/DATABASE.md`, mevcut `backend/GeoMosk.Infrastructure/Migrations/`.
 
 ## İş akışı
 1. **İncele:** Mevcut model snapshot ve son migration'ı oku. Uygulanmış migration'ı asla düzenleme; yeni ileri migration yaz.
 2. **Model:** Entity configuration'da geometri tipi ve SRID açık: `HasColumnType("geometry(Point,4326)")` vb. `NOT NULL`, unique kaynak anahtarı (`source + source_object_type + source_id`).
-3. **Migration oluştur:** `dotnet ef migrations add <Ad> --project backend/GeoScope.Infrastructure --startup-project backend/GeoScope.Api` (planlanan, Faz 1 — `dotnet-tools.json` ile).
+3. **Migration oluştur:** `dotnet ef migrations add <Ad> --project backend/GeoMosk.Infrastructure --startup-project backend/GeoMosk.Api` (planlanan, Faz 1 — `dotnet-tools.json` ile).
 4. **SQL gözden geçir:** `dotnet ef migrations script --idempotent` (planlanan, Faz 1) çıktısında: `CREATE EXTENSION IF NOT EXISTS postgis` yönetimi, GiST indeksleri, `geography` expression index, CHECK (`ST_SRID`, `ST_IsValid`, `NOT ST_IsEmpty`, tip) var mı.
 5. **Test:** Boş test DB'sinde tümünü uygula; önceki migration'daki DB'ye ileri uygula; ikinci kez uygula (no-op). `pg_indexes` ile indeks doğrula.
 6. **Geri alma planı:** `Down` metodunun veri kaybı etkisini PR/PROGRESS notuna yaz. Veri kaybettiren `Down` yalnızca bilinçli karar ile.
