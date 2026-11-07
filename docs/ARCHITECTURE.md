@@ -49,3 +49,25 @@ Planlanan: `src/features/{map,layers,search,drawing,analysis}` (Faz 2-6), MapLib
 
 ## Veri akışı ilkeleri
 Bkz. `.claude/rules/spatial-data.md` (4326 saklama, metrik hesap geography/metrik SRID, kaynak/kullanıcı verisi ayrımı).
+
+## Ortam değişkenleri
+| Değişken | Varsayılan | Açıklama |
+|---|---|---|
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | `geoscope` / `geoscope` / `geoscope_dev` | Şema sahibi (migration, import) |
+| `GEOSCOPE_APP_PASSWORD` | `geoscope_app_dev` | API'nin kısıtlı rolü `geoscope_app` |
+| `DB_PORT` / `API_PORT` / `WEB_PORT` | `5432` / `5080` / `8080` | Host portları (127.0.0.1) |
+| `GEOSCOPE_IMPORT_DATABASE_URL` | `postgres://geoscope:geoscope_dev@localhost:5432/geoscope` | Host'tan import |
+| `VITE_API_BASE_URL` | boş (aynı origin `/api`) | Farklı origin'deki API için; CORS izinli origin `Cors__AllowedOrigins__0` |
+
+Değerler yalnız yerel geliştirme içindir; `.env` Git dışındadır. Elle migration komutu: [DATABASE](DATABASE.md).
+
+## Sorun giderme
+- **Harita boş, sayılar 0:** import çalıştırılmamıştır → `docker compose --profile tools run --rm import`.
+- **"Veritabanı: Hazır değil":** `docker compose ps` ile `db` sağlıklı mı, `migrate` başarıyla bitmiş mi kontrol edin.
+- **Eski volume'da API 500 / yetki hatası:** uygulama rolü yalnız yeni volume'da otomatik oluşur. Bir kez:
+  `docker compose exec db sh /docker-entrypoint-initdb.d/10-app-role.sh`.
+- **Port çakışması:** `.env` içinde `DB_PORT`, `API_PORT`, `WEB_PORT` değerlerini değiştirin.
+- **Altlık karoları yüklenmiyor:** haritada uyarı görünür, veri katmanları çalışır; diğer altlığı seçin.
+- **`dotnet build` dosya kilitli (MSB3027):** çalışan `dotnet run` sürecini durdurup tekrar derleyin.
+- **Aynı makinede ikinci klon:** `docker-compose.yml`'deki `name: geoscope` nedeniyle klonlar aynı veri volume'unu paylaşır;
+  bir klonda `down -v` hepsinin verisini siler.
