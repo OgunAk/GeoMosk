@@ -1,16 +1,16 @@
 # GeoMosk — İlerleme kaydı
 
-## Kısa durum (5 Kasım 2026; güncelleme 6 Kasım 2026)
+## Kısa durum (5 Kasım 2026; güncelleme 8 Kasım 2026)
 - **Ad değişikliği (2026-11-06, geliştirici isteği):** proje adı GeoScope → **GeoMosk** (görünen ad, ADR-0017).
 - **Büyük veri önlemleri (2026-11-08, geliştirici isteği):** ad araması için GIN trigram indeksleri ve keyset sayfalama (`after`/`nextAfter`), ADR-0020. Backend 154/154; 10.000 tesiste arama 14,7 → 0,28 ms, derin sayfa 1,7 → 0,07 ms (TEST-PLAN).
 - **Tam yeniden adlandırma (2026-11-08, geliştirici isteği):** kod, veritabanı, rol, ortam değişkeni ve Compose adları da GeoMosk (ADR-0019); temiz kurulum gerekir.
 - **Ek geliştirmeler (2026-11-06):** harici WMS katmanı (ADR-0015, PR #8) ve tesislerin bbox ile yüklenmesi (ADR-0016, PR #10) master'a birleşti; CI 4/4.
-- **Son doğrulanan faz:** Faz 8 — Teslim, teknik kapı (`validate-project --full` exit 0, E2E üretim imajına karşı). **Geliştirici son kabulü (kontrol noktası 3) bekliyor.**
+- **Son doğrulanan faz:** Faz 8 — Teslim, teknik kapı (`validate-project --full` exit 0, E2E üretim imajına karşı). **Geliştirici son kabulü (kontrol noktası 3) verildi (2026-11-08: "kabul"); depo herkese açık (`OgunAk/GeoMosk`).**
 - **Geliştirici kontrol noktası 2:** Geri bildirim G1/G2 uygulandı. G3 ("ad en az 3 karakter") geliştirici 2026-11-05'te AI'ya bıraktı; uygulandı (backend 134/134, Vitest 58/58).
 - **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
 - **Geliştirici bildirimi (2026-11-05):** başka ilçe seçilince eski analiz sonucu kalıyordu → `keepAnalysisFor` kuralı: yalnız analiz kaynağı veya sonuç listesindeki tesis seçilince sonuç korunur, aksi halde temizlenir (Vitest 6 + E2E). Commit 734d642.
 - **Geliştirici bildirimi (2026-11-05):** "En yakın N" modunda "Haritada nokta seç" düğmesi ve Tür kutusu 320 px yan panelde taşıyordu → nokta bilgisi/düğme ayrı satır, N+Tür ızgarası (`minmax(0,1fr)`), seçim kutusu `min-w-0`; E2E: üç modda ve nokta seçildikten sonra içerik alanını aşan öğe yok. Commit 734d642.
-- **Git:** `master` = Faz 0-8 (GitHub; PR #1-#6 geliştirici tarafından birleştirildi, son merge 1e1904e, PR #6 CI 8/8 yeşil). Depo private.
+- **Git:** `master` = Faz 0-8 ve sonraki geliştirmeler (GitHub `OgunAk/GeoMosk`; PR #1-#17 geliştirici tarafından birleştirildi, CI yeşil). Depo herkese açık (2026-11-08).
 - **Çalışan ortam:** compose `db` ayakta (gerçek veri). Compose `api`/`web` durdurulmuş (Docker Desktop container ağı sorunu); API `dotnet run` (5080) + Vite (5173) yerelde.
 - **Sonraki adım (geliştirici):** kontrol noktası 3 — manuel demo, teknik sahiplik soruları (DEVELOPER-REVIEW), depo erişimi/lisans kararı (DELIVERY-CHECKLIST).
 - **Açık kalan (bilinçli) kısıtlar:** klavye ile çizim yok; ilçe GeoJSON tam çözünürlük (gzip 97 KB, ölçülen ihtiyaç yok); arama trigram indeksi gerekmedi (10.000'de p95 17 ms); nearest 100.000+ kayıtta KNN değerlendirilir (ADR-0012).

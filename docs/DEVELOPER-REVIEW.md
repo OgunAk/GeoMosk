@@ -6,7 +6,7 @@ Bu dosyaya yalnızca gerçekleşen kayıt yazılır. Geliştirici adına görü�
 |---|---|---|---|---|---|---|---|
 | 1 | Kapsam/mimari | Faz 0 sonu | Bursa ilçeleri + sağlık tesisleri senaryosu; katmanlı monolit | Master prompt §22'de "geliştirici tarafından onaylanmıştır" kaydı var; bu oturumda ayrıca soru sorulmadı | docs/DECISIONS.md ADR-0002 | — | önceden onaylı (master prompt §22) |
 | 2 | Ürün ve kod | Faz 4 sonu (2026-11-04) | Geliştirici uygulamayı denedi. İki iyileştirme istendi; kendi yapacağı değişikliği seçti: "Ad en az 3 karakter" | Bkz. "Geliştirici geri bildirimi (2026-11-04)" | Geri bildirim 1-2 uygulandı. Seçilen değişikliği geliştirici 2026-11-05'te AI'ya bıraktı; AI uyguladı | — | tamamlandı (G3 AI tarafından, geliştirici isteğiyle) |
-| 3 | Son kabul | Faz 8 sonu (rehber 2026-11-05) | Manuel demo, teknik açıklama, teslim kapsamı. Otomatik kanıtlar aşağıdaki demo tablosunda | — | Faz 8 (a501f90), PR #6 birleştirildi | Otomatik: backend 141/141, Vitest 62/62, E2E 22/22, `validate-project --full` exit 0. Manuel: — | geliştirici incelemesi bekliyor |
+| 3 | Son kabul | Faz 8 sonu (rehber 2026-11-05) | Manuel demo, teknik açıklama, teslim kapsamı. Otomatik kanıtlar aşağıdaki demo tablosunda | — | Faz 8 (a501f90), PR #6 birleştirildi | Otomatik (2026-11-08): backend 154/154, Vitest 75/75, E2E 26/26, `validate-project --full` exit 0. Manuel: demo 10/10 yapıldı, 8 teknik soru yanıtlandı (aşağıda) | **Kabul edildi** (2026-11-08). Geliştiricinin sohbetteki yanıtı: "kabul" |
 
 ## Kontrol noktası 2 — deneme rehberi (geliştirici dolduracak)
 
