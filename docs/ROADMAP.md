@@ -15,4 +15,4 @@ Her faz kapısı: `node scripts/validate-project.mjs --phase N`.
 | 5 | doğrulandı | A01 within, A02 buffer, A03 nearest: API + UI + doğruluk testleri + EXPLAIN | A00-A03 | Sınır semantiği, geography indeksi | `Faz 5: üç MVP analizi` |
 | 6 | doğrulandı | A04 metrik SRID ölçüm, A05 ilçe sayımı + choropleth | A04-A05 | UTM 35N kapsamı → extent doğrulaması | `Faz 6: ölçüm ve ilçe istatistiği` |
 | 7 | doğrulandı | Regresyon, performans ölçümü (p50/p95), güvenlik, erişilebilirlik, code-reviewer | Q01-Q03; kritik bulgu yok | Ölçmeden başarı yazmama | `Faz 7: sağlamlaştırma` |
-| 8 | teknik kapı doğrulandı; geliştirici kabulü bekliyor | Temiz Compose kurulumu, README, ekran görüntüleri, teslim listesi | L01-L03; **geliştirici kontrol noktası 3** | Uzak yayın izni | `Faz 8: teslim` |
+| 8 | **tamamlandı** (2026-11-08: teknik kapı + geliştirici kabulü) | Temiz Compose kurulumu, README, ekran görüntüleri, teslim listesi | L01-L03; **geliştirici kontrol noktası 3** | Uzak yayın izni | `Faz 8: teslim` |
