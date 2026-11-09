@@ -121,6 +121,24 @@ Her karar: bağlam → seçenekler (≤2) → karar → sonuçlar → doğrulama
 - **Sonuç:** Dış servise bağımlılık: E2E'de istekler yakalanıp fixture PNG ile yanıtlanır; gerçek servis elle doğrulanır.
   CORINE lejantı uygulamada yok (renk sınıfları EEA'nın CLC nomenklatürü).
 
+## ADR-0021 — Analizin tür filtresine uyması ve çizilen alanların birleştirilmesi
+
+- **Durum:** Kabul (2026-11-09, geliştiricinin uygulama testindeki bulgular).
+- **Bağlam:** Katman panelindeki tür filtresi yalnız haritayı etkiliyordu; analiz tüm türleri döndürüyordu. Analiz panelindeki
+  geçici "Çizilen alan" ile çizim araçlarıyla kaydedilen alanlar birbirinden habersizdi. Seçilen nokta ve geçici alan, analiz
+  çalışana kadar haritada görünmüyordu.
+- **Karar:**
+  - A01-A03 isteğe bağlı `types` dizisi alır; arayüz yalnız bazı türler işaretliyse gönderir. Boş dizi 400: "hiçbir tür" sessizce
+    boş sonuç üretmez; arayüz bu durumda tesis analizini kapatır ve nedenini yazar. Filtre değişince eski sonuç temizlenir.
+  - Tek alan listesi: analizde "Çizilen alan" seçeneği kaydedilmemiş alanı ve kayıtlı alan çizimlerini aynı listede sunar.
+    Kaydedilmemiş alan "Alanı kaydet" ile normal kayıt formuna gider ve kayıtlı çizime dönüşür.
+  - Analiz girdisi (seçilen nokta/alan) analiz kaynağında taslak olarak çizilir; altlık değişiminde korunur.
+  - Çizgi/alan çizimi sağ tıklamayla biter; Terra Draw'ın sağ tıklamada köşe ekleme varsayılanı kapatıldı. "Çizimi bitir" düğmesi ve
+    Enter, dokunmatik ve klavye kullanımı için kalır.
+  - Tesise ilk tıklama zoom 14'e, aynı tesise ikinci tıklama zoom 16'ya yaklaştırır; daha yakındaysa uzaklaşılmaz. 400 ms içindeki
+    ikinci tıklama, kamera hareket ederken tesis imlecin altından kaysa da aynı tesise sayılır ve haritanın +1 çift tıklama zoomu binmez.
+- **Sonuç:** İlçe başına sayımın (A05) kendi tür seçimi vardır, katman filtresine bağlanmadı. Ölçüm (A04) tesis kullanmaz.
+
 ## ADR-0020 — Büyük veri için ad araması indeksi ve keyset sayfalama
 
 - **Durum:** Kabul (2026-11-08, geliştirici isteği: değerlendirme ölçütü "veri boyutu büyüdüğünde performans"; "Yes, add both").

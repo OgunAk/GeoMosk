@@ -15,6 +15,13 @@ async function searchAndPick(page: Page, layer: 'districts' | 'facilities', q: s
 }
 
 const analysis = (page: Page) => page.getByRole('region', { name: 'Analiz' })
+// Analiz kaynağındaki geometri tipleri: seçilen girdi ve sonuç bu kaynaktan çizilir.
+const analysisGeometryTypes = (page: Page) =>
+  page.evaluate(async () => {
+    const source = window.__geomoskMap!.getSource('src-analysis') as unknown as { getData: () => Promise<{ features: { geometry: { type: string } }[] }> }
+    return (await source.getData()).features.map((f) => f.geometry.type)
+  })
+
 const resultNames = (page: Page) => analysis(page).getByRole('list', { name: 'Analiz sonuçları' }).getByRole('listitem')
 
 test('analiz paneli hiçbir modda dar yan panelden taşmaz', async ({ page }) => {
@@ -114,6 +121,7 @@ test('haritada tıklanan noktaya en yakın 5 tesis artan mesafeyle listelenir', 
   const box = (await page.getByTestId('map').boundingBox())!
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
   await expect(analysis(page).getByText(/^40\.\d+, 29\.\d+$/)).toBeVisible() // enlem, boylam gösterimi
+  await expect.poll(() => analysisGeometryTypes(page)).toEqual(['Point']) // seçilen nokta haritada görünür kalır
   await expect(page.getByRole('button', { name: 'Seçimi kapat' })).toHaveCount(0) // nokta seçimi obje seçmez
 
   await analysis(page).getByRole('button', { name: 'Analizi çalıştır' }).click()
@@ -126,6 +134,18 @@ test('haritada tıklanan noktaya en yakın 5 tesis artan mesafeyle listelenir', 
 
   await analysis(page).getByRole('button', { name: 'Temizle' }).click()
   await expect(analysis(page).getByRole('list', { name: 'Analiz sonuçları' })).toHaveCount(0)
+})
+
+test('katmanda kapatılan tesis türü analiz sonucuna girmez', async ({ page }) => {
+  await openApp(page)
+  await searchAndPick(page, 'districts', 'nilufer', 'Nilüfer')
+  await page.getByRole('checkbox', { name: /Eczane/ }).uncheck()
+  await expect(analysis(page).getByText(/Yalnız işaretli türler:/)).not.toContainText('Eczane')
+
+  await analysis(page).getByRole('button', { name: 'Analizi çalıştır' }).click()
+  await expect(analysis(page).getByText(/Alan içinde \d+ tesis/)).toBeVisible()
+  expect(await resultNames(page).count()).toBeGreaterThan(0)
+  await expect(resultNames(page).getByText('Eczane', { exact: true })).toHaveCount(0)
 })
 
 test('analiz için çizilen alan kullanıcı katmanına kaydedilmez', async ({ page }) => {
@@ -143,8 +163,9 @@ test('analiz için çizilen alan kullanıcı katmanına kaydedilmez', async ({ p
     await page.waitForTimeout(150)
   }
   await page.getByRole('button', { name: 'Çizimi bitir', exact: true }).click()
-  await expect(analysis(page).getByText('hazır')).toBeVisible()
+  await expect(analysis(page).getByText('kaydedilmemiş alan', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: /Yeni .* kaydet/ })).toHaveCount(0) // kayıt formu açılmaz
+  await expect.poll(() => analysisGeometryTypes(page)).toEqual(['Polygon']) // analiz çalışmadan önce de haritada
 
   await analysis(page).getByRole('button', { name: 'Analizi çalıştır' }).click()
   await expect(analysis(page).getByText(/Alan içinde \d+ tesis/)).toBeVisible()

@@ -100,12 +100,13 @@ test('çizgi ve alan çizilir; alanın adı ve geometrisi düzenlenir', async ({
   const areaName = `E2E alan ${Date.now()}`
   await openAtArea(page)
 
-  // Çizgi: köşeler + Enter tuşuyla bitir (geliştirici geri bildirimi G1).
+  // Çizgi: köşeler + sağ tıklamayla bitir; sağ tıklama köşe eklememeli.
   await page.getByRole('button', { name: 'Çizgi', exact: true }).click()
   await clickAt(page, offset(-0.004, -0.002))
   await clickAt(page, offset(0, 0.002))
   await clickAt(page, offset(0.004, -0.002))
-  await page.keyboard.press('Enter')
+  const finishAt = await screenPoint(page, offset(0.006, 0.002))
+  await page.mouse.click(finishAt.x, finishAt.y, { button: 'right' })
   await saveDraft(page, lineName)
   const line = await apiFeatureByName(page, lineName)
   expect(line?.geometry.type).toBe('LineString')

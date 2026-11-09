@@ -13,13 +13,14 @@ public sealed record SourceRef(string LayerId, string Id);
 public sealed record AnalysisInput(SourceRef? Source, Geometry? Geometry);
 
 /// <summary>A01: alan içindeki tesisler. Sınır dahil (varsayılan) ST_Covers, hariç ST_Within.</summary>
-public sealed record WithinRequest(AnalysisInput Area, bool IncludeBoundary, int Limit);
+/// <param name="FacilityTypes">null: tüm türler; dolu: yalnız bu tesis türleri (haritadaki tür filtresi).</param>
+public sealed record WithinRequest(AnalysisInput Area, bool IncludeBoundary, int Limit, string[]? FacilityTypes = null);
 
 /// <summary>A02: tampon. Seçim ST_DWithin(geography) ile metre cinsinden; çizilen tampon yaklaşık görseldir.</summary>
-public sealed record BufferRequest(AnalysisInput Source, double RadiusMeters, bool ExcludeSource, int Limit);
+public sealed record BufferRequest(AnalysisInput Source, double RadiusMeters, bool ExcludeSource, int Limit, string[]? FacilityTypes = null);
 
 /// <summary>A03: en yakın N. Kesin sıralama ST_Distance(geography) + id.</summary>
-public sealed record NearestRequest(Point Point, int N, string? FacilityType, double? MaxDistanceMeters);
+public sealed record NearestRequest(Point Point, int N, string? FacilityType, double? MaxDistanceMeters, string[]? FacilityTypes = null);
 
 /// <summary>A04: metrik ölçüm. Çizgi → uzunluk; alan → alan + çevre. Nokta desteklenmez (422, 0 dönülmez).</summary>
 public sealed record MeasureRequest(AnalysisInput Input);
@@ -63,10 +64,11 @@ public static class AnalysisRequestParser
     public static (WithinRequest? Value, RequestErrors Errors) ParseWithin(JsonElement body)
     {
         var errors = new Dictionary<string, string[]>();
-        if (!RequireObject(body, ["sourceFeature", "geometry", "includeBoundary", "limit"], errors)) return Fail<WithinRequest>(errors);
+        if (!RequireObject(body, ["sourceFeature", "geometry", "includeBoundary", "limit", "types"], errors)) return Fail<WithinRequest>(errors);
         var (input, unprocessable) = ReadInput(body, errors);
         var includeBoundary = ReadBool(body, "includeBoundary", true, errors);
         var limit = ReadInt(body, "limit", AnalysisLimits.DefaultLimit, 1, AnalysisLimits.MaxLimit, errors);
+        var types = ReadFacilityTypes(body, errors);
         if (input?.Geometry is { } g && g is not (Polygon or MultiPolygon))
         {
             errors["geometry"] = ["Alan analizi için geometry Polygon olmalı."];
@@ -77,20 +79,21 @@ public static class AnalysisRequestParser
             errors["sourceFeature.layerId"] = ["Alan analizi için kaynak bir ilçe veya alan (Polygon) kullanıcı çizimi olmalı."];
             unprocessable = true;
         }
-        return Result(errors, unprocessable, () => new WithinRequest(input!, includeBoundary, limit));
+        return Result(errors, unprocessable, () => new WithinRequest(input!, includeBoundary, limit, types));
     }
 
     public static (BufferRequest? Value, RequestErrors Errors) ParseBuffer(JsonElement body)
     {
         var errors = new Dictionary<string, string[]>();
-        if (!RequireObject(body, ["sourceFeature", "geometry", "radiusMeters", "excludeSource", "limit"], errors)) return Fail<BufferRequest>(errors);
+        if (!RequireObject(body, ["sourceFeature", "geometry", "radiusMeters", "excludeSource", "limit", "types"], errors)) return Fail<BufferRequest>(errors);
         var (input, unprocessable) = ReadInput(body, errors);
         var radius = ReadDouble(body, "radiusMeters", required: true, errors);
         if (radius is { } r && (r <= 0 || r > AnalysisLimits.MaxRadiusMeters))
             errors["radiusMeters"] = [$"radiusMeters 0'dan büyük ve en çok {AnalysisLimits.MaxRadiusMeters:0} metre olmalı."];
         var exclude = ReadBool(body, "excludeSource", true, errors);
         var limit = ReadInt(body, "limit", AnalysisLimits.DefaultLimit, 1, AnalysisLimits.MaxLimit, errors);
-        return Result(errors, unprocessable, () => new BufferRequest(input!, radius!.Value, exclude, limit));
+        var types = ReadFacilityTypes(body, errors);
+        return Result(errors, unprocessable, () => new BufferRequest(input!, radius!.Value, exclude, limit, types));
     }
 
     public static (MeasureRequest? Value, RequestErrors Errors) ParseMeasure(JsonElement body)
@@ -114,7 +117,7 @@ public static class AnalysisRequestParser
     public static (NearestRequest? Value, RequestErrors Errors) ParseNearest(JsonElement body)
     {
         var errors = new Dictionary<string, string[]>();
-        if (!RequireObject(body, ["point", "n", "type", "maxDistanceMeters"], errors)) return Fail<NearestRequest>(errors);
+        if (!RequireObject(body, ["point", "n", "type", "types", "maxDistanceMeters"], errors)) return Fail<NearestRequest>(errors);
 
         Point? point = null;
         var unprocessable = false;
@@ -146,11 +149,14 @@ public static class AnalysisRequestParser
             if (type is null || !FacilityTypes.All.Contains(type))
                 errors["type"] = [$"Geçersiz tesis türü. İzin verilenler: {string.Join(", ", FacilityTypes.All)}."];
         }
+        var types = ReadFacilityTypes(body, errors);
+        if (type is not null && types is not null)
+            errors["types"] = ["type ve types birlikte kullanılamaz."];
         var max = ReadDouble(body, "maxDistanceMeters", required: false, errors);
         if (max is { } m && (m <= 0 || m > AnalysisLimits.MaxRadiusMeters))
             errors["maxDistanceMeters"] = [$"maxDistanceMeters 0'dan büyük ve en çok {AnalysisLimits.MaxRadiusMeters:0} metre olmalı."];
 
-        return Result(errors, unprocessable, () => new NearestRequest(point!, n, type, max));
+        return Result(errors, unprocessable, () => new NearestRequest(point!, n, type, max, types));
     }
 
     // --- yardımcılar ---
@@ -214,6 +220,21 @@ public static class AnalysisRequestParser
             return (null, false);
         }
         return (new AnalysisInput(new SourceRef(layerId, idText), null), false);
+    }
+
+    /// <summary>Yok/null: tüm türler. Boş dizi hatadır: "hiçbir tür" sessizce boş sonuç üretmesin.</summary>
+    private static string[]? ReadFacilityTypes(JsonElement body, Dictionary<string, string[]> errors)
+    {
+        if (!body.TryGetProperty("types", out var v) || v.ValueKind == JsonValueKind.Null) return null;
+        var values = v.ValueKind == JsonValueKind.Array
+            ? v.EnumerateArray().Select(e => e.ValueKind == JsonValueKind.String ? e.GetString() : null).ToArray()
+            : [];
+        if (values.Length == 0 || values.Any(t => t is null || !FacilityTypes.All.Contains(t)))
+        {
+            errors["types"] = [$"types en az bir geçerli tesis türü içeren dizi olmalı. İzin verilenler: {string.Join(", ", FacilityTypes.All)}."];
+            return null;
+        }
+        return values.Distinct().ToArray()!;
     }
 
     private static bool ReadBool(JsonElement body, string name, bool fallback, Dictionary<string, string[]> errors)

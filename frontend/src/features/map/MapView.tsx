@@ -1,4 +1,4 @@
-import type { FeatureCollection } from 'geojson'
+import type { FeatureCollection, Geometry } from 'geojson'
 import {
   Map as MapLibreMap,
   NavigationControl,
@@ -63,6 +63,8 @@ interface MapViewProps {
   facilityTypes: FacilityType[]
   /** Son analiz sonucu: girdi geometrisi + eşleşen tesisler. */
   analysis: AnalysisResponse | null
+  /** Analiz çalışmadan önce seçilen nokta veya alan; altlık değişiminde korunur. */
+  analysisDraft: Geometry | null
   /** true iken harita tıklaması seçim yerine nokta verir (en yakın N). */
   pickingPoint: boolean
   onPickPoint: (lngLat: [number, number]) => void
@@ -78,8 +80,11 @@ interface MapViewProps {
 }
 
 const HIT_TOLERANCE_PX = 5
-/** Haritada tesise tek tıklayınca yaklaşılan zoom (arama sonucuna zoom'un maxZoom'uyla aynı). Daha yakındaysa uzaklaşılmaz. */
-const FACILITY_CLICK_ZOOM = 16
+/** Tesise ilk tıklamada yaklaşılan zoom; aynı tesise ikinci tıklamada tam zoom (arama sonucunun maxZoom'u). Daha yakındaysa uzaklaşılmaz. */
+const FACILITY_FIRST_CLICK_ZOOM = 14
+const FACILITY_SECOND_CLICK_ZOOM = 16
+/** Bu süre içindeki ikinci tıklama, kamera hareket ederken tesis imlecin altından kaysa da aynı tesise sayılır. */
+const QUICK_REPEAT_MS = 400
 
 declare global {
   interface Window {
@@ -91,7 +96,7 @@ declare global {
 export function MapView(props: MapViewProps) {
   const { layers, userFeatures, basemap, visibility, selection, highlight, focus, draw, drawCallbacks, finishSignal, facilityTypes, editingId, onSelect } =
     props
-  const { analysis, pickingPoint, onPickPoint, choropleth, wmsVisible } = props
+  const { analysis, analysisDraft, pickingPoint, onPickPoint, choropleth, wmsVisible } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const appliedBasemap = useRef<BasemapId>(basemap)
@@ -106,6 +111,7 @@ export function MapView(props: MapViewProps) {
 
   const pickRef = useRef<((lngLat: [number, number]) => void) | null>(null)
   const onViewChangeRef = useRef(props.onViewChange)
+  const lastFacilityClickRef = useRef<{ id: number; center: [number, number]; at: number } | null>(null)
 
   useEffect(() => {
     onSelectRef.current = onSelect
@@ -155,20 +161,43 @@ export function MapView(props: MapViewProps) {
       }
       return undefined
     }
+    const zoomToFacility = (center: [number, number], zoom: number) =>
+      map.easeTo({ center, zoom: Math.max(map.getZoom(), zoom), duration: 600 })
+    const isQuickRepeat = () => lastFacilityClickRef.current !== null && performance.now() - lastFacilityClickRef.current.at < QUICK_REPEAT_MS
     const onClick = (e: MapMouseEvent) => {
       if (drawingRef.current) return // çizim/düzenleme sırasında tıklama seçim yapmaz
       if (pickRef.current) return pickRef.current([e.lngLat.lng, e.lngLat.lat]) // en yakın N için nokta seçimi
+      const last = lastFacilityClickRef.current
+      if (last && isQuickRepeat()) {
+        last.at = performance.now()
+        return zoomToFacility(last.center, FACILITY_SECOND_CLICK_ZOOM)
+      }
       const hit = hitAt(e)
-      if (!hit) return onSelectRef.current(null)
+      if (!hit) {
+        lastFacilityClickRef.current = null
+        return onSelectRef.current(null)
+      }
       const layer = LAYER_OF_RENDERING[hit.layer.id]
       const id = layer === 'user-features' ? (hit.properties.featureId as string) : hit.id
       if (id === undefined) return
       onSelectRef.current({ layer, id: layer === 'user-features' ? String(id) : Number(id) })
-      // Geliştirici demosu (2026-11-06): tesise tek tıklama yaklaştırır. İlçe tıklaması haritayı oynatmaz (analiz için seçim).
+      // Geliştirici geri bildirimi: tesise ilk tıklama biraz, ikinci tıklama tam yaklaştırır. İlçe tıklaması haritayı oynatmaz (analiz için seçim).
       if (layer === 'facilities' && hit.geometry.type === 'Point') {
         const [lng, lat] = hit.geometry.coordinates
-        map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), FACILITY_CLICK_ZOOM), duration: 600 })
+        const repeated = last?.id === Number(id)
+        lastFacilityClickRef.current = { id: Number(id), center: [lng, lat], at: performance.now() }
+        zoomToFacility([lng, lat], repeated ? FACILITY_SECOND_CLICK_ZOOM : FACILITY_FIRST_CLICK_ZOOM)
+      } else {
+        lastFacilityClickRef.current = null
       }
+    }
+    // Tesise çift tıklamada zoom iki adımlı kuraldan gelir; haritanın kendi +1 zoom'u üstüne binmez.
+    const onDoubleClick = (e: MapMouseEvent) => {
+      const last = lastFacilityClickRef.current
+      if (!last || !isQuickRepeat()) return
+      e.preventDefault()
+      // Engellenen dblclick işlenirken MapLibre süren kamera hareketini durdurur; tam zoom bir sonraki karede istenir.
+      requestAnimationFrame(() => zoomToFacility(last.center, FACILITY_SECOND_CLICK_ZOOM))
     }
     const onMove = (e: MapMouseEvent) => {
       if (drawingRef.current) return
@@ -192,6 +221,7 @@ export function MapView(props: MapViewProps) {
     map.on('error', onError)
     map.on('sourcedata', onSourceData)
     map.on('click', onClick)
+    map.on('dblclick', onDoubleClick)
     map.on('mousemove', onMove)
     mapRef.current = map
     window.__geomoskMap = map
@@ -202,6 +232,7 @@ export function MapView(props: MapViewProps) {
       map.off('error', onError)
       map.off('sourcedata', onSourceData)
       map.off('click', onClick)
+      map.off('dblclick', onDoubleClick)
       map.off('mousemove', onMove)
       map.remove()
       mapRef.current = null
@@ -243,12 +274,12 @@ export function MapView(props: MapViewProps) {
   useEffect(() => {
     const map = mapRef.current
     if (!map || styleRevision === 0) return
-    upsertGeoJson(map, SOURCE_IDS.analysis, analysisCollection(analysis))
+    upsertGeoJson(map, SOURCE_IDS.analysis, analysisCollection(analysis, analysisDraft))
     ensureAnalysisLayers(map)
     enforceLayerOrder(map)
     const ids = analysis ? analysis.matches.features.map((f) => Number(f.id)) : []
     if (map.getLayer(LAYER_IDS.analysisMatches)) map.setFilter(LAYER_IDS.analysisMatches, idFilter(ids))
-  }, [styleRevision, analysis, layers])
+  }, [styleRevision, analysis, analysisDraft, layers])
 
   // Harici WMS: kaynak ve katman her stilde yeniden kurulur; yalnız görünürken karo istenir.
   useEffect(() => {
@@ -430,9 +461,12 @@ function ensureSourceLayers(map: MapLibreMap) {
   })
 }
 
-function analysisCollection(analysis: AnalysisResponse | null): FeatureCollection {
-  if (!analysis) return { type: 'FeatureCollection', features: [] }
-  const features: FeatureCollection['features'] = [analysis.input]
+function analysisCollection(analysis: AnalysisResponse | null, draft: Geometry | null): FeatureCollection {
+  const draftFeature: FeatureCollection['features'] = draft ? [{ type: 'Feature', geometry: draft, properties: { role: 'draft' } }] : []
+  if (!analysis) return { type: 'FeatureCollection', features: draftFeature }
+  // Sonuç girdisi seçilen girdiyle aynıysa iki kez çizilmez (yarı saydam dolgu koyulaşmasın).
+  const sameAsInput = JSON.stringify(draft) === JSON.stringify(analysis.input.geometry)
+  const features: FeatureCollection['features'] = [...(sameAsInput ? [] : draftFeature), analysis.input]
   if (analysis.analysis === 'nearest' && analysis.input.geometry.type === 'Point') {
     const from = analysis.input.geometry.coordinates
     // Bağlantı çizgisi kuş uçuşu ilişkiyi gösterir; rota değildir.

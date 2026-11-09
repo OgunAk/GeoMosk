@@ -1,6 +1,6 @@
 import type { Feature, Geometry, Polygon } from 'geojson'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AnalysisPanel, type SelectedSource } from './features/analysis/AnalysisPanel'
+import { AnalysisPanel, type SavedArea, type SelectedSource } from './features/analysis/AnalysisPanel'
 import { keepAnalysisFor } from './features/analysis/analysisSelection'
 import { choroplethClasses, colorByDistrict } from './features/analysis/choropleth'
 import { DistrictStatsPanel } from './features/analysis/DistrictStatsPanel'
@@ -57,6 +57,7 @@ export default function App() {
   // --- analiz durumu ---
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null)
   const [analysisArea, setAnalysisArea] = useState<Polygon | null>(null)
+  const [analysisDraft, setAnalysisDraft] = useState<Geometry | null>(null)
   const [drawingAnalysisArea, setDrawingAnalysisArea] = useState(false)
   const [pickingPoint, setPickingPoint] = useState(false)
   const [pickedPoint, setPickedPoint] = useState<[number, number] | null>(null)
@@ -161,6 +162,7 @@ export default function App() {
           analysisDrawRef.current = false
           setDrawingAnalysisArea(false)
           setAnalysisArea(geometry)
+          setAnalysisResult(null) // yeni girdi: önceki alanın sonucu yanıltıcı olur
           setDraw((d) => ({ kind: 'off', token: d.token + 1 }))
         } else {
           setPendingGeometry(geometry)
@@ -192,11 +194,21 @@ export default function App() {
 
   const onCreated = useCallback(
     (feature: UserFeature) => {
+      // Kaydedilen analiz alanı artık listede kayıtlı çizim olarak yer alır.
+      if (pendingGeometry === analysisArea) setAnalysisArea(null)
       user.refresh()
       endDrawing()
       setSelection({ layer: 'user-features', id: feature.id })
     },
-    [user, endDrawing],
+    [user, endDrawing, pendingGeometry, analysisArea],
+  )
+
+  const savedAreas = useMemo<SavedArea[]>(
+    () =>
+      user.state.kind === 'loaded'
+        ? user.state.collection.features.flatMap((f) => (f.geometry.type === 'Polygon' ? [{ id: String(f.id), name: f.properties.name, geometry: f.geometry }] : []))
+        : [],
+    [user.state],
   )
 
   const selectedUserId = selection?.layer === 'user-features' ? String(selection.id) : null
@@ -254,6 +266,8 @@ export default function App() {
           <AnalysisPanel
             selected={selectedSource}
             drawnArea={analysisArea}
+            savedAreas={savedAreas}
+            facilityTypes={visibleFacilityTypes}
             pickedPoint={pickedPoint}
             pickingPoint={pickingPoint}
             drawingArea={drawingAnalysisArea}
@@ -264,6 +278,12 @@ export default function App() {
               setPickingPoint(true)
             }}
             onResult={(result) => setAnalysisResult(result && keepAnalysisFor(result, selectionRef.current) ? result : null)}
+            onDraftChange={setAnalysisDraft}
+            onSaveDrawnArea={() => setPendingGeometry(analysisArea)}
+            onClearInput={() => {
+              setPickedPoint(null)
+              setAnalysisArea(null)
+            }}
             onSelectMatch={(f) => {
               showLayer('facilities')
               setSelection({ layer: 'facilities', id: Number(f.id) })
@@ -307,7 +327,10 @@ export default function App() {
             basemap={basemap}
             onBasemapChange={setBasemap}
             facilityTypes={facilityTypes}
-            onToggleFacilityType={(type, visible) => setFacilityTypes((t) => ({ ...t, [type]: visible }))}
+            onToggleFacilityType={(type, visible) => {
+              setFacilityTypes((t) => ({ ...t, [type]: visible }))
+              setAnalysisResult(null) // sonuç eski tür seçimine aittir
+            }}
             wmsVisible={wmsVisible}
             onToggleWms={setWmsVisible}
           />
@@ -329,12 +352,14 @@ export default function App() {
         facilityTypes={visibleFacilityTypes}
         editingId={editing?.id ?? null}
         analysis={analysisResult}
+        analysisDraft={analysisDraft}
         choropleth={choropleth}
         wmsVisible={wmsVisible}
         pickingPoint={pickingPoint}
         onPickPoint={(point) => {
           setPickedPoint(point)
           setPickingPoint(false)
+          setAnalysisResult(null) // yeni girdi: önceki noktanın sonucu yanıltıcı olur
         }}
         onSelect={selectObject}
         onViewChange={onViewChange}

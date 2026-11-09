@@ -66,16 +66,17 @@ function post(path: string, body: unknown) {
   }).then((r) => r.data)
 }
 
-export function runWithin(input: { sourceFeature: SourceRef } | { geometry: Polygon }, includeBoundary: boolean) {
-  return post('within', { ...input, includeBoundary })
+/** types verilmezse tüm tesis türleri; verilirse yalnız bunlar (haritadaki tür filtresi). */
+export function runWithin(input: { sourceFeature: SourceRef } | { geometry: Polygon }, includeBoundary: boolean, types?: FacilityType[]) {
+  return post('within', { ...input, includeBoundary, ...(types ? { types } : {}) })
 }
 
-export function runBuffer(input: { sourceFeature: SourceRef } | { geometry: Geometry }, radiusMeters: number) {
-  return post('buffer', { ...input, radiusMeters })
+export function runBuffer(input: { sourceFeature: SourceRef } | { geometry: Geometry }, radiusMeters: number, types?: FacilityType[]) {
+  return post('buffer', { ...input, radiusMeters, ...(types ? { types } : {}) })
 }
 
-export function runNearest(point: [number, number], n: number, type?: FacilityType | '') {
-  return post('nearest', { point: { type: 'Point', coordinates: point }, n, ...(type ? { type } : {}) })
+export function runNearest(point: [number, number], n: number, type?: FacilityType | '', types?: FacilityType[]) {
+  return post('nearest', { point: { type: 'Point', coordinates: point }, n, ...(type ? { type } : types ? { types } : {}) })
 }
 
 export function runMeasure(input: { sourceFeature: SourceRef } | { geometry: Geometry }) {
