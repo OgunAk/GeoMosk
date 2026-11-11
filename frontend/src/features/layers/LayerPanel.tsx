@@ -11,6 +11,8 @@ interface LayerPanelProps {
   /** Kullanıcı çizimleri liste sınırını (2000) aştı: haritada hepsi yok. */
   userHasMore?: boolean
   onRetry: () => void
+  /** Görünen alanın tesisleri yüklenemediyse yalnız o isteği yeniler (eldeki veri korunur). */
+  onRefresh?: () => void
   visibility: Record<LayerKey, boolean>
   onToggle: (layer: LayerKey, visible: boolean) => void
   basemap: BasemapId
@@ -31,7 +33,7 @@ const LAYER_TITLES: Record<LayerKey, string> = {
 
 /** Katman aç/kapa (M02), altlık seçimi (M05), sayılar, tesis türü lejantı ve kaynak atfı. */
 export function LayerPanel(props: LayerPanelProps) {
-  const { state, userCount, userHasMore = false, onRetry, visibility, onToggle, basemap, onBasemapChange, facilityTypes, onToggleFacilityType, wmsVisible = false, onToggleWms } = props
+  const { state, userCount, userHasMore = false, onRetry, onRefresh, visibility, onToggle, basemap, onBasemapChange, facilityTypes, onToggleFacilityType, wmsVisible = false, onToggleWms } = props
   const facilityCounts = Object.fromEntries((Object.keys(FACILITY_LABELS) as FacilityType[]).map((t) => [t, 0])) as Record<FacilityType, number>
   if (state.kind === 'loaded') for (const f of state.facilities.features) facilityCounts[f.properties.facilityType]++
   return (
@@ -92,6 +94,16 @@ export function LayerPanel(props: LayerPanelProps) {
             <p role="status" className="mt-2 rounded bg-amber-50 px-2 py-1 text-amber-900">
               Kayıt sınırı aşıldı; haritada verinin yalnızca bir kısmı gösteriliyor.
             </p>
+          )}
+          {state.facilitiesStale && (
+            <div role="alert" className="mt-2 rounded bg-amber-50 px-2 py-1 text-amber-900">
+              <p>Yeni görünümün tesisleri yüklenemedi; önceki alandaki tesisler gösteriliyor.</p>
+              {onRefresh && (
+                <button type="button" onClick={onRefresh} className="mt-1 rounded border border-amber-300 bg-white px-2 py-0.5 hover:bg-amber-100">
+                  Tesisleri yeniden yükle
+                </button>
+              )}
+            </div>
           )}
           <p className="mt-2 text-xs text-slate-500">
             Sağlık tesisleri haritada görünen alana göre (bbox) yüklenir; sayılar bu alanı gösterir.

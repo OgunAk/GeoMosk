@@ -57,8 +57,25 @@ describe('SearchPanel', () => {
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tür' }), 'pharmacy')
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'İlçe' }), '7')
 
-    await waitFor(() => expect(screen.getByText('İlk 50 sonuç gösteriliyor')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('1 sonuç gösteriliyor; devamı var')).toBeInTheDocument())
     expect(fetchMock.mock.lastCall?.[0]).toBe('/api/facilities?limit=50&type=pharmacy&districtId=7')
+  })
+
+  it('devamı olan aramada sonraki sayfa keyset ile eklenir ve vurgu tüm listeyi kapsar (dış inceleme bulgusu)', async () => {
+    const first = { ...collection(['A', 'B'], true), meta: { returned: 2, limit: 50, offset: 0, hasMore: true, nextAfter: 2 } }
+    const second = collection(['C'])
+    second.features[0].id = 3
+    const fetchMock = vi.fn().mockResolvedValueOnce(ok(first)).mockResolvedValueOnce(ok(second))
+    vi.stubGlobal('fetch', fetchMock)
+    const props = setup()
+
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Ad ile ara' }), 'eczane')
+    await userEvent.click(await screen.findByRole('button', { name: '50 sonuç daha göster' }))
+
+    await waitFor(() => expect(screen.getByText('3 sonuç')).toBeInTheDocument())
+    expect(fetchMock.mock.lastCall?.[0]).toBe('/api/facilities?limit=50&q=eczane&after=2')
+    expect(props.onResults.mock.lastCall?.[1]).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: '50 sonuç daha göster' })).not.toBeInTheDocument()
   })
 
   it('ölçüt temizlenince vurguyu kaldırır ve istek atmaz', async () => {

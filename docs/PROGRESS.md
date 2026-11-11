@@ -1,6 +1,7 @@
 # GeoMosk — İlerleme kaydı
 
 ## Kısa durum (5 Kasım 2026; güncelleme 8 Kasım 2026)
+- **Dış inceleme (2026-11-11):** geliştirici iki yapay zekâya (Gemini, Codex) yönetici rolüyle inceleme yaptırdı. Claude bulguları kodda doğruladı: yenileme hatasında sonsuz "Yükleniyor" (gerçek hata → uyarı + yeniden yükle), aramada ilk 50'den sonrasına ulaşılamaması (keyset ile "50 sonuç daha göster"), yan panelde arama/katmanların aşağıda kalması (sıra değişti), README test önkoşulu (`npm ci`). En yakın N tam taraması kodda değiştirilmedi (ADR-0012'de belgeli); `tmp/` bulgusu repoya ait değildi. Backend 156/156, Vitest 83/83, E2E 30/30 (üretim imajı), `validate-project --full` exit 0.
 - **Geliştirici uygulama testi (2026-11-09):** analizler tür filtresine uyar, seçilen nokta/alan haritada kalır, çizilen alanlar tek listede, sağ tıkla çizim bitirme, tesise iki adımlı zoom (ADR-0021).
 - **Ad değişikliği (2026-11-06, geliştirici isteği):** proje adı GeoScope → **GeoMosk** (görünen ad, ADR-0017).
 - **Büyük veri önlemleri (2026-11-08, geliştirici isteği):** ad araması için GIN trigram indeksleri ve keyset sayfalama (`after`/`nextAfter`), ADR-0020. Backend 154/154; 10.000 tesiste arama 14,7 → 0,28 ms, derin sayfa 1,7 → 0,07 ms (TEST-PLAN).
@@ -11,7 +12,7 @@
 - **Ek istek (2026-11-04):** orta tuşla sürükleyerek harita kaydırma uygulandı (useMiddleMousePan, E2E).
 - **Geliştirici bildirimi (2026-11-05):** başka ilçe seçilince eski analiz sonucu kalıyordu → `keepAnalysisFor` kuralı: yalnız analiz kaynağı veya sonuç listesindeki tesis seçilince sonuç korunur, aksi halde temizlenir (Vitest 6 + E2E). Commit 734d642.
 - **Geliştirici bildirimi (2026-11-05):** "En yakın N" modunda "Haritada nokta seç" düğmesi ve Tür kutusu 320 px yan panelde taşıyordu → nokta bilgisi/düğme ayrı satır, N+Tür ızgarası (`minmax(0,1fr)`), seçim kutusu `min-w-0`; E2E: üç modda ve nokta seçildikten sonra içerik alanını aşan öğe yok. Commit 734d642.
-- **Git:** `master` = Faz 0-8 ve sonraki geliştirmeler (GitHub `OgunAk/GeoMosk`; PR #1-#17 geliştirici tarafından birleştirildi, CI yeşil). Depo herkese açık (2026-11-08).
+- **Git:** `master` = Faz 0-8 ve sonraki geliştirmeler (GitHub `OgunAk/GeoMosk`; PR #1-#20 geliştirici tarafından birleştirildi, CI yeşil). Depo herkese açık (2026-11-08).
 - **Çalışan ortam:** compose `db` ayakta (gerçek veri). Compose `api`/`web` durdurulmuş (Docker Desktop container ağı sorunu); API `dotnet run` (5080) + Vite (5173) yerelde.
 - **Sonraki adım (geliştirici):** kontrol noktası 3 — manuel demo, teknik sahiplik soruları (DEVELOPER-REVIEW), depo erişimi/lisans kararı (DELIVERY-CHECKLIST).
 - **Açık kalan (bilinçli) kısıtlar:** klavye ile çizim yok; ilçe GeoJSON tam çözünürlük (gzip 97 KB, ölçülen ihtiyaç yok); arama trigram indeksi gerekmedi (10.000'de p95 17 ms); nearest 100.000+ kayıtta KNN değerlendirilir (ADR-0012).
