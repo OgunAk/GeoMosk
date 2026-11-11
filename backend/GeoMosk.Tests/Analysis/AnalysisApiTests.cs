@@ -205,6 +205,48 @@ public sealed class AnalysisApiTests(PostGisContainerFixture postgis) : IAsyncLi
         Assert.Equal(["Aynı konum", "Batı 0.01", "Doğu 0.01", "Kaynak"], Names(within1km).Order());
     }
 
+    // Geliştirici testi (2026-11-09): haritada yalnız bazı türler işaretliyken analiz de o türlerle sınırlı kalmalı.
+    private static string[] Types(JsonElement response) =>
+        response.GetProperty("matches").GetProperty("features").EnumerateArray()
+            .Select(f => f.GetProperty("properties").GetProperty("facilityType").GetString()!).Distinct().ToArray();
+
+    [Fact]
+    public async Task Analyses_are_limited_to_requested_facility_types()
+    {
+        var square = new
+        {
+            type = "Polygon",
+            coordinates = new[] { new[] { new[] { 29.285, 40.295 }, new[] { 29.315, 40.295 }, new[] { 29.315, 40.305 }, new[] { 29.285, 40.305 }, new[] { 29.285, 40.295 } } },
+        };
+        var (_, within) = await Post("/api/analysis/within", new { geometry = square, types = new[] { "hospital" } });
+        var (_, buffer) = await Post("/api/analysis/buffer", new { geometry = Point(OLon, OLat), radiusMeters = Radius, types = new[] { "pharmacy" } });
+        var (_, nearest) = await Post("/api/analysis/nearest", new { point = Point(OLon, OLat), n = 100, types = new[] { "hospital", "pharmacy" } });
+
+        Assert.Equal(["Kaynak"], Names(within));
+        Assert.Equal(["pharmacy"], Types(buffer));
+        Assert.Contains("Doğu 0.01", Names(buffer));
+        Assert.DoesNotContain("Kaynak", Names(buffer)); // hospital
+        var expected = await Sql.ScalarAsync<int>(_cs, "SELECT count(*) FROM health_facilities WHERE source_deleted_at IS NULL AND facility_type IN ('hospital', 'pharmacy')");
+        Assert.Equal(expected, nearest.GetProperty("matches").GetProperty("features").GetArrayLength());
+        Assert.Equal(["hospital", "pharmacy"], Types(nearest).Order());
+    }
+
+    [Fact]
+    public async Task Invalid_facility_type_filters_are_rejected()
+    {
+        var area = new { sourceFeature = new { layerId = "districts", id = 1 } };
+        var (empty, emptyBody) = await Post("/api/analysis/within", new { area.sourceFeature, types = Array.Empty<string>() });
+        var (unknown, _) = await Post("/api/analysis/buffer", new { geometry = Point(OLon, OLat), radiusMeters = Radius, types = new[] { "veteriner" } });
+        var (notArray, _) = await Post("/api/analysis/within", new { area.sourceFeature, types = "hospital" });
+        var (both, _) = await Post("/api/analysis/nearest", new { point = Point(OLon, OLat), n = 5, type = "hospital", types = new[] { "pharmacy" } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, empty);
+        Assert.True(emptyBody.GetProperty("errors").TryGetProperty("types", out _));
+        Assert.Equal(HttpStatusCode.BadRequest, unknown);
+        Assert.Equal(HttpStatusCode.BadRequest, notArray);
+        Assert.Equal(HttpStatusCode.BadRequest, both);
+    }
+
     [Theory]
     [InlineData(0, "n")]
     [InlineData(101, "n")]

@@ -2,7 +2,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { formatDistance, type AnalysisResponse } from '../../services/analysis'
-import { AnalysisPanel, type SelectedSource } from './AnalysisPanel'
+import { FACILITY_LABELS } from '../map/mapStyle'
+import type { FacilityType } from '../../services/sourceLayers'
+import { AnalysisPanel, type SavedArea, type SelectedSource } from './AnalysisPanel'
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
@@ -28,6 +30,8 @@ function setup(overrides: Partial<Parameters<typeof AnalysisPanel>[0]> = {}) {
   const props = {
     selected: null as SelectedSource | null,
     drawnArea: null,
+    savedAreas: [] as SavedArea[],
+    facilityTypes: Object.keys(FACILITY_LABELS) as FacilityType[],
     pickedPoint: null as [number, number] | null,
     pickingPoint: false,
     drawingArea: false,
@@ -35,6 +39,9 @@ function setup(overrides: Partial<Parameters<typeof AnalysisPanel>[0]> = {}) {
     onDrawArea: vi.fn(),
     onPickPoint: vi.fn(),
     onResult: vi.fn(),
+    onDraftChange: vi.fn(),
+    onSaveDrawnArea: vi.fn(),
+    onClearInput: vi.fn(),
     onSelectMatch: vi.fn(),
     onShowAll: vi.fn(),
   }
@@ -165,6 +172,75 @@ describe('AnalysisPanel', () => {
     expect(dl).not.toHaveTextContent('Uzunluk')
     expect(screen.getByText(/EPSG:32635/)).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Analiz sonuçları' })).not.toBeInTheDocument()
+  })
+
+  const square = (x: number) => ({ type: 'Polygon' as const, coordinates: [[[x, 40], [x + 0.1, 40], [x + 0.1, 40.1], [x, 40]]] })
+  const nilufer: SelectedSource = { ref: { layerId: 'districts', id: 12 }, label: 'Nilüfer', isArea: true, measurable: true }
+
+  it('haritada yalnız bazı türler işaretliyse analiz bu türlerle istenir ve panelde yazar', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok(response('within', [])))
+    vi.stubGlobal('fetch', fetchMock)
+    setup({ selected: nilufer, facilityTypes: ['hospital'] })
+
+    expect(screen.getByText('Yalnız işaretli türler: Hastane.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Analizi çalıştır' }))
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).types).toEqual(['hospital'])
+  })
+
+  it('hiç tür işaretli değilse tesis analizi çalışmaz; ölçüm çalışır', async () => {
+    setup({ selected: nilufer, facilityTypes: [] })
+
+    expect(screen.getByText(/en az bir tesis türü işaretleyin/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Analizi çalıştır' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('radio', { name: 'Ölçüm' }))
+    expect(screen.getByRole('button', { name: 'Analizi çalıştır' })).toBeEnabled()
+  })
+
+  it('en yakın N: Tür kutusu yalnız işaretli türleri sunar, Tümü işaretli türleri gönderir', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok(response('nearest', [])))
+    vi.stubGlobal('fetch', fetchMock)
+    setup({ pickedPoint: [29.06, 40.19], facilityTypes: ['hospital', 'pharmacy'] })
+    await userEvent.click(screen.getByRole('radio', { name: 'En yakın N' }))
+
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Tümü', 'Hastane', 'Eczane'])
+    await userEvent.click(screen.getByRole('button', { name: 'Analizi çalıştır' }))
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).types).toEqual(['hospital', 'pharmacy'])
+  })
+
+  it('çizim bölümünde kaydedilen alan analiz listesinde gelir ve kayıtlı çizim olarak gönderilir', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok(response('within', [])))
+    vi.stubGlobal('fetch', fetchMock)
+    const saved = [{ id: 'a1', name: 'Eski alan', geometry: square(29) }, { id: 'b2', name: 'Yeni alan', geometry: square(29.2) }]
+    const props = setup({ savedAreas: saved })
+    await userEvent.click(screen.getByRole('radio', { name: /Çizilen alan/ }))
+
+    expect(screen.getByRole('combobox', { name: 'Alan seçin' })).toHaveValue('b2') // en son kaydedilen
+    expect(props.onDraftChange).toHaveBeenLastCalledWith(saved[1].geometry)
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Alan seçin' }), 'a1')
+    await userEvent.click(screen.getByRole('button', { name: 'Analizi çalıştır' }))
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).sourceFeature).toEqual({ layerId: 'user-features', id: 'a1' })
+  })
+
+  it('kaydedilmemiş alan listede öne çıkar, kaydedilebilir ve haritaya taslak olarak bildirilir', async () => {
+    const area = square(29)
+    const props = setup({ drawnArea: area, savedAreas: [{ id: 'a1', name: 'Eski alan', geometry: square(29.2) }] })
+    await userEvent.click(screen.getByRole('radio', { name: /Çizilen alan/ }))
+
+    expect(screen.getByRole('combobox', { name: 'Alan seçin' })).toHaveDisplayValue('Kaydedilmemiş alan')
+    expect(props.onDraftChange).toHaveBeenLastCalledWith(area)
+    await userEvent.click(screen.getByRole('button', { name: 'Alanı kaydet' }))
+    expect(props.onSaveDrawnArea).toHaveBeenCalledOnce()
+  })
+
+  it('seçilen nokta haritaya bildirilir ve Temizle ile silinebilir', async () => {
+    const props = setup({ pickedPoint: [29.06, 40.19] })
+    await userEvent.click(screen.getByRole('radio', { name: 'En yakın N' }))
+
+    expect(props.onDraftChange).toHaveBeenLastCalledWith({ type: 'Point', coordinates: [29.06, 40.19] })
+    await userEvent.click(screen.getByRole('button', { name: 'Temizle' }))
+    expect(props.onClearInput).toHaveBeenCalledOnce()
   })
 
   it('sunucu hatasını gösterir', async () => {

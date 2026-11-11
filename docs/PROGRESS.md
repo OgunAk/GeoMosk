@@ -1,6 +1,7 @@
 # GeoMosk — İlerleme kaydı
 
 ## Kısa durum (5 Kasım 2026; güncelleme 8 Kasım 2026)
+- **Geliştirici uygulama testi (2026-11-09):** analizler tür filtresine uyar, seçilen nokta/alan haritada kalır, çizilen alanlar tek listede, sağ tıkla çizim bitirme, tesise iki adımlı zoom (ADR-0021).
 - **Ad değişikliği (2026-11-06, geliştirici isteği):** proje adı GeoScope → **GeoMosk** (görünen ad, ADR-0017).
 - **Büyük veri önlemleri (2026-11-08, geliştirici isteği):** ad araması için GIN trigram indeksleri ve keyset sayfalama (`after`/`nextAfter`), ADR-0020. Backend 154/154; 10.000 tesiste arama 14,7 → 0,28 ms, derin sayfa 1,7 → 0,07 ms (TEST-PLAN).
 - **Tam yeniden adlandırma (2026-11-08, geliştirici isteği):** kod, veritabanı, rol, ortam değişkeni ve Compose adları da GeoMosk (ADR-0019); temiz kurulum gerekir.

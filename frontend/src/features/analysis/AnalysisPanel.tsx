@@ -1,5 +1,5 @@
-import type { Feature, Point, Polygon } from 'geojson'
-import { useId, useState, type FormEvent } from 'react'
+import type { Feature, Geometry, Point, Polygon } from 'geojson'
+import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
 import { ApiError } from '../../services/apiClient'
 import {
   MAX_N,
@@ -28,9 +28,24 @@ export interface SelectedSource {
   measurable: boolean
 }
 
+/** Analizde kullanılabilen, kaydedilmiş alan çizimi. */
+export interface SavedArea {
+  id: string
+  name: string
+  geometry: Polygon
+}
+
+/** Listede kaydedilmemiş (geçici) alanı temsil eder; kayıtlı çizimlerin UUID'siyle çakışmaz. */
+const TEMPORARY_AREA = 'temporary'
+
 interface AnalysisPanelProps {
   selected: SelectedSource | null
+  /** Analiz panelinden çizilen, henüz kaydedilmemiş alan. */
   drawnArea: Polygon | null
+  /** Çizim araçlarıyla kaydedilmiş alanlar (eskiden yeniye). */
+  savedAreas: SavedArea[]
+  /** Haritada işaretlenen tesis türleri; analizler bunlarla sınırlanır. */
+  facilityTypes: FacilityType[]
   pickedPoint: [number, number] | null
   pickingPoint: boolean
   drawingArea: boolean
@@ -38,6 +53,12 @@ interface AnalysisPanelProps {
   onDrawArea: () => void
   onPickPoint: () => void
   onResult: (result: AnalysisResponse | null) => void
+  /** Analiz çalışmadan önce haritada gösterilecek girdi (seçilen nokta veya alan). */
+  onDraftChange: (draft: Geometry | null) => void
+  /** Kaydedilmemiş alanı kayıt formuna gönderir. */
+  onSaveDrawnArea: () => void
+  /** Seçilen noktayı ve kaydedilmemiş alanı temizler. */
+  onClearInput: () => void
   onSelectMatch: (feature: Feature<Point, MatchProperties>) => void
   onShowAll: () => void
 }
@@ -51,10 +72,12 @@ const KINDS: { kind: AnalysisKind; label: string }[] = [
 
 /** A01-A03: hesap tamamen backend'de (PostGIS); arayüz yalnız girdiyi toplar ve sonucu gösterir. */
 export function AnalysisPanel(props: AnalysisPanelProps) {
-  const { selected, drawnArea, pickedPoint, pickingPoint, drawingArea, result, onDrawArea, onPickPoint, onResult, onSelectMatch, onShowAll } = props
-  const ids = { radius: useId(), n: useId(), type: useId() }
+  const { selected, drawnArea, savedAreas, facilityTypes, pickedPoint, pickingPoint, drawingArea, result } = props
+  const { onDrawArea, onPickPoint, onResult, onDraftChange, onSaveDrawnArea, onClearInput, onSelectMatch, onShowAll } = props
+  const ids = { radius: useId(), n: useId(), type: useId(), area: useId() }
   const [kind, setKind] = useState<AnalysisKind>('within')
   const [areaSource, setAreaSource] = useState<'selected' | 'drawn'>('selected')
+  const [areaChoice, setAreaChoice] = useState(TEMPORARY_AREA)
   const [includeBoundary, setIncludeBoundary] = useState(true)
   const [radius, setRadius] = useState('2000')
   const [n, setN] = useState('5')
@@ -67,16 +90,38 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
   const nValue = Number(n)
   const nValid = Number.isInteger(nValue) && nValue >= 1 && nValue <= MAX_N
 
-  const ready =
+  // Seçim geçersizse (alan silindi, geçici alan kaydedildi) varsa geçici alan, yoksa en son kaydedilen alan kullanılır.
+  const chosenSaved = savedAreas.find((a) => a.id === areaChoice)
+  const effectiveChoice = areaChoice === TEMPORARY_AREA && drawnArea ? TEMPORARY_AREA : chosenSaved ? chosenSaved.id : drawnArea ? TEMPORARY_AREA : (savedAreas.at(-1)?.id ?? '')
+  const usesTemporary = effectiveChoice === TEMPORARY_AREA
+  const savedArea = savedAreas.find((a) => a.id === effectiveChoice) ?? null
+  const drawnGeometry = usesTemporary ? drawnArea : (savedArea?.geometry ?? null)
+
+  const allTypes = Object.keys(FACILITY_LABELS) as FacilityType[]
+  const noTypes = facilityTypes.length === 0
+  const typesFilter = facilityTypes.length === allTypes.length ? undefined : facilityTypes
+  const usesFacilities = kind !== 'measure'
+  // Tür kutusunda seçili tür haritadan kapatılırsa kutu "Tümü"ne (görünen türlere) döner.
+  const nearestType = type !== '' && facilityTypes.includes(type) ? type : ''
+
+  const draft = useMemo<Geometry | null>(() => {
+    if (kind === 'nearest') return pickedPoint ? { type: 'Point', coordinates: pickedPoint } : null
+    return kind === 'within' && areaSource === 'drawn' ? drawnGeometry : null
+  }, [kind, areaSource, pickedPoint, drawnGeometry])
+  useEffect(() => onDraftChange(draft), [draft, onDraftChange])
+
+  const inputReady =
     kind === 'within'
       ? areaSource === 'drawn'
-        ? drawnArea !== null
+        ? drawnGeometry !== null
         : selected?.isArea === true
       : kind === 'buffer'
         ? selected !== null && radiusValid
         : kind === 'measure'
           ? selected?.measurable === true
           : pickedPoint !== null && nValid
+  const ready = inputReady && !(usesFacilities && noTypes)
+  const clearable = result !== null || (kind === 'nearest' && pickedPoint !== null) || (kind === 'within' && areaSource === 'drawn' && usesTemporary && drawnArea !== null)
 
   async function onRun(e: FormEvent) {
     e.preventDefault()
@@ -86,12 +131,16 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
     try {
       const response =
         kind === 'within'
-          ? await runWithin(areaSource === 'drawn' ? { geometry: drawnArea! } : { sourceFeature: selected!.ref }, includeBoundary)
+          ? await runWithin(
+              areaSource === 'selected' ? { sourceFeature: selected!.ref } : usesTemporary ? { geometry: drawnArea! } : { sourceFeature: { layerId: 'user-features', id: savedArea!.id } },
+              includeBoundary,
+              typesFilter,
+            )
           : kind === 'buffer'
-            ? await runBuffer({ sourceFeature: selected!.ref }, radiusValue)
+            ? await runBuffer({ sourceFeature: selected!.ref }, radiusValue, typesFilter)
             : kind === 'measure'
               ? await runMeasure({ sourceFeature: selected!.ref })
-              : await runNearest(pickedPoint!, nValue, type)
+              : await runNearest(pickedPoint!, nValue, nearestType, typesFilter)
       onResult(response)
     } catch (err) {
       setError(err instanceof ApiError ? err.userMessage : 'Analiz yapılamadı; bağlantıyı kontrol edin.')
@@ -134,12 +183,45 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
               </label>
               <label className="flex items-center gap-2">
                 <input type="radio" name="area-source" checked={areaSource === 'drawn'} onChange={() => setAreaSource('drawn')} />
-                Çizilen alan: {drawnArea ? <strong>hazır</strong> : <em className="text-slate-500">yok</em>}
+                Çizilen alan: {drawnGeometry ? <strong className="min-w-0 break-words">{usesTemporary ? 'kaydedilmemiş alan' : savedArea!.name}</strong> : <em className="text-slate-500">yok</em>}
               </label>
               {areaSource === 'drawn' && (
-                <button type="button" onClick={onDrawArea} disabled={drawingArea} className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 disabled:opacity-50">
-                  {drawingArea ? 'Alanı çizin, sonra "Çizimi bitir"' : drawnArea ? 'Yeniden çiz' : 'Haritada alan çiz'}
-                </button>
+                <div className="space-y-2 pl-5">
+                  {(savedAreas.length > 0 || drawnArea) && (
+                    <div>
+                      <label htmlFor={ids.area} className="block text-xs text-slate-600">
+                        Alan seçin
+                      </label>
+                      <select id={ids.area} value={effectiveChoice} onChange={(e) => setAreaChoice(e.target.value)} className="w-full min-w-0 truncate rounded border border-slate-300 px-2 py-1">
+                        {drawnArea && <option value={TEMPORARY_AREA}>Kaydedilmemiş alan</option>}
+                        {savedAreas.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAreaChoice(TEMPORARY_AREA)
+                        onDrawArea()
+                      }}
+                      disabled={drawingArea}
+                      className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      {drawingArea ? 'Alanı çizin, bitirmek için sağ tıklayın' : drawnArea ? 'Yeniden çiz' : 'Haritada alan çiz'}
+                    </button>
+                    {usesTemporary && drawnArea && (
+                      <button type="button" onClick={onSaveDrawnArea} className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100">
+                        Alanı kaydet
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">Çizim bölümünde kaydettiğiniz alanlar da bu listede görünür.</p>
+                </div>
               )}
             </fieldset>
             <label className="flex items-center gap-2">
@@ -218,12 +300,12 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
                 </label>
                 <select
                   id={ids.type}
-                  value={type}
+                  value={nearestType}
                   onChange={(e) => setType(e.target.value as FacilityType | '')}
                   className="w-full min-w-0 truncate rounded border border-slate-300 px-2 py-1"
                 >
                   <option value="">Tümü</option>
-                  {(Object.keys(FACILITY_LABELS) as FacilityType[]).map((t) => (
+                  {facilityTypes.map((t) => (
                     <option key={t} value={t}>
                       {FACILITY_LABELS[t]}
                     </option>
@@ -247,12 +329,25 @@ export function AnalysisPanel(props: AnalysisPanelProps) {
           </div>
         )}
 
+        {usesFacilities && typesFilter && (
+          <p className={noTypes ? 'text-xs text-amber-800' : 'text-xs text-slate-600'}>
+            {noTypes ? 'Analiz için katman panelinden en az bir tesis türü işaretleyin.' : `Yalnız işaretli türler: ${facilityTypes.map((t) => FACILITY_LABELS[t]).join(', ')}.`}
+          </p>
+        )}
+
         <div className="flex gap-2">
           <button type="submit" disabled={!ready || running} className="rounded bg-orange-600 px-3 py-1 text-white hover:bg-orange-700 disabled:opacity-50">
             {running ? 'Hesaplanıyor…' : 'Analizi çalıştır'}
           </button>
-          {result && (
-            <button type="button" onClick={() => onResult(null)} className="rounded border border-slate-300 px-3 py-1 hover:bg-slate-100">
+          {clearable && (
+            <button
+              type="button"
+              onClick={() => {
+                onResult(null)
+                onClearInput()
+              }}
+              className="rounded border border-slate-300 px-3 py-1 hover:bg-slate-100"
+            >
               Temizle
             </button>
           )}

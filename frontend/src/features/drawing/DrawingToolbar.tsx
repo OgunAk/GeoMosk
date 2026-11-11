@@ -4,7 +4,7 @@ interface DrawingToolbarProps {
   draw: DrawRequest
   disabled: boolean
   onStart: (mode: DrawMode) => void
-  /** Açık çizgi/alan çizimini bitirir (Enter ile aynı). */
+  /** Açık çizgi/alan çizimini bitirir (sağ tıklama ve Enter ile aynı). */
   onFinish: () => void
   onCancel: () => void
 }
@@ -14,12 +14,12 @@ const MODES: { mode: DrawMode; label: string; hint: string }[] = [
   {
     mode: 'linestring',
     label: 'Çizgi',
-    hint: 'Köşeler için tıklayın; en az 2 köşeden sonra "Çizimi bitir" düğmesine ya da Enter tuşuna basın.',
+    hint: 'Köşeler için sol tıklayın; en az 2 köşeden sonra bitirmek için sağ tıklayın.',
   },
   {
     mode: 'polygon',
     label: 'Alan',
-    hint: 'Köşeler için tıklayın; en az 3 köşeden sonra "Çizimi bitir" düğmesine ya da Enter tuşuna basın. Alan otomatik kapanır.',
+    hint: 'Köşeler için sol tıklayın; en az 3 köşeden sonra bitirmek için sağ tıklayın. Alan otomatik kapanır.',
   },
 ]
 
@@ -65,6 +65,7 @@ export function DrawingToolbar({ draw, disabled, onStart, onFinish, onCancel }: 
         </p>
       )}
       <p className="mt-2 text-xs text-slate-500">Çizimler kaynak verisinden ayrı "Kullanıcı çizimleri" katmanında saklanır.</p>
+      <p className="mt-1 text-xs text-slate-500">Çizgi ve alan çizimini bitirmek için haritada sağ tıklayın.</p>
     </section>
   )
 }

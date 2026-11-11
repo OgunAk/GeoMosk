@@ -11,10 +11,10 @@ function setup(draw: DrawRequest) {
 }
 
 describe('DrawingToolbar', () => {
-  it('alan çizerken "Çizimi bitir" düğmesi ve Enter ipucu görünür (geliştirici geri bildirimi G1)', async () => {
+  it('alan çizerken "Çizimi bitir" düğmesi ve sağ tıklama ipucu görünür', async () => {
     const props = setup({ kind: 'draw', mode: 'polygon', token: 1 })
 
-    expect(screen.getByText(/en az 3 köşeden sonra "Çizimi bitir"/)).toBeInTheDocument()
+    expect(screen.getByText(/en az 3 köşeden sonra bitirmek için sağ tıklayın/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Çizimi bitir' }))
 
     expect(props.onFinish).toHaveBeenCalledOnce()
@@ -28,9 +28,10 @@ describe('DrawingToolbar', () => {
     expect(screen.getByRole('button', { name: 'Çizimi iptal et' })).toBeInTheDocument()
   })
 
-  it('çizim yokken yalnız mod düğmeleri vardır', async () => {
+  it('çizim yokken yalnız mod düğmeleri vardır; bitirme yöntemi altta açıklanır', async () => {
     const props = setup({ kind: 'off', token: 0 })
 
+    expect(screen.getByText('Çizgi ve alan çizimini bitirmek için haritada sağ tıklayın.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Çizimi iptal et' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Çizgi' }))
     expect(props.onStart).toHaveBeenCalledWith('linestring')

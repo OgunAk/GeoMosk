@@ -28,6 +28,9 @@ export interface DrawCallbacks {
 
 const MODE_OF: Record<UserGeometry['type'], DrawMode> = { Point: 'point', LineString: 'linestring', Polygon: 'polygon' }
 
+/** Sağ tıklama çizimi bitirir; Terra Draw'ın varsayılanı gibi köşe eklememeli. */
+const ADD_VERTEX_ON_LEFT_ONLY = { rightClick: false, contextMenu: false, leftClick: true, onDragStart: true, onDrag: true, onDragEnd: true }
+
 /**
  * Terra Draw yaşam döngüsü. Altlık değişince stil (ve Terra Draw katmanları) silinir: taslak önce saklanır,
  * çizim durdurulur, yeni stil yüklenince yeni bir örnekle geri yüklenir (taslak kaybolmaz).
@@ -68,8 +71,8 @@ export function useTerraDraw(
       adapter: new TerraDrawMapLibreGLAdapter({ map, prefixId: 'td' }),
       modes: [
         new TerraDrawPointMode(),
-        new TerraDrawLineStringMode(),
-        new TerraDrawPolygonMode(),
+        new TerraDrawLineStringMode({ pointerEvents: ADD_VERTEX_ON_LEFT_ONLY }),
+        new TerraDrawPolygonMode({ pointerEvents: ADD_VERTEX_ON_LEFT_ONLY }),
         new TerraDrawSelectMode({
           flags: {
             point: { feature: { draggable: true } },
@@ -106,7 +109,13 @@ export function useTerraDraw(
 
     const instance: Instance = { draw, stopped: false }
     store.instance = instance
+    const onContextMenu = () => {
+      const current = store.request
+      if (current.kind === 'draw' && current.mode !== 'point') finishOpenDrawing(map.getCanvas())
+    }
+    map.on('contextmenu', onContextMenu)
     return () => {
+      map.off('contextmenu', onContextMenu)
       // suspend() çağrılmadıysa (ör. beklenmeyen stil yenilemesi) taslak burada saklanır.
       if (!instance.stopped) {
         store.draft = snapshotOf(draw)
@@ -115,14 +124,12 @@ export function useTerraDraw(
     }
   }, [mapRef, styleRevision])
 
-  // "Çizimi bitir": Terra Draw çizgi/alan modları Enter ile bitirir ve tuşu harita tuvalinden dinler.
-  // Düğme aynı olayı tuvale gönderir; klavye ve düğme tek yoldan geçer (yeterli köşe yoksa çizim sürer).
+  // "Çizimi bitir" düğmesi; sağ tıklama ve Enter ile aynı yoldan geçer.
   useEffect(() => {
     if (finishSignal === 0) return
     const canvas = mapRef.current?.getCanvas()
     if (!canvas || storeRef.current.request.kind !== 'draw') return
-    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
-    canvas.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }))
+    finishOpenDrawing(canvas)
   }, [finishSignal, mapRef])
 
   // İstek değişince (yeni çizim, düzenleme, kapatma) mevcut örneğe uygulanır.
@@ -150,6 +157,12 @@ interface Instance {
 interface SavedDraft {
   features: GeoJSONStoreFeatures[]
   mode: string
+}
+
+/** Terra Draw çizgi/alan modları Enter ile bitirir ve tuşu harita tuvalinden dinler; yeterli köşe yoksa çizim sürer. */
+function finishOpenDrawing(canvas: HTMLCanvasElement) {
+  canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  canvas.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }))
 }
 
 function snapshotOf(draw: TerraDraw): SavedDraft {

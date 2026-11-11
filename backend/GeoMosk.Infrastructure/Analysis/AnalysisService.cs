@@ -31,6 +31,8 @@ internal sealed class AnalysisService(GeoMoskDbContext db) : IAnalysisService
         facilities = request.IncludeBoundary
             ? facilities.Where(f => area!.Covers(f.Geom))
             : facilities.Where(f => f.Geom.Within(area!));
+        if (request.FacilityTypes is { } types)
+            facilities = facilities.Where(f => types.Contains(f.FacilityType));
 
         var rows = await facilities.OrderBy(f => f.Id).Take(request.Limit + 1)
             .Select(SourceFeatureQueries.FacilityRow).ToListAsync(cancellationToken);
@@ -42,6 +44,7 @@ internal sealed class AnalysisService(GeoMoskDbContext db) : IAnalysisService
             {
                 ["includeBoundary"] = request.IncludeBoundary,
                 ["predicate"] = request.IncludeBoundary ? "ST_Covers(alan, tesis)" : "ST_Within(tesis, alan)",
+                ["types"] = request.FacilityTypes,
             });
     }
 
@@ -57,12 +60,13 @@ internal sealed class AnalysisService(GeoMoskDbContext db) : IAnalysisService
             WHERE f.source_deleted_at IS NULL
               AND ST_DWithin(f.geom::geography, @src::geography, @radius)
               AND f.id <> @exclude
+              AND (@types::text[] IS NULL OR f.facility_type = ANY(@types::text[]))
             ORDER BY distance_meters, f.id
             LIMIT @take
             """;
         var distances = await QueryDistancesAsync(sql, cancellationToken,
             Geo("src", source!), new NpgsqlParameter("radius", NpgsqlDbType.Double) { Value = request.RadiusMeters },
-            new NpgsqlParameter("exclude", NpgsqlDbType.Bigint) { Value = excludeId },
+            new NpgsqlParameter("exclude", NpgsqlDbType.Bigint) { Value = excludeId }, TypesParameter(request.FacilityTypes),
             new NpgsqlParameter("take", NpgsqlDbType.Integer) { Value = request.Limit + 1 });
 
         var bufferPolygon = await ScalarGeometryAsync(
@@ -77,6 +81,7 @@ internal sealed class AnalysisService(GeoMoskDbContext db) : IAnalysisService
             {
                 ["radiusMeters"] = request.RadiusMeters,
                 ["excludeSource"] = request.ExcludeSource,
+                ["types"] = request.FacilityTypes,
                 ["method"] = "ST_DWithin(geography) — WGS84 sferoidi üzerinde metre",
                 ["bufferNote"] = "Çizilen tampon 64 kenarlı yaklaşık poligondur; seçim kesin mesafeyle (ST_DWithin) yapılır.",
             });
@@ -90,6 +95,7 @@ internal sealed class AnalysisService(GeoMoskDbContext db) : IAnalysisService
             FROM health_facilities f
             WHERE f.source_deleted_at IS NULL
               AND (@type::text IS NULL OR f.facility_type = @type::text)
+              AND (@types::text[] IS NULL OR f.facility_type = ANY(@types::text[]))
               AND (@max::float8 IS NULL OR ST_DWithin(f.geom::geography, @p::geography, @max::float8))
             ORDER BY distance_meters, f.id
             LIMIT @n
@@ -97,6 +103,7 @@ internal sealed class AnalysisService(GeoMoskDbContext db) : IAnalysisService
         var distances = await QueryDistancesAsync(sql, cancellationToken,
             Geo("p", request.Point),
             new NpgsqlParameter("type", NpgsqlDbType.Text) { Value = (object?)request.FacilityType ?? DBNull.Value },
+            TypesParameter(request.FacilityTypes),
             new NpgsqlParameter("max", NpgsqlDbType.Double) { Value = (object?)request.MaxDistanceMeters ?? DBNull.Value },
             new NpgsqlParameter("n", NpgsqlDbType.Integer) { Value = request.N });
 
@@ -108,6 +115,7 @@ internal sealed class AnalysisService(GeoMoskDbContext db) : IAnalysisService
             {
                 ["n"] = request.N,
                 ["type"] = request.FacilityType,
+                ["types"] = request.FacilityTypes,
                 ["maxDistanceMeters"] = request.MaxDistanceMeters,
                 ["method"] = "ST_Distance(geography) sıralaması + id; kuş uçuşu mesafe (yol ağı değil)",
             });
@@ -267,6 +275,9 @@ internal sealed class AnalysisService(GeoMoskDbContext db) : IAnalysisService
     }
 
     // --- SQL yardımcıları ---
+
+    private static NpgsqlParameter TypesParameter(string[]? types) =>
+        new("types", NpgsqlDbType.Array | NpgsqlDbType.Text) { Value = (object?)types ?? DBNull.Value };
 
     private static NpgsqlParameter Geo(string name, Geometry geometry) =>
         new(name, NpgsqlDbType.Geometry) { Value = geometry };

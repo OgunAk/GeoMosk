@@ -139,8 +139,8 @@ test('haritada tesise tıklayınca öznitelikler yan panelde görünür', async 
   await expect(details.getByText(/temsilî bir noktadır/)).toBeVisible() // OSM way'den üretilmiş nokta
 })
 
-// Geliştirici demosu (2026-11-06): tesise tek tıklama yaklaştırır; ilçeye tıklama haritayı oynatmaz.
-test('tesise tek tıklayınca harita tesise yaklaşır; ilçeye tıklama kamerayı değiştirmez', async ({ page }) => {
+// Geliştirici geri bildirimi: tesise ilk tıklama biraz, ikinci tıklama tam yaklaştırır; ilçeye tıklama haritayı oynatmaz.
+test('tesise ilk tıklama biraz, ikinci tıklama tam yaklaştırır; ilçeye tıklama kamerayı değiştirmez', async ({ page }) => {
   await openApp(page)
   const coords = await page.evaluate(async () => {
     const r = (await fetch('/api/facilities?q=%C3%A7ekirge%20devlet&limit=1').then((x) => x.json())) as {
@@ -155,14 +155,23 @@ test('tesise tek tıklayınca harita tesise yaklaşır; ilçeye tıklama kameray
       return { zoom: m.getZoom(), lng: m.getCenter().lng, lat: m.getCenter().lat }
     })
 
-  // Tesisi merkezden uzakta ve zoom 13'te göster; tek tıkla.
-  await page.evaluate(([lon, lat]) => window.__geomoskMap!.jumpTo({ center: [lon + 0.01, lat + 0.005], zoom: 13 }), coords)
+  // Tesisi merkezden uzakta ve zoom 12'de göster; ilk tıklama zoom 14'e getirir.
+  await page.evaluate(([lon, lat]) => window.__geomoskMap!.jumpTo({ center: [lon + 0.01, lat + 0.005], zoom: 12 }), coords)
   await page.waitForFunction(() => window.__geomoskMap!.loaded())
   const point = await page.evaluate(([lon, lat]) => window.__geomoskMap!.project([lon, lat]), coords)
   await page.mouse.click(box.x + point.x, box.y + point.y)
 
+  await expect.poll(async () => (await camera()).zoom).toBeGreaterThanOrEqual(13.99)
+  await page.waitForFunction(() => !window.__geomoskMap!.isMoving())
+  expect((await camera()).zoom).toBeLessThan(14.01)
+
+  // Aynı tesise ikinci tıklama: harita tesise ortalandığı için tesis artık ekran merkezinde.
+  const center = await page.evaluate(([lon, lat]) => window.__geomoskMap!.project([lon, lat]), coords)
+  await page.mouse.click(box.x + center.x, box.y + center.y)
   await expect.poll(async () => (await camera()).zoom).toBeGreaterThanOrEqual(15.99)
+  await page.waitForFunction(() => !window.__geomoskMap!.isMoving())
   const after = await camera()
+  expect(after.zoom).toBeLessThan(16.01)
   expect(Math.abs(after.lng - coords[0])).toBeLessThan(1e-4)
   expect(Math.abs(after.lat - coords[1])).toBeLessThan(1e-4)
 
@@ -174,6 +183,26 @@ test('tesise tek tıklayınca harita tesise yaklaşır; ilçeye tıklama kameray
   await expect(page.getByRole('heading', { name: 'Nilüfer' })).toBeVisible()
   await page.waitForTimeout(800) // olası bir easeTo süresinden (600 ms) uzun
   expect(await camera()).toEqual(before)
+})
+
+test('tesise hızlı çift tıklama tam zoom yapar, haritanın +1 zoomu binmez', async ({ page }) => {
+  await openApp(page)
+  const coords = await page.evaluate(async () => {
+    const r = (await fetch('/api/facilities?q=%C3%A7ekirge%20devlet&limit=1').then((x) => x.json())) as {
+      features: { geometry: { coordinates: [number, number] } }[]
+    }
+    return r.features[0].geometry.coordinates
+  })
+  const box = (await page.getByTestId('map').boundingBox())!
+  await page.evaluate(([lon, lat]) => window.__geomoskMap!.jumpTo({ center: [lon, lat], zoom: 12 }), coords)
+  await page.waitForFunction(() => window.__geomoskMap!.loaded())
+  const point = await page.evaluate(([lon, lat]) => window.__geomoskMap!.project([lon, lat]), coords)
+
+  await page.mouse.dblclick(box.x + point.x, box.y + point.y)
+
+  await expect.poll(() => page.evaluate(() => window.__geomoskMap!.getZoom())).toBeGreaterThanOrEqual(15.99)
+  await page.waitForFunction(() => !window.__geomoskMap!.isMoving())
+  expect(await page.evaluate(() => window.__geomoskMap!.getZoom())).toBeLessThan(16.01)
 })
 
 test('yerel açıklama kaydedilir, yenilemede korunur ve geri alınır', async ({ page }) => {

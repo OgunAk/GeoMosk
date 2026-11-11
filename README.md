@@ -41,10 +41,10 @@ değiştirin.
 ## Özellikler
 - **Harita:** katmanlar açılıp kapatılır; iki altlık vardır (OSM Standart, OpenFreeMap Positron). Altlık değişince katmanlar,
   seçim, analiz sonucu ve yarım çizim korunur. İsteğe bağlı harici WMS katmanı: CORINE 2018 arazi örtüsü.
-- **Öznitelikler:** tıklanan ilçe ya da tesisin bilgileri yan panelde görünür. Tesise tıklayınca harita yaklaşır.
+- **Öznitelikler:** tıklanan ilçe ya da tesisin bilgileri yan panelde görünür. Tesise ilk tıklamada harita biraz, ikinci tıklamada tam yaklaşır.
 - **Arama:** ad, tür ve ilçeye göre sunucuda arar; Türkçe aksan duyarsızdır ("nilufer" → Nilüfer).
 - **Yerel düzenleme:** kayıtlara yerel ad ve açıklama verilir. Bu düzenlemeler ayrı tabloda tutulur, yeniden import onları ezmez.
-- **Kullanıcı çizimleri:** nokta, çizgi ve alan çizilir, kaydedilir, düzenlenir, silinir. Geometri sunucuda yeniden
+- **Kullanıcı çizimleri:** nokta, çizgi ve alan çizilir (çizgi ve alan sağ tıklamayla biter), kaydedilir, düzenlenir, silinir. Geometri sunucuda yeniden
   doğrulanır; kendini kesen şekil ya da ters koordinat 422 ile reddedilir.
 - **Beş analiz:**
 
@@ -56,6 +56,7 @@ değiştirin.
   | Ölçüm | `ST_Transform(geom, 32635)` sonrası `ST_Length` / `ST_Area` | EPSG:32635 (UTM 35N) |
   | İlçe başına sayım | Her tesis tek ilçeye atanır; tablo + choropleth | Ortak sınırdaki tesis iki kez sayılmaz |
 
+  Analizler katman panelinde işaretli tesis türlerine uyar; kayıtlı alan çizimleri "Çizilen alan" listesinden kullanılabilir.
   Veri EPSG:4326'da saklanır; dereceyle metre hesabı yapılmaz. Doğruluk testleri gerçek PostGIS üzerinde koşar.
 
 ## Performans (büyük veri)
