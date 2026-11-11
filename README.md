@@ -127,6 +127,7 @@ dotnet run --project backend/GeoMosk.Api          # http://localhost:5080
 npm --prefix frontend ci
 npm --prefix frontend run dev                      # http://localhost:5173
 
+npm ci                                             # kök araç bağımlılıkları: import testleri bunları kullanır
 dotnet test backend                                # Docker gerekli (Testcontainers, geçici PostGIS)
 npm --prefix frontend run test                     # Vitest; ayrıca: typecheck, lint, e2e (Playwright)
 ```
@@ -141,24 +142,58 @@ Test sonuçları ve performans ölçümü: [TEST-PLAN](docs/TEST-PLAN.md).
    bir ilçe için "Ölçüm"; "İlçe başına tesis sayısı" → Hesapla.
 6. Hata durumu: kendini kesen bir alan kaydetmeyi deneyin (422 mesajı).
 
-## Geliştirme süreci ve yapay zekâ kullanımı
+## Claude Code ile geliştirme
 Proje, geliştirici (Ogün Ak) yönetiminde **Claude Code** (Anthropic) yapay zekâ asistanıyla geliştirildi. Kapsam, mimari
 seçimler ve ürün kararları geliştiricinindir; kodun büyük kısmını yapay zekâ yazdı.
 
-- **Geliştiricinin kendi incelemesi:** manuel demo sonuçları ve teknik sorulara verdiği yanıtlar, yapay zekâ açıklamalarından
-  ayrı sütunda: [DEVELOPER-REVIEW](docs/DEVELOPER-REVIEW.md).
-- **Kararlar:** [DECISIONS](docs/DECISIONS.md) (ADR'ler).
-- **Süreç kayıtları:** uygulamayı çalıştırmak için gerekmez.
+### Asistana verilen çerçeve
+Asistanın neyi, hangi kurallarla ve nasıl doğrulayarak yapacağı depoda tanımlıdır:
 
-  | Yol | İçerik |
-  |---|---|
-  | `CLAUDE.md`, `.claude/` | Yapay zekâ asistanının proje talimatları, kuralları, ajan ve skill tanımları |
-  | `docs/REQUIREMENTS.md`, `PROGRESS.md`, `ROADMAP.md` | Gereksinim izlenebilirliği ve faz kayıtları |
-  | `docs/FILE-MANIFEST.md`, `AI-TOOLS.md`, `DELIVERY-CHECKLIST.md` | Dosya envanteri, araç kurulumu, teslim kontrol listesi |
-  | `scripts/validate-project.mjs`, `scripts/hooks/` | Faz kapısı ve dosya denetimi script'leri |
+| Yol | Ne işe yarar |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | Her oturumda yüklenen kısa talimat: önce ne okunacağı, çalışan komutlar, SRID/GeoJSON kuralları, doğrulama dürüstlüğü, "bitti" tanımı |
+| [`.claude/rules/`](.claude/rules) | 6 bağlayıcı kural: mimari, mekânsal veri, test, güvenlik, kodlama standartları, frontend |
+| [`.claude/agents/`](.claude/agents) | 7 uzman ajan: `architect`, `postgis-specialist`, `gis-specialist`, `backend-engineer`, `frontend-engineer`, `qa-engineer`, salt-okunur `code-reviewer` |
+| [`.claude/skills/`](.claude/skills) | Tekrarlanan işlerin adım adım akışları: EF migration, endpoint, GeoJSON doğrulama, MapLibre, mekânsal analiz, faz doğrulama; tarayıcı testi için `playwright-cli` |
+| [`.claude/settings.json`](.claude/settings.json) | Hook: her dosya düzenlemesinden sonra `scripts/hooks/validate-changed-files.mjs` çalışır. İzin: `.env` okunamaz |
+| [`scripts/validate-project.mjs`](scripts/validate-project.mjs) | Faz kapısı (`--phase 0..8`, `--full`); bir faz bu kapıdan geçmeden tamamlanmış sayılmaz |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Her PR'da 4 iş: Claude altyapısı/hook testleri, backend + gerçek PostGIS, frontend, Compose + Playwright uçtan uca |
 
-  Belgelerdeki "master prompt §N" atıfları, projenin başında yapay zekâ için yazılan kapsam ve kalite tanımına aittir;
-  bu dosya depoda yer almaz.
+### Çalışma döngüsü
+1. **Kapsam:** ödev PDF'i ve projenin başında yazılan kapsam tanımı, gereksinim matrisine ([REQUIREMENTS](docs/REQUIREMENTS.md)) ve
+   9 fazlık yol haritasına ([ROADMAP](docs/ROADMAP.md)) çevrildi.
+2. **Faz:** küçük dikey dilim → build ve testler (gerçek PostGIS) → faz kapısı → [PROGRESS](docs/PROGRESS.md) kaydı.
+3. **Değişiklik:** her iş ayrı dal ve PR; CI geçince geliştirici birleştirir ([PR #1–#20](https://github.com/OgunAk/GeoMosk/pulls?q=is%3Apr+is%3Amerged)).
+4. **Karar:** geri dönüşü pahalı her karar bir ADR olarak yazılır ([DECISIONS](docs/DECISIONS.md), 21 ADR).
+5. **Kontrol noktaları:** geliştirici Faz 4 sonunda uygulamayı deneyip geri bildirim verdi; Faz 8 sonunda manuel demo yaptı ve
+   8 teknik soruyu kendi cümleleriyle yanıtladı ([DEVELOPER-REVIEW](docs/DEVELOPER-REVIEW.md); yanıtlar yapay zekâ açıklamasından ayrı sütunda).
+
+### Geliştiricinin yön verdiği yerler (örnekler)
+| Geliştiricinin girdisi | Sonuç | Kanıt |
+|---|---|---|
+| Faz 4 denemesi: çizimi bitirmek zor; tesisler türe göre filtrelensin | "Çizimi bitir" düğmesi; lejantta tür anahtarları | DEVELOPER-REVIEW G1-G2 |
+| Manuel demo: tesise yaklaşmak için çift tıklamak gerekiyor | Tesise tıklayınca yaklaşma | [PR #14](https://github.com/OgunAk/GeoMosk/pull/14) |
+| Değerlendirme ölçütü "veri büyüdüğünde performans" | Ad araması için trigram indeksi, keyset sayfalama, 10.000 tesiste EXPLAIN ölçümü | ADR-0020, TEST-PLAN |
+| Kurulum testinde altı bulgu | Analizin tür filtresine uyması, tek alan listesi, sağ tıkla bitirme, iki adımlı zoom | ADR-0021, [PR #20](https://github.com/OgunAk/GeoMosk/pull/20) |
+| İki ayrı yapay zekâya (Gemini, Codex) yönetici gözüyle inceleme yaptırılması; bulguların Claude ile kodda doğrulanması | Yenileme hatası uyarısı, aramada sonraki sayfalar, yan panel sırası, README test önkoşulu; yanlış bulgu (`tmp/`) ayıklandı | PROGRESS (2026-11-11) |
+| Proje adı, lisans, depo görünürlüğü, yapay zekâ kullanımının açıkça yazılması | GeoMosk adı, MIT lisansı, herkese açık depo, bu bölüm | ADR-0017, ADR-0019, `LICENSE` |
+
+### Doğrulama ilkeleri
+Asistana verilen kurallar ([`CLAUDE.md`](CLAUDE.md), [`.claude/rules/testing.md`](.claude/rules/testing.md)):
+- Test sonucu komut ve exit code ile raporlanır; çalıştırılmayan test "geçti" sayılmaz, başarısız test silinmez.
+- Mekânsal testler gerçek PostGIS'te koşar; beklenen değerler uygulamadan bağımsız formüllerle hesaplanır.
+- Sentetik veri gerçek veri diye sunulmaz; geliştirici adına görüş veya yanıt yazılmaz.
+
+### Süreç kayıtları
+Uygulamayı çalıştırmak için gerekmez.
+
+| Yol | İçerik |
+|---|---|
+| `docs/REQUIREMENTS.md`, `PROGRESS.md`, `ROADMAP.md` | Gereksinim izlenebilirliği ve faz kayıtları |
+| `docs/FILE-MANIFEST.md`, `AI-TOOLS.md`, `DELIVERY-CHECKLIST.md` | Dosya envanteri, araç kurulumu, teslim kontrol listesi |
+
+Belgelerdeki "master prompt §N" atıfları, projenin başında yapay zekâ için yazılan kapsam ve kalite tanımına aittir;
+bu dosya depoda yer almaz.
 
 ## Ödev teslim maddeleri
 | Madde | Bölüm |

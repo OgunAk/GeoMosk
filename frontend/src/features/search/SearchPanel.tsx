@@ -1,5 +1,5 @@
 import type { Feature, Geometry } from 'geojson'
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { ApiError } from '../../services/apiClient'
 import {
@@ -44,6 +44,9 @@ export function SearchPanel({ districts, onResults, onPick, onShowAll }: SearchP
   const [districtId, setDistrictId] = useState<number | null>(null)
   // Sonuç, hangi ölçüt anahtarına ait olduğuyla saklanır; anahtar değişince "aranıyor" render sırasında türetilir.
   const [result, setResult] = useState<{ key: string; value: SettledSearch } | null>(null)
+  // "Daha fazla göster" isteği hangi ölçüte aitse onunla saklanır; ölçüt değişince geç gelen sayfa eklenmez.
+  const [more, setMore] = useState<{ key: string; status: 'loading' | 'error' } | null>(null)
+  const currentKeyRef = useRef('')
 
   // Debounce kararlı bir metin anahtarı üzerinde yapılır; her render'da yeni nesne vermek sonsuz döngü yaratırdı.
   const debouncedKey = useDebouncedValue(JSON.stringify({ layer, q: q.trim(), type, districtId }), DEBOUNCE_MS)
@@ -52,6 +55,10 @@ export function SearchPanel({ districts, onResults, onPick, onShowAll }: SearchP
     [debouncedKey],
   )
   const hasCriteria = criteria.q.length > 0 || (criteria.layer === 'facilities' && (criteria.type !== '' || criteria.districtId !== null))
+
+  useEffect(() => {
+    currentKeyRef.current = debouncedKey
+  }, [debouncedKey])
 
   useEffect(() => {
     if (!hasCriteria) {
@@ -75,6 +82,24 @@ export function SearchPanel({ districts, onResults, onPick, onShowAll }: SearchP
   }, [criteria, debouncedKey, hasCriteria, onResults])
 
   const state: SearchState = !hasCriteria ? { kind: 'idle' } : result?.key === debouncedKey ? result.value : { kind: 'loading' }
+  const moreStatus = more?.key === debouncedKey ? more.status : null
+
+  async function loadMore() {
+    if (state.kind !== 'done' || !state.meta.nextAfter || moreStatus === 'loading') return
+    const key = debouncedKey
+    const shown = state.features
+    setMore({ key, status: 'loading' })
+    try {
+      const response = await searchFeatures({ ...criteria, after: state.meta.nextAfter })
+      if (currentKeyRef.current !== key) return
+      const features = [...shown, ...(response.features as ResultFeature[])]
+      setResult({ key, value: { kind: 'done', features, meta: response.meta } })
+      setMore(null)
+      onResults(criteria.layer, features)
+    } catch {
+      if (currentKeyRef.current === key) setMore({ key, status: 'error' })
+    }
+  }
 
   return (
     <section aria-labelledby="search-title" className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
@@ -156,14 +181,14 @@ export function SearchPanel({ districts, onResults, onPick, onShowAll }: SearchP
           <>
             <div className="flex items-center justify-between">
               <p className="text-slate-700">
-                {state.meta.hasMore ? `İlk ${SEARCH_LIMIT} sonuç gösteriliyor` : `${state.features.length} sonuç`}
+                {state.meta.hasMore ? `${state.features.length} sonuç gösteriliyor; devamı var` : `${state.features.length} sonuç`}
               </p>
               <button
                 type="button"
                 onClick={() => onShowAll(state.features)}
                 className="text-blue-700 underline hover:text-blue-900 focus-visible:outline-2 focus-visible:outline-blue-600"
               >
-                Tümünü haritada göster
+                Listedekileri haritada göster
               </button>
             </div>
             <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto" aria-label="Arama sonuçları">
@@ -182,6 +207,19 @@ export function SearchPanel({ districts, onResults, onPick, onShowAll }: SearchP
                 </li>
               ))}
             </ul>
+            {state.meta.hasMore && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  disabled={moreStatus === 'loading'}
+                  className="w-full rounded border border-slate-300 px-2 py-1 hover:bg-slate-100 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-blue-600"
+                >
+                  {moreStatus === 'loading' ? 'Yükleniyor…' : `${SEARCH_LIMIT} sonuç daha göster`}
+                </button>
+                {moreStatus === 'error' && <p className="mt-1 text-red-700">Sonraki sonuçlar yüklenemedi; tekrar deneyin.</p>}
+              </div>
+            )}
           </>
         )}
       </div>

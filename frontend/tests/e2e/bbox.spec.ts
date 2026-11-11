@@ -59,3 +59,24 @@ test('tesisler görünen kutuyla istenir; kutu içi kaydırma yeni istek atmaz, 
   await expect.poll(() => loadedFacilities(page)).toBeGreaterThan(0)
   expect(await loadedFacilities(page)).toBeLessThan(911)
 })
+
+// Dış inceleme bulgusu (2026-11-11): yeni kutunun isteği başarısız olunca sürekli "Yükleniyor…" yerine uyarı ve yeniden yükleme.
+test('yeni görünümün tesisleri yüklenemezse eski tesisler kalır, uyarı ve yeniden yükleme sunulur', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('checkbox', { name: /Sağlık tesisleri/ })).toBeVisible()
+  await settle(page)
+  const layers = page.getByRole('region', { name: 'Katmanlar' })
+
+  await page.route(/\/api\/facilities\?bbox=/, (route) => route.fulfill({ status: 503, contentType: 'application/problem+json', body: '{"title":"x"}' }))
+  await page.evaluate(() => window.__geomoskMap!.jumpTo({ center: [36.5, 39.0], zoom: 13 })) // ilk kutunun (Bursa geneli, %50 paylı) dışı
+  await settle(page)
+
+  await expect(layers.getByRole('alert')).toContainText('Yeni görünümün tesisleri yüklenemedi')
+  await expect(layers.getByText(/Yükleniyor/)).toHaveCount(0)
+  expect(await loadedFacilities(page)).toBe(911) // önceki veri korunur
+
+  await page.unroute(/\/api\/facilities\?bbox=/)
+  await layers.getByRole('button', { name: 'Tesisleri yeniden yükle' }).click()
+  await expect(layers.getByRole('alert')).toHaveCount(0)
+  await expect.poll(() => loadedFacilities(page)).toBeLessThan(911)
+})

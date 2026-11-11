@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Bbox } from './geometry'
 import { useSourceLayers } from './useSourceLayers'
@@ -70,5 +70,14 @@ describe('useSourceLayers (bbox ile tesis yükleme)', () => {
     const s = result.current.state
     expect(s.kind).toBe('loaded')
     expect(s.kind === 'loaded' && s.facilities.features[0].properties.name).toBe('Eski')
+    // Sürekli "yükleniyor" değil: yenilemenin başarısız olduğu ayrı bildirilir (dış inceleme bulgusu).
+    expect(s.kind === 'loaded' && [s.facilitiesPending, s.facilitiesStale]).toEqual([false, true])
+
+    fetchMock.mockImplementation((url: string) => Promise.resolve(ok(url.startsWith('/api/districts') ? page(['İlçe']) : page(['Yeni']))))
+    act(() => result.current.refresh())
+    await waitFor(() => {
+      const r = result.current.state
+      expect(r.kind === 'loaded' && [r.facilitiesStale, r.facilities.features[0].properties.name]).toEqual([false, 'Yeni'])
+    })
   })
 })

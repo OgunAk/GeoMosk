@@ -70,6 +70,8 @@ export interface SearchParams {
   q: string
   type?: FacilityType | ''
   districtId?: number | null
+  /** Keyset: önceki sayfanın meta.nextAfter değeri. */
+  after?: number
 }
 
 export function searchFeatures(params: SearchParams, signal?: AbortSignal) {
@@ -79,6 +81,7 @@ export function searchFeatures(params: SearchParams, signal?: AbortSignal) {
     if (params.type) query.set('type', params.type)
     if (params.districtId) query.set('districtId', String(params.districtId))
   }
+  if (params.after) query.set('after', String(params.after))
   return getJson<FeatureCollection<MultiPolygon | Point, DistrictProperties | FacilityProperties> & { meta: PageMeta }>(
     `/api/${params.layer}?${query}`,
     signal,

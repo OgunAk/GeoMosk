@@ -205,6 +205,22 @@ test('tesise hızlı çift tıklama tam zoom yapar, haritanın +1 zoomu binmez',
   expect(await page.evaluate(() => window.__geomoskMap!.getZoom())).toBeLessThan(16.01)
 })
 
+// Dış inceleme bulgusu (2026-11-11): aramada ilk 50 sonuçtan sonrasına ulaşılabilmeli.
+test('çok sonuçlu aramada sonraki 50 sonuç eklenir; listedekiler haritada vurgulanır', async ({ page }) => {
+  await openApp(page)
+  await page.getByRole('combobox', { name: 'Tür' }).first().selectOption('pharmacy')
+  const list = page.getByRole('list', { name: 'Arama sonuçları' })
+  await expect(list.getByRole('listitem')).toHaveCount(50)
+  await expect(page.getByText('50 sonuç gösteriliyor; devamı var')).toBeVisible()
+
+  await page.getByRole('button', { name: '50 sonuç daha göster' }).click()
+  await expect(list.getByRole('listitem')).toHaveCount(100)
+  const highlighted = await page.evaluate(() => JSON.stringify(window.__geomoskMap!.getFilter('lyr-facilities-highlight')))
+  const ids = await list.getByRole('listitem').count()
+  expect(ids).toBe(100)
+  expect((highlighted.match(/\d+/g) ?? []).length).toBeGreaterThanOrEqual(100)
+})
+
 test('yerel açıklama kaydedilir, yenilemede korunur ve geri alınır', async ({ page }) => {
   const note = `E2E notu ${Date.now()}`
   await openApp(page)

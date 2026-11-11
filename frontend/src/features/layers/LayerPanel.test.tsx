@@ -16,6 +16,7 @@ function loaded(hasMore = false): SourceLayersState {
     facilities: { type: 'FeatureCollection', features: [], meta: meta(911, hasMore) },
     facilitiesBbox: [28, 39.5, 30, 40.7],
     facilitiesPending: false,
+    facilitiesStale: false,
   }
 }
 
@@ -24,6 +25,7 @@ function renderPanel(overrides: Partial<Parameters<typeof LayerPanel>[0]> = {}) 
     state: loaded(),
     userCount: 3 as number | null,
     onRetry: vi.fn<() => void>(),
+    onRefresh: vi.fn<() => void>(),
     visibility: { districts: true, facilities: true, 'user-features': true },
     onToggle: vi.fn<(layer: LayerKey, visible: boolean) => void>(),
     basemap: 'osm' as BasemapId,
@@ -68,6 +70,7 @@ describe('LayerPanel', () => {
       facilities: { type: 'FeatureCollection', features: [facility('pharmacy'), facility('pharmacy'), facility('hospital')], meta: meta(3) },
       facilitiesBbox: [28, 39.5, 30, 40.7],
       facilitiesPending: false,
+      facilitiesStale: false,
     }
     const props = renderPanel({ state })
 
@@ -125,6 +128,16 @@ describe('LayerPanel', () => {
     expect(wms).not.toBeChecked()
     await userEvent.click(wms)
     expect(onToggleWms).toHaveBeenCalledWith(true)
+  })
+
+  it('görünen alanın tesisleri yüklenemezse uyarır ve yeniden yükletir; "Yükleniyor" yazmaz', async () => {
+    const base = loaded()
+    const props = renderPanel({ state: base.kind === 'loaded' ? { ...base, facilitiesStale: true } : base })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Yeni görünümün tesisleri yüklenemedi')
+    expect(screen.queryByText(/Yükleniyor/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Tesisleri yeniden yükle' }))
+    expect(props.onRefresh).toHaveBeenCalledOnce()
   })
 
   it('hata durumunda tekrar dene çağırır', async () => {

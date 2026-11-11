@@ -21,7 +21,7 @@ MapLibre haritası, katman/altlık, arama, sözel düzenleme, kullanıcı çizim
 ## Klasörler
 | Yol | Durum |
 |---|---|
-| `.claude/agents/` 7 ajan, `.claude/skills/` 6 proje + 2 araç skill'i, `.claude/rules/` 6 kural | Faz 0 ✓ |
+| `.claude/agents/` 7 ajan, `.claude/skills/` 6 proje + 1 araç skill'i, `.claude/rules/` 6 kural | Faz 0 ✓ |
 | `scripts/verify-agent-setup.mjs`, `scripts/validate-project.mjs`, `scripts/hooks/` | Faz 0 ✓ |
 | `docs/` REQUIREMENTS, PROGRESS, DECISIONS, DEVELOPER-REVIEW, FILE-MANIFEST, AI-TOOLS | Faz 0 ✓ |
 | `backend/GeoMosk.{Domain,Application,Infrastructure,Api,Tests}/`, `Directory.Packages.props` | Faz 1 ✓ |

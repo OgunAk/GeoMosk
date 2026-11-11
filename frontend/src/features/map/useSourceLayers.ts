@@ -25,6 +25,8 @@ export type SourceLayersState =
       facilitiesBbox: Bbox
       /** Yeni kutunun isteği sürüyor; o gelene kadar önceki tesisler gösterilir (titreme yok). */
       facilitiesPending: boolean
+      /** Yeni kutunun isteği başarısız oldu; gösterilen tesisler önceki kutuya ait (kullanıcıya bildirilir). */
+      facilitiesStale: boolean
     }
 
 type FacilitiesResult = { key: string; bbox: Bbox; data: Facilities } | 'error' | null
@@ -38,6 +40,8 @@ export function useSourceLayers(facilityBbox: Bbox | null) {
   const [attempt, setAttempt] = useState(0)
   const [districts, setDistricts] = useState<Districts | 'error' | null>(null)
   const [facilities, setFacilities] = useState<FacilitiesResult>(null)
+  // Başarısız olan kutu ve deneme: yeniden deneme (attempt artışı) başlayınca uyarı kalkar, istek sürüyor görünür.
+  const [failed, setFailed] = useState<{ key: string; attempt: number } | null>(null)
   const key = facilityBbox ? bboxParam(facilityBbox) : ''
 
   useEffect(() => {
@@ -62,6 +66,7 @@ export function useSourceLayers(facilityBbox: Bbox | null) {
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
         console.error('Tesis verisi alınamadı', error)
+        setFailed({ key, attempt })
         setFacilities((current) => (current && current !== 'error' ? current : 'error'))
       })
     return () => controller.abort()
@@ -79,14 +84,17 @@ export function useSourceLayers(facilityBbox: Bbox | null) {
   const state = useMemo<SourceLayersState>(() => {
     if (districts === 'error' || facilities === 'error') return { kind: 'error' }
     if (!districts || !facilities) return { kind: 'loading' }
+    const behind = facilities.key !== key
+    const stale = behind && failed?.key === key && failed.attempt === attempt
     return {
       kind: 'loaded',
       districts,
       facilities: facilities.data,
       facilitiesBbox: facilities.bbox,
-      facilitiesPending: facilities.key !== key,
+      facilitiesPending: behind && !stale,
+      facilitiesStale: stale,
     }
-  }, [districts, facilities, key])
+  }, [districts, facilities, key, failed, attempt])
 
   return { state, retry, refresh }
 }

@@ -263,6 +263,30 @@ export default function App() {
               onSaved={onSourceSaved}
             />
           )}
+          <SearchPanel
+            districts={districtOptions}
+            onResults={onSearchResults}
+            onPick={onPick}
+            onShowAll={(features) => zoomTo(features.map((f) => f.geometry))}
+          />
+          <LayerPanel
+            state={state}
+            userCount={user.state.kind === 'loaded' ? user.state.collection.meta.returned : null}
+            userHasMore={user.state.kind === 'loaded' && user.state.collection.meta.hasMore}
+            onRetry={retry}
+            onRefresh={refresh}
+            visibility={visibility}
+            onToggle={(layer, visible) => setVisibility((v) => ({ ...v, [layer]: visible }))}
+            basemap={basemap}
+            onBasemapChange={setBasemap}
+            facilityTypes={facilityTypes}
+            onToggleFacilityType={(type, visible) => {
+              setFacilityTypes((t) => ({ ...t, [type]: visible }))
+              setAnalysisResult(null) // sonuç eski tür seçimine aittir
+            }}
+            wmsVisible={wmsVisible}
+            onToggleWms={setWmsVisible}
+          />
           <AnalysisPanel
             selected={selectedSource}
             drawnArea={analysisArea}
@@ -310,29 +334,6 @@ export default function App() {
             onStart={startDraw}
             onFinish={() => setFinishSignal((n) => n + 1)}
             onCancel={endDrawing}
-          />
-          <SearchPanel
-            districts={districtOptions}
-            onResults={onSearchResults}
-            onPick={onPick}
-            onShowAll={(features) => zoomTo(features.map((f) => f.geometry))}
-          />
-          <LayerPanel
-            state={state}
-            userCount={user.state.kind === 'loaded' ? user.state.collection.meta.returned : null}
-            userHasMore={user.state.kind === 'loaded' && user.state.collection.meta.hasMore}
-            onRetry={retry}
-            visibility={visibility}
-            onToggle={(layer, visible) => setVisibility((v) => ({ ...v, [layer]: visible }))}
-            basemap={basemap}
-            onBasemapChange={setBasemap}
-            facilityTypes={facilityTypes}
-            onToggleFacilityType={(type, visible) => {
-              setFacilityTypes((t) => ({ ...t, [type]: visible }))
-              setAnalysisResult(null) // sonuç eski tür seçimine aittir
-            }}
-            wmsVisible={wmsVisible}
-            onToggleWms={setWmsVisible}
           />
           <SystemStatus />
         </>
