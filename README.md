@@ -143,7 +143,7 @@ Test sonuçları ve performans ölçümü: [TEST-PLAN](docs/TEST-PLAN.md).
 6. Hata durumu: kendini kesen bir alan kaydetmeyi deneyin (422 mesajı).
 
 ## Claude Code ile geliştirme
-Proje, geliştirici (Ogün Ak) yönetiminde **Claude Code** (Anthropic) yapay zekâ asistanıyla geliştirildi. Kapsam, mimari
+Proje, geliştirici (Ogün Ak) yönetiminde yapay zekâ asistanıyla geliştirildi. Kapsam, mimari
 seçimler ve ürün kararları geliştiricinindir; kodun büyük kısmını yapay zekâ yazdı.
 
 ### Asistana verilen çerçeve
@@ -176,7 +176,6 @@ Asistanın neyi, hangi kurallarla ve nasıl doğrulayarak yapacağı depoda tan�
 | Değerlendirme ölçütü "veri büyüdüğünde performans" | Ad araması için trigram indeksi, keyset sayfalama, 10.000 tesiste EXPLAIN ölçümü | ADR-0020, TEST-PLAN |
 | Kurulum testinde altı bulgu | Analizin tür filtresine uyması, tek alan listesi, sağ tıkla bitirme, iki adımlı zoom | ADR-0021, [PR #20](https://github.com/OgunAk/GeoMosk/pull/20) |
 | İki ayrı yapay zekâya (Gemini, Codex) yönetici gözüyle inceleme yaptırılması; bulguların Claude ile kodda doğrulanması | Yenileme hatası uyarısı, aramada sonraki sayfalar, yan panel sırası, README test önkoşulu; yanlış bulgu (`tmp/`) ayıklandı | PROGRESS (2026-11-11) |
-| Proje adı, lisans, depo görünürlüğü, yapay zekâ kullanımının açıkça yazılması | GeoMosk adı, MIT lisansı, herkese açık depo, bu bölüm | ADR-0017, ADR-0019, `LICENSE` |
 
 ### Doğrulama ilkeleri
 Asistana verilen kurallar ([`CLAUDE.md`](CLAUDE.md), [`.claude/rules/testing.md`](.claude/rules/testing.md)):
