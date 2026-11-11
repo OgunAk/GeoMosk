@@ -29,7 +29,7 @@ Durdurmak için `docker compose down` (veri korunur). `docker compose down -v` v
 değiştirin.
 
 ## Giriş bilgileri
-- **Uygulama:** kullanıcı adı ya da parola yoktur. Uygulama kimlik doğrulamasızdır (ödevde istenmiyor) ve yalnız
+- **Uygulama:** kullanıcı adı ya da parola yoktur. Uygulama kimlik doğrulamasızdır ve yalnız
   `127.0.0.1`'e bağlanır.
 - **Veritabanı** (yerel geliştirme varsayılanları, `localhost:5432`, veritabanı `geomosk`):
 
